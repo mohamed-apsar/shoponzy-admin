@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { adminRequest } from "../api/adminApi";
+import { API_BASE } from "../api/config";
 import { dateTime, money, shortDate, titleCase } from "../utils/format";
 
 /* eslint-disable react/prop-types */
-const API_BASE = (import.meta.env.VITE_API_BASE_URL || "/api/v1").replace(/\/$/, "");
 const STATUS_CLASS = {
   pending_payment: "pending", placed: "pending", confirmed: "processing", packed: "processing",
   shipped: "shipped", delivered: "delivered", cancelled: "cancelled", returned: "cancelled",
