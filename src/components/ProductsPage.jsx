@@ -544,25 +544,32 @@ export default function ProductsPage({ query = "", categories = [] }) {
 
                 {hasOptions && (
                   <div className="products-form-field products-form-full">
-                    <span>Variants ({variantList.length}) — empty cells use the defaults above</span>
-                    <div className="table-scroll">
-                      <table>
-                        <thead><tr><th>Colour</th><th>Size</th><th>Price</th><th>Previous price</th><th>Stock</th><th>SKU</th></tr></thead>
-                        <tbody>
-                          {variantList.map(({ color, size, key }) => {
-                            const row = form.rows[key] || {};
-                            return (
-                              <tr key={key}>
-                                <td>{color || "—"}</td><td>{size || "—"}</td>
-                                <td><input type="number" min="0" step="0.01" value={row.price ?? ""} placeholder={form.price} onChange={(e) => updateRow(key, "price", e.target.value === "" ? undefined : e.target.value)} aria-label={`Price ${key}`} /></td>
-                                <td><input type="number" min="0" step="0.01" value={row.mrp ?? ""} placeholder={form.mrp} onChange={(e) => updateRow(key, "mrp", e.target.value === "" ? undefined : e.target.value)} aria-label={`Previous price ${key}`} /></td>
-                                <td><input type="number" min="0" step="1" value={row.stock ?? ""} placeholder={form.stock} onChange={(e) => updateRow(key, "stock", e.target.value === "" ? undefined : e.target.value)} aria-label={`Stock ${key}`} /></td>
-                                <td><input value={row.sku ?? ""} onChange={(e) => updateRow(key, "sku", e.target.value)} aria-label={`SKU ${key}`} /></td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
+                    <span>Variant pricing and stock ({variantList.length})</span>
+                    <p className="products-variant-hint">Enter a price and stock for each variant, or leave them blank to use the defaults above.</p>
+                    <div className="products-variant-grid">
+                      {variantList.map(({ color, size, key }) => {
+                        const row = form.rows[key] || {};
+                        const label = [color, size].filter(Boolean).join(" / ") || "Default variant";
+                        return (
+                          <section className="products-variant-card" key={key} aria-label={`${label} pricing and stock`}>
+                            <h3>{label}</h3>
+                            <div className="products-variant-fields">
+                              <label>Price *
+                                <input type="number" min="0" step="0.01" value={row.price ?? ""} placeholder={form.price || "Enter price"} onChange={(e) => updateRow(key, "price", e.target.value === "" ? undefined : e.target.value)} aria-label={`Price ${key}`} />
+                              </label>
+                              <label>Previous price
+                                <input type="number" min="0" step="0.01" value={row.mrp ?? ""} placeholder={form.mrp || "Optional"} onChange={(e) => updateRow(key, "mrp", e.target.value === "" ? undefined : e.target.value)} aria-label={`Previous price ${key}`} />
+                              </label>
+                              <label>Stock quantity *
+                                <input type="number" min="0" step="1" value={row.stock ?? ""} placeholder={form.stock || "0"} onChange={(e) => updateRow(key, "stock", e.target.value === "" ? undefined : e.target.value)} aria-label={`Stock ${key}`} />
+                              </label>
+                              <label>SKU
+                                <input value={row.sku ?? ""} placeholder="Optional" onChange={(e) => updateRow(key, "sku", e.target.value)} aria-label={`SKU ${key}`} />
+                              </label>
+                            </div>
+                          </section>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
