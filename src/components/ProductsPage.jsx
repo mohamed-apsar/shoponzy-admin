@@ -39,7 +39,7 @@ function combos(form) {
   return out;
 }
 
-function ImageUpload({ title, images, onChange, required = false }) {
+function ImageUpload({ title, images, onChange, required = false, multiple = true }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -57,7 +57,7 @@ function ImageUpload({ title, images, onChange, required = false }) {
         const result = await uploadImage(file, "product");
         uploaded.push({ url: result.url, publicId: result.publicId, alt: "" });
       }
-      onChange([...images, ...uploaded]);
+      onChange(multiple ? [...images, ...uploaded] : uploaded.slice(-1));
     } catch (uploadError) {
       setError(uploadError.message);
     } finally {
@@ -79,9 +79,9 @@ function ImageUpload({ title, images, onChange, required = false }) {
       <label className="product-file-picker">
         <span>{busy ? "Uploading…" : images.length ? `${images.length} image(s) uploaded` : "Upload Image..."}</span>
         <span className="product-browse">Browse</span>
-        <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple disabled={busy} onChange={handleFiles} />
+        <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple={multiple} disabled={busy} onChange={handleFiles} />
       </label>
-      <p className="product-image-hint">Images are stored in Cloudinary. The first image is the featured image. 800 × 800 px (square) recommended, max 5 MB.</p>
+      <p className="product-image-hint">Images are stored in Cloudinary. 800 × 800 px (square) recommended, max 5 MB.</p>
       {error && <p className="products-form-error">{error}</p>}
       {!!images.length && (
         <div className="product-image-previews">
@@ -204,7 +204,11 @@ export default function ProductsPage({ query = "", categories = [] }) {
       status: full.status === "archived" ? "disabled" : full.status || "active",
       categoryIds,
       images: (full.images || []).map(({ url, publicId, alt }) => ({ url, publicId, alt: alt || "" })),
-      colors: (full.colors || []).map(({ name, hex }) => ({ name, hex })),
+      colors: (full.colors || []).map(({ name, hex, featuredImage, images }) => ({
+        name, hex,
+        featuredImage: featuredImage ? { url: featuredImage.url, publicId: featuredImage.publicId, alt: featuredImage.alt || "" } : null,
+        images: (images || []).map(({ url, publicId, alt }) => ({ url, publicId, alt: alt || "" })),
+      })),
       sizesText: (full.sizes || []).join(", "),
       price: single ? String(single.price) : "", mrp: single?.mrp ? String(single.mrp) : "", stock: single ? String(single.stock) : "0",
       rows,
@@ -238,7 +242,8 @@ export default function ProductsPage({ query = "", categories = [] }) {
     if (form.name.trim().length < 2) return setError("Please enter a product name (at least 2 characters).");
     const category = [...form.categoryIds].reverse().find(Boolean);
     if (!category) return setError("Please select a category.");
-    if (!form.images.length) return setError("Please upload a featured image.");
+    if (!form.colors.length && !form.images.length) return setError("Please upload at least one product image.");
+    if (form.colors.some((color) => !color.featuredImage)) return setError("Upload a featured image for every colour variant.");
     const colorNames = form.colors.map((c) => c.name.trim());
     if (colorNames.some((n) => !n)) return setError("Every colour needs a name.");
     if (new Set(colorNames).size !== colorNames.length) return setError("Colour names must be unique.");
@@ -260,7 +265,11 @@ export default function ProductsPage({ query = "", categories = [] }) {
       description: form.description.trim(),
       category,
       images: form.images.map(({ url, publicId }) => ({ url, publicId, alt: form.name.trim().slice(0, 200) })),
-      colors: form.colors.map((c) => ({ name: c.name.trim(), hex: c.hex })),
+      colors: form.colors.map((color) => ({
+        name: color.name.trim(), hex: color.hex,
+        featuredImage: color.featuredImage || null,
+        images: color.images || [],
+      })),
       sizes: parseSizes(form.sizesText),
       variants,
       isNewArrival: form.isNewArrival, isBestseller: form.isBestseller, isTrending: form.isTrending, isFeatured: form.isFeatured,
@@ -353,7 +362,9 @@ export default function ProductsPage({ query = "", categories = [] }) {
             <tbody>
               {items.map((product) => (
                 <tr key={product.id}>
-                  <td><div className="products-table-product">{product.images?.[0]?.url ? <img src={product.images[0].url} alt="" /> : <span className="products-no-image">□</span>}<span>{product.name}</span></div></td>
+                  <td><div className="products-table-product">{product.images?.[0]?.url || product.colors?.[0]?.featuredImage?.url
+                    ? <img src={product.images?.[0]?.url || product.colors[0].featuredImage.url} alt="" />
+                    : <span className="products-no-image">□</span>}<span>{product.name}</span></div></td>
                   <td>{product.sku || product.variants?.[0]?.sku || "—"}</td>
                   <td>{product.category?.path || product.category?.name || "—"}</td>
                   <td>{money(product.minPrice)}{product.maxPrice > product.minPrice ? ` – ${money(product.maxPrice)}` : ""}</td>
@@ -401,7 +412,7 @@ export default function ProductsPage({ query = "", categories = [] }) {
                 </label>
 
                 <div className="products-form-field products-form-full">
-                  <ImageUpload title="Product Images (first = featured)" required images={form.images} onChange={(value) => updateField("images", value)} />
+                  <ImageUpload title="Shared Product Gallery (optional when every colour has a featured image)" images={form.images} onChange={(value) => updateField("images", value)} />
                 </div>
 
                 {LEVEL_LABELS.map((label, index) => (
@@ -425,15 +436,31 @@ export default function ProductsPage({ query = "", categories = [] }) {
                 </label>
 
                 <div className="products-form-field products-form-full">
-                  <span>Colours</span>
+                  <span>Colours and images</span>
                   {form.colors.map((color, index) => (
-                    <div key={index} style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 6 }}>
-                      <input type="color" value={color.hex} onChange={(e) => updateField("colors", form.colors.map((c, i) => i === index ? { ...c, hex: e.target.value.toUpperCase() } : c))} aria-label={`Colour ${index + 1} swatch`} style={{ width: 48, padding: 2 }} />
-                      <input value={color.name} onChange={(e) => updateField("colors", form.colors.map((c, i) => i === index ? { ...c, name: e.target.value } : c))} placeholder="Colour name, e.g. Black" aria-label={`Colour ${index + 1} name`} />
-                      <button type="button" className="table-action danger" onClick={() => updateField("colors", form.colors.filter((_, i) => i !== index))}>Remove</button>
-                    </div>
+                    <section className="product-color-variant" key={index}>
+                      <div className="product-color-variant-heading">
+                        <input type="color" value={color.hex} onChange={(e) => updateField("colors", form.colors.map((c, i) => i === index ? { ...c, hex: e.target.value.toUpperCase() } : c))} aria-label={`Colour ${index + 1} swatch`} />
+                        <input value={color.name} onChange={(e) => updateField("colors", form.colors.map((c, i) => i === index ? { ...c, name: e.target.value } : c))} placeholder="Colour name, e.g. Black" aria-label={`Colour ${index + 1} name`} />
+                        <button type="button" className="table-action danger" onClick={() => updateField("colors", form.colors.filter((_, i) => i !== index))}>Remove colour</button>
+                      </div>
+                      <div className="product-color-variant-images">
+                        <ImageUpload
+                          title={`${color.name || `Colour ${index + 1}`} featured image`}
+                          images={color.featuredImage ? [color.featuredImage] : []}
+                          multiple={false}
+                          required
+                          onChange={(images) => updateField("colors", form.colors.map((c, i) => i === index ? { ...c, featuredImage: images[0] || null } : c))}
+                        />
+                        <ImageUpload
+                          title={`${color.name || `Colour ${index + 1}`} product gallery`}
+                          images={color.images || []}
+                          onChange={(images) => updateField("colors", form.colors.map((c, i) => i === index ? { ...c, images } : c))}
+                        />
+                      </div>
+                    </section>
                   ))}
-                  <button type="button" className="table-action" style={{ marginTop: 8, width: "fit-content" }} onClick={() => updateField("colors", [...form.colors, { name: "", hex: "#111111" }])}>+ Add colour</button>
+                  <button type="button" className="table-action" style={{ marginTop: 8, width: "fit-content" }} onClick={() => updateField("colors", [...form.colors, { name: "", hex: "#111111", featuredImage: null, images: [] }])}>+ Add colour / variant</button>
                 </div>
                 <label className="products-form-field products-form-full">Sizes (comma separated, leave empty if none)
                   <input value={form.sizesText} onChange={(e) => updateField("sizesText", e.target.value)} placeholder="e.g. 6, 7, 8, 9 or S, M, L" />
