@@ -283,6 +283,12 @@
   background: #ffe4e6;
 }
 
+.cm-actions .cm-edit-icon-button {
+  width: 32px;
+  min-height: 32px;
+  padding: 7px;
+}
+
 /* Primary button */
 .cm-primary-btn {
   background: #4f46e5;

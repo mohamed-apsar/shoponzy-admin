@@ -210,3 +210,5 @@ tbody td, .products-table td { font-size: 15px !important; }
 .product-modal input, .product-modal select, .product-modal textarea,
 .products-filter-bar input, .products-filter-bar select { font-size: 15px !important; }
 .auth-card input { font-size: 15px !important; }
+.edit-icon-button { width: 32px; height: 32px; padding: 7px !important; display: inline-grid; place-items: center; }
+.edit-icon-button svg, .cm-edit-icon-button svg, .ms-edit-icon-button svg { display: block; width: 16px; height: 16px; }

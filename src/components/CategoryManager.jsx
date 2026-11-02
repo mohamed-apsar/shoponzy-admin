@@ -1,6 +1,7 @@
 import { useState } from "react";
 import "./CategoryManager.css";
 import { adminRequest } from "../api/adminApi";
+import EditIcon from "./EditIcon";
 
 /* eslint-disable react/prop-types */
 const LEVELS = [
@@ -217,7 +218,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
                   {level === 1 && <td>{item.image?.url ? <img className="cm-thumb" src={item.image.url} alt={item.name} /> : <div className="cm-thumb cm-thumb-empty">No image</div>}</td>}
                   <td>{item.name}</td><td>{item.slug}</td>{level > 1 && <td>{pathFor(item) || "—"}</td>}
                   <td><button className={`cm-status-button ${item.status}`} onClick={() => toggleStatus(item)} disabled={loading}>{item.status === "enabled" ? "Enabled ▾" : "Disabled ▾"}</button></td>
-                  <td><div className="cm-actions"><button onClick={() => openEdit(item)}>Edit</button><button className="danger" onClick={() => remove(item)}>Delete</button></div></td>
+                  <td><div className="cm-actions"><button type="button" className="cm-edit-icon-button" aria-label={`Edit ${item.name}`} title={`Edit ${item.name}`} onClick={() => openEdit(item)}><EditIcon /></button><button className="danger" onClick={() => remove(item)}>Delete</button></div></td>
                 </tr>
               ))}
               {!loading && !shown.length && <tr><td colSpan={level === 1 ? 5 : 5} className="cm-empty">No {config.title.toLowerCase()} found.</td></tr>}

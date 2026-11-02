@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { adminRequest } from "../api/adminApi";
 import { money, shortDate } from "../utils/format";
+import EditIcon from "./EditIcon";
 
 /* eslint-disable react/prop-types */
 const emptyCoupon = () => ({
@@ -137,7 +138,7 @@ export default function CouponsPage({ query = "" }) {
                     <td>{c.usedCount || 0}{c.usageLimit ? ` / ${c.usageLimit}` : ""}</td>
                     <td><span className={`products-status ${tone}`}>{label}</span></td>
                     <td><div className="action-buttons">
-                      <button className="table-action" onClick={() => openEdit(c)}>Edit</button>
+                      <button className="table-action edit-icon-button" aria-label={`Edit coupon ${c.code}`} title={`Edit coupon ${c.code}`} onClick={() => openEdit(c)}><EditIcon /></button>
                       <button className="table-action" onClick={() => toggle(c)}>{c.status === "active" ? "Disable" : "Enable"}</button>
                       <button className="table-action danger" onClick={() => remove(c)}>Delete</button>
                     </div></td>

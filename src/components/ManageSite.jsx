@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./ManageSite.css";
 import { adminRequest, uploadImage } from "../api/adminApi";
 import { shortDate } from "../utils/format";
+import EditIcon from "./EditIcon";
 
 /* eslint-disable react/prop-types */
 const sections = [
@@ -527,7 +528,7 @@ export default function ManageSite({ activeSection = "General Settings", onSecti
       <div className="ms-sections-list">{homepageSections.slice().sort((a, b) => Number(a.order) - Number(b.order)).map((item, index, list) => <article className="ms-section-row" key={item.id}>
         <div className="ms-reorder"><button type="button" aria-label={`Move ${item.title} up`} disabled={index === 0} onClick={() => moveSection(item, -1, list)}>↑</button><button type="button" aria-label={`Move ${item.title} down`} disabled={index === list.length - 1} onClick={() => moveSection(item, 1, list)}>↓</button></div>
         <div className="ms-section-main"><div className="ms-section-title"><strong>{item.title}</strong><EntityStatus status={item.active ? "Active" : "Inactive"} /></div><p>{item.subtitle || "No subtitle"} · {item.type} · {item.count} items</p><small>Shows: {sourceLabel(item)} · Order {item.order}</small></div>
-        <div className="ms-row-actions"><button type="button" onClick={() => setModal({ kind: "section", record: item })}>Edit</button><button type="button" onClick={() => toggleRecord("section", item)}>{item.active ? "Disable" : "Enable"}</button><button type="button" className="danger" onClick={() => removeRecord("section", item)}>Delete</button></div>
+        <div className="ms-row-actions"><button type="button" className="ms-edit-icon-button" aria-label={`Edit ${item.title}`} title={`Edit ${item.title}`} onClick={() => setModal({ kind: "section", record: item })}><EditIcon /></button><button type="button" onClick={() => toggleRecord("section", item)}>{item.active ? "Disable" : "Enable"}</button><button type="button" className="danger" onClick={() => removeRecord("section", item)}>Delete</button></div>
       </article>)}
       {!homepageSections.length && <div className="ms-empty"><strong>No homepage sections yet</strong></div>}</div>
       <button type="button" className="ms-button ms-button-secondary ms-add-section" onClick={() => setModal({ kind: "section", record: { order: homepageSections.length + 1 } })}>＋ Add homepage section</button>
@@ -682,7 +683,7 @@ function RecordList({ kind, title, description, records, search, setSearch, stat
         {kind === "banner" ? <><td><div className="ms-record-title">{item.image?.url ? <img src={item.image.url} alt="" /> : <div className="ms-thumb-placeholder">▧</div>}<div><strong>{item.title}</strong><small>{item.subtitle}</small></div></div></td><td>{item.placement}</td><td>{item.order}</td><td>{item.start || "—"}</td><td>{item.end || "—"}</td><td><EntityStatus status={item.status || "Inactive"} /></td></>
           : pageMode ? <><td><strong>{item.title}</strong></td><td className="ms-slug">/{item.slug}</td><td>{item.updated}</td><td><EntityStatus status={item.status} /></td></>
             : <><td><div className="ms-record-title">{item.image?.url ? <img src={item.image.url} alt="" /> : <div className="ms-thumb-placeholder">▣</div>}<div><strong>{item.title}</strong><small>{item.description}</small></div></div></td><td>{item.trigger}</td><td>{item.frequency}</td><td>{item.start || "—"}</td><td>{item.end || "—"}</td><td><EntityStatus status={item.status} /></td></>}
-        <td><div className="ms-row-actions"><button type="button" onClick={() => onEdit(item)}>Edit</button><button type="button" onClick={() => onToggle(item)}>{pageMode ? item.status === "Published" ? "Unpublish" : "Publish" : item.status === "Inactive" ? "Enable" : "Disable"}</button><button type="button" className="danger" onClick={() => onDelete(item)}>Delete</button></div></td>
+        <td><div className="ms-row-actions"><button type="button" className="ms-edit-icon-button" aria-label={`Edit ${item.title}`} title={`Edit ${item.title}`} onClick={() => onEdit(item)}><EditIcon /></button><button type="button" onClick={() => onToggle(item)}>{pageMode ? item.status === "Published" ? "Unpublish" : "Publish" : item.status === "Inactive" ? "Enable" : "Disable"}</button><button type="button" className="danger" onClick={() => onDelete(item)}>Delete</button></div></td>
       </tr>)}
       {!records.length && <tr><td colSpan={kind === "banner" ? 7 : pageMode ? 5 : 7}><div className="ms-empty"><span>⌕</span><strong>{emptyLabel}</strong><small>Try changing your search or filters, or add a new item.</small></div></td></tr>}
       </tbody></table></div>

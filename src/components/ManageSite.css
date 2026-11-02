@@ -95,6 +95,7 @@
 .ms-status.scheduled { color: #a65d13; background: #fff4df; }
 .ms-row-actions { display: flex; align-items: center; gap: 5px; }
 .ms-row-actions button { padding: 6px 7px; border: 0; border-radius: 6px; background: transparent; color: var(--ms-indigo); font-size: 9px; font-weight: 650; cursor: pointer; }
+.ms-row-actions .ms-edit-icon-button { display: inline-grid; place-items: center; width: 32px; height: 32px; padding: 7px; }
 .ms-row-actions button:hover { background: #f0f2ff; }
 .ms-row-actions button.danger { color: #d34b56; }
 .ms-row-actions button.danger:hover { background: #fff0f1; }

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { adminRequest, uploadImage } from "../api/adminApi";
 import { money } from "../utils/format";
+import EditIcon from "./EditIcon";
 
 /* eslint-disable react/prop-types */
 const LEVEL_LABELS = ["Select Category *", "Select Sub Category", "Select Child Category", "Select Second Child Category", "Select Third Child Category"];
@@ -350,7 +351,7 @@ export default function ProductsPage({ query = "", categories = [] }) {
                   <td>{product.totalStock ?? 0}{product.variants?.length > 1 ? ` (${product.variants.length} variants)` : ""}</td>
                   <td><span className={`products-status ${product.status === "active" ? "enabled" : "disabled"}`}>{product.status === "active" ? "enabled" : product.status}</span></td>
                   <td><div className="action-buttons">
-                    <button className="table-action" onClick={() => openEditForm(product)}>Edit</button>
+                    <button className="table-action edit-icon-button" aria-label={`Edit ${product.name}`} title={`Edit ${product.name}`} onClick={() => openEditForm(product)}><EditIcon /></button>
                     {product.status !== "archived" && <button className="table-action" onClick={() => toggleStatus(product)}>{product.status === "active" ? "Disable" : "Enable"}</button>}
                     <button className="table-action danger" onClick={() => deleteProduct(product)}>Delete</button>
                   </div></td>
