@@ -217,7 +217,21 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
                 <tr key={item.id}>
                   {level === 1 && <td>{item.image?.url ? <img className="cm-thumb" src={item.image.url} alt={item.name} /> : <div className="cm-thumb cm-thumb-empty">No image</div>}</td>}
                   <td>{item.name}</td><td>{item.slug}</td>{level > 1 && <td>{pathFor(item) || "—"}</td>}
-                  <td><button className={`cm-status-button ${item.status}`} onClick={() => toggleStatus(item)} disabled={loading}>{item.status === "enabled" ? "Enabled ▾" : "Disabled ▾"}</button></td>
+                  <td>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={item.status === "enabled"}
+                      aria-label={`${item.status === "enabled" ? "Disable" : "Enable"} ${item.name}`}
+                      title={`${item.status === "enabled" ? "Disable" : "Enable"} ${item.name}`}
+                      className={`cm-status-toggle ${item.status}`}
+                      onClick={() => toggleStatus(item)}
+                      disabled={loading}
+                    >
+                      <span className="cm-toggle-track" aria-hidden="true"><span /></span>
+                      <span>{item.status === "enabled" ? "Enabled" : "Disabled"}</span>
+                    </button>
+                  </td>
                   <td><div className="cm-actions"><button type="button" className="cm-edit-icon-button" aria-label={`Edit ${item.name}`} title={`Edit ${item.name}`} onClick={() => openEdit(item)}><EditIcon /></button><button className="danger" onClick={() => remove(item)}>Delete</button></div></td>
                 </tr>
               ))}

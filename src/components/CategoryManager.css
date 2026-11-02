@@ -192,42 +192,53 @@
   color: #be123c;
 }
 
-/* Clickable status dropdown */
-.cm-status-button {
+/* Status switch */
+.cm-status-toggle {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 7px;
-  min-width: 94px;
-  padding: 9px 12px;
-  border: 1px solid transparent;
-  border-radius: 8px;
+  gap: 9px;
+  min-height: 36px;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #64748b;
   font: inherit;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 650;
   cursor: pointer;
-  transition: background 150ms ease, border-color 150ms ease;
+  transition: color 150ms ease, background 150ms ease;
 }
 
-.cm-status-button.enabled {
-  background: #ecfdf5;
-  border-color: #d1fae5;
-  color: #047857;
+.cm-toggle-track {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 38px;
+  height: 22px;
+  flex: 0 0 auto;
+  padding: 3px;
+  border-radius: 999px;
+  background: #cbd5e1;
+  transition: background 150ms ease;
 }
 
-.cm-status-button.enabled:hover {
-  background: #d1fae5;
+.cm-toggle-track > span {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(15 23 42 / 25%);
+  transition: transform 150ms ease;
 }
 
-.cm-status-button.disabled {
-  background: #fff1f2;
-  border-color: #ffe4e6;
-  color: #be123c;
-}
-
-.cm-status-button.disabled:hover {
-  background: #ffe4e6;
-}
+.cm-status-toggle.enabled { color: #047857; }
+.cm-status-toggle.enabled .cm-toggle-track { background: #10b981; }
+.cm-status-toggle.enabled .cm-toggle-track > span { transform: translateX(16px); }
+.cm-status-toggle.disabled { color: #64748b; }
+.cm-status-toggle:hover:not(:disabled) { background: #f1f5f9; }
+.cm-status-toggle:focus-visible { outline: 2px solid #4f46e5; outline-offset: 2px; }
+.cm-status-toggle:disabled { cursor: wait; opacity: .65; }
 
 /* Action buttons */
 .cm-actions {

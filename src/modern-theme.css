@@ -74,6 +74,7 @@ button { transition: background-color .18s ease, color .18s ease, border-color .
 
 /* Remove stacked margins in the sidebar and keep navigation rows compact. */
 .brand { margin: 0 !important; padding-bottom: 16px !important; }
+.brand-logo-wrap .brand-logo { width: min(100%, 185px); }
 .menu-label { margin: 0 12px 8px !important; padding-bottom: 0 !important; }
 .sidebar nav { gap: 3px !important; }
 .nav-item { min-height: 44px; margin-bottom: 0 !important; padding-top: 10px !important; padding-bottom: 10px !important; }
