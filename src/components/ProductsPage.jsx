@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { adminRequest, uploadImage } from "../api/adminApi";
 import { money } from "../utils/format";
 import EditIcon from "./EditIcon";
+import StatusToggle from "./StatusToggle";
 
 /* eslint-disable react/prop-types */
 const LEVEL_LABELS = ["Select Category *", "Select Sub Category", "Select Child Category", "Select Second Child Category", "Select Third Child Category"];
@@ -111,6 +112,7 @@ export default function ProductsPage({ query = "", categories = [] }) {
   const [statusFilter, setStatusFilter] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [pendingStatusIds, setPendingStatusIds] = useState([]);
 
   const term = `${search} ${query}`.trim();
 
@@ -293,11 +295,18 @@ export default function ProductsPage({ query = "", categories = [] }) {
   }
 
   async function toggleStatus(product) {
+    const nextStatus = product.status === "active" ? "disabled" : "active";
+    setItems((current) => current.map((item) => item.id === product.id ? { ...item, status: nextStatus } : item));
+    setPendingStatusIds((current) => [...current, product.id]);
+    setLoadError("");
     try {
-      await adminRequest(`/admin/products/${product.id}`, { method: "PATCH", body: JSON.stringify({ status: product.status === "active" ? "disabled" : "active" }) });
+      await adminRequest(`/admin/products/${product.id}`, { method: "PATCH", body: JSON.stringify({ status: nextStatus }) });
       await load();
     } catch (requestError) {
+      setItems((current) => current.map((item) => item.id === product.id ? { ...item, status: product.status } : item));
       setLoadError(requestError.message);
+    } finally {
+      setPendingStatusIds((current) => current.filter((id) => id !== product.id));
     }
   }
 
@@ -352,7 +361,7 @@ export default function ProductsPage({ query = "", categories = [] }) {
                   <td><span className={`products-status ${product.status === "active" ? "enabled" : "disabled"}`}>{product.status === "active" ? "enabled" : product.status}</span></td>
                   <td><div className="action-buttons">
                     <button className="table-action edit-icon-button" aria-label={`Edit ${product.name}`} title={`Edit ${product.name}`} onClick={() => openEditForm(product)}><EditIcon /></button>
-                    {product.status !== "archived" && <button className="table-action" onClick={() => toggleStatus(product)}>{product.status === "active" ? "Disable" : "Enable"}</button>}
+                    {product.status !== "archived" && <StatusToggle checked={product.status === "active"} label={`${product.status === "active" ? "Disable" : "Enable"} ${product.name}`} onChange={() => toggleStatus(product)} disabled={pendingStatusIds.includes(product.id)} />}
                     <button className="table-action danger" onClick={() => deleteProduct(product)}>Delete</button>
                   </div></td>
                 </tr>

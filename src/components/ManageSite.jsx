@@ -3,6 +3,7 @@ import "./ManageSite.css";
 import { adminRequest, uploadImage } from "../api/adminApi";
 import { shortDate } from "../utils/format";
 import EditIcon from "./EditIcon";
+import StatusToggle from "./StatusToggle";
 
 /* eslint-disable react/prop-types */
 const sections = [
@@ -359,6 +360,7 @@ export default function ManageSite({ activeSection = "General Settings", onSecti
   const [statusFilter, setStatusFilter] = useState("All");
   const [modal, setModal] = useState(null);
   const [urlFeedback, setUrlFeedback] = useState("");
+  const [pendingToggleIds, setPendingToggleIds] = useState([]);
 
   const setters = { banner: setBanners, popup: setPopups, page: setPages, section: setHomepageSections };
 
@@ -420,11 +422,29 @@ export default function ManageSite({ activeSection = "General Settings", onSecti
     }
   }
   async function toggleRecord(kind, record) {
+    const pendingId = `${kind}:${record.id}`;
+    const apiChanges = RECORDS[kind].toggle(record);
+    const uiChanges = kind === "section"
+      ? apiChanges
+      : {
+        status: kind === "page"
+          ? apiChanges.status === "published" ? "Published" : "Draft"
+          : kind === "banner" && apiChanges.status === "active" && record.start && new Date(record.start) > new Date()
+            ? "Scheduled"
+            : apiChanges.status === "active" ? "Active" : "Inactive",
+      };
+    const updateRecord = (changes) => setters[kind]((current) => current.map((item) => (
+      item.id === record.id ? { ...item, ...changes } : item
+    )));
+    updateRecord(uiChanges);
+    setPendingToggleIds((current) => [...current, pendingId]);
     try {
-      await adminRequest(`${RECORDS[kind].path}/${record.id}`, { method: "PATCH", body: JSON.stringify(RECORDS[kind].toggle(record)) });
-      await loadRecords(kind);
+      await adminRequest(`${RECORDS[kind].path}/${record.id}`, { method: "PATCH", body: JSON.stringify(apiChanges) });
     } catch (error) {
+      updateRecord(kind === "section" ? { active: record.active } : { status: record.status });
       notify(`Not updated: ${error.message}`);
+    } finally {
+      setPendingToggleIds((current) => current.filter((id) => id !== pendingId));
     }
   }
   const visibleBanners = useMemo(() => banners.filter((item) =>
@@ -512,13 +532,13 @@ export default function ManageSite({ activeSection = "General Settings", onSecti
   }
 
   function renderBanners() {
-    return <RecordList kind="banner" title="Homepage banners" description="Manage promotional artwork and placements on your storefront." records={visibleBanners} search={search} setSearch={setSearch} statusFilter={statusFilter} setStatusFilter={setStatusFilter} onAdd={() => setModal({ kind: "banner" })} onEdit={(item) => setModal({ kind: "banner", record: item })} onDelete={(item) => removeRecord("banner", item)} onToggle={(item) => toggleRecord("banner", item)} />;
+    return <RecordList kind="banner" title="Homepage banners" description="Manage promotional artwork and placements on your storefront." records={visibleBanners} search={search} setSearch={setSearch} statusFilter={statusFilter} setStatusFilter={setStatusFilter} onAdd={() => setModal({ kind: "banner" })} onEdit={(item) => setModal({ kind: "banner", record: item })} onDelete={(item) => removeRecord("banner", item)} onToggle={(item) => toggleRecord("banner", item)} pendingToggleIds={pendingToggleIds} />;
   }
   function renderPopups() {
-    return <RecordList kind="popup" title="Popup management" description="Control promotional messages and when they appear to shoppers." records={visiblePopups} search={search} setSearch={setSearch} statusFilter={statusFilter} setStatusFilter={setStatusFilter} onAdd={() => setModal({ kind: "popup" })} onEdit={(item) => setModal({ kind: "popup", record: item })} onDelete={(item) => removeRecord("popup", item)} onToggle={(item) => toggleRecord("popup", item)} />;
+    return <RecordList kind="popup" title="Popup management" description="Control promotional messages and when they appear to shoppers." records={visiblePopups} search={search} setSearch={setSearch} statusFilter={statusFilter} setStatusFilter={setStatusFilter} onAdd={() => setModal({ kind: "popup" })} onEdit={(item) => setModal({ kind: "popup", record: item })} onDelete={(item) => removeRecord("popup", item)} onToggle={(item) => toggleRecord("popup", item)} pendingToggleIds={pendingToggleIds} />;
   }
   function renderPages() {
-    return <RecordList kind="page" title="Pages & policies" description="Keep your store information and policies up to date." records={visiblePages} search={search} setSearch={setSearch} statusFilter={statusFilter} setStatusFilter={setStatusFilter} onAdd={() => setModal({ kind: "page" })} onEdit={(item) => setModal({ kind: "page", record: item })} onDelete={(item) => removeRecord("page", item)} onToggle={(item) => toggleRecord("page", item)} />;
+    return <RecordList kind="page" title="Pages & policies" description="Keep your store information and policies up to date." records={visiblePages} search={search} setSearch={setSearch} statusFilter={statusFilter} setStatusFilter={setStatusFilter} onAdd={() => setModal({ kind: "page" })} onEdit={(item) => setModal({ kind: "page", record: item })} onDelete={(item) => removeRecord("page", item)} onToggle={(item) => toggleRecord("page", item)} pendingToggleIds={pendingToggleIds} />;
   }
   const sourceLabel = (item) => item.type === "Categories" ? "Top-level categories"
     : item.source === "category" ? `Category: ${categories.find((c) => c.id === item.category)?.name || "not selected"}`
@@ -528,7 +548,7 @@ export default function ManageSite({ activeSection = "General Settings", onSecti
       <div className="ms-sections-list">{homepageSections.slice().sort((a, b) => Number(a.order) - Number(b.order)).map((item, index, list) => <article className="ms-section-row" key={item.id}>
         <div className="ms-reorder"><button type="button" aria-label={`Move ${item.title} up`} disabled={index === 0} onClick={() => moveSection(item, -1, list)}>↑</button><button type="button" aria-label={`Move ${item.title} down`} disabled={index === list.length - 1} onClick={() => moveSection(item, 1, list)}>↓</button></div>
         <div className="ms-section-main"><div className="ms-section-title"><strong>{item.title}</strong><EntityStatus status={item.active ? "Active" : "Inactive"} /></div><p>{item.subtitle || "No subtitle"} · {item.type} · {item.count} items</p><small>Shows: {sourceLabel(item)} · Order {item.order}</small></div>
-        <div className="ms-row-actions"><button type="button" className="ms-edit-icon-button" aria-label={`Edit ${item.title}`} title={`Edit ${item.title}`} onClick={() => setModal({ kind: "section", record: item })}><EditIcon /></button><button type="button" onClick={() => toggleRecord("section", item)}>{item.active ? "Disable" : "Enable"}</button><button type="button" className="danger" onClick={() => removeRecord("section", item)}>Delete</button></div>
+        <div className="ms-row-actions"><button type="button" className="ms-edit-icon-button" aria-label={`Edit ${item.title}`} title={`Edit ${item.title}`} onClick={() => setModal({ kind: "section", record: item })}><EditIcon /></button><StatusToggle checked={item.active} label={`${item.active ? "Disable" : "Enable"} ${item.title}`} onChange={() => toggleRecord("section", item)} disabled={pendingToggleIds.includes(`section:${item.id}`)} /><button type="button" className="danger" onClick={() => removeRecord("section", item)}>Delete</button></div>
       </article>)}
       {!homepageSections.length && <div className="ms-empty"><strong>No homepage sections yet</strong></div>}</div>
       <button type="button" className="ms-button ms-button-secondary ms-add-section" onClick={() => setModal({ kind: "section", record: { order: homepageSections.length + 1 } })}>＋ Add homepage section</button>
@@ -670,7 +690,7 @@ export default function ManageSite({ activeSection = "General Settings", onSecti
   );
 }
 
-function RecordList({ kind, title, description, records, search, setSearch, statusFilter, setStatusFilter, onAdd, onEdit, onDelete, onToggle }) {
+function RecordList({ kind, title, description, records, search, setSearch, statusFilter, setStatusFilter, onAdd, onEdit, onDelete, onToggle, pendingToggleIds }) {
   const pageMode = kind === "page";
   const popupMode = kind === "popup";
   const statusOptions = pageMode ? ["All", "Published", "Draft"] : ["All", "Active", "Inactive", ...(kind === "banner" ? ["Scheduled"] : [])];
@@ -683,7 +703,7 @@ function RecordList({ kind, title, description, records, search, setSearch, stat
         {kind === "banner" ? <><td><div className="ms-record-title">{item.image?.url ? <img src={item.image.url} alt="" /> : <div className="ms-thumb-placeholder">▧</div>}<div><strong>{item.title}</strong><small>{item.subtitle}</small></div></div></td><td>{item.placement}</td><td>{item.order}</td><td>{item.start || "—"}</td><td>{item.end || "—"}</td><td><EntityStatus status={item.status || "Inactive"} /></td></>
           : pageMode ? <><td><strong>{item.title}</strong></td><td className="ms-slug">/{item.slug}</td><td>{item.updated}</td><td><EntityStatus status={item.status} /></td></>
             : <><td><div className="ms-record-title">{item.image?.url ? <img src={item.image.url} alt="" /> : <div className="ms-thumb-placeholder">▣</div>}<div><strong>{item.title}</strong><small>{item.description}</small></div></div></td><td>{item.trigger}</td><td>{item.frequency}</td><td>{item.start || "—"}</td><td>{item.end || "—"}</td><td><EntityStatus status={item.status} /></td></>}
-        <td><div className="ms-row-actions"><button type="button" className="ms-edit-icon-button" aria-label={`Edit ${item.title}`} title={`Edit ${item.title}`} onClick={() => onEdit(item)}><EditIcon /></button><button type="button" onClick={() => onToggle(item)}>{pageMode ? item.status === "Published" ? "Unpublish" : "Publish" : item.status === "Inactive" ? "Enable" : "Disable"}</button><button type="button" className="danger" onClick={() => onDelete(item)}>Delete</button></div></td>
+        <td><div className="ms-row-actions"><button type="button" className="ms-edit-icon-button" aria-label={`Edit ${item.title}`} title={`Edit ${item.title}`} onClick={() => onEdit(item)}><EditIcon /></button><StatusToggle checked={pageMode ? item.status === "Published" : item.status !== "Inactive"} label={pageMode ? `${item.status === "Published" ? "Unpublish" : "Publish"} ${item.title}` : `${item.status === "Inactive" ? "Enable" : "Disable"} ${item.title}`} onChange={() => onToggle(item)} disabled={pendingToggleIds.includes(`${kind}:${item.id}`)} /><button type="button" className="danger" onClick={() => onDelete(item)}>Delete</button></div></td>
       </tr>)}
       {!records.length && <tr><td colSpan={kind === "banner" ? 7 : pageMode ? 5 : 7}><div className="ms-empty"><span>⌕</span><strong>{emptyLabel}</strong><small>Try changing your search or filters, or add a new item.</small></div></td></tr>}
       </tbody></table></div>

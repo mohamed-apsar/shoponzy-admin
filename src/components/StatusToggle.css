@@ -1,0 +1,39 @@
+.status-switch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.status-switch-track {
+  display: inline-flex;
+  align-items: center;
+  width: 38px;
+  height: 22px;
+  padding: 3px;
+  border-radius: 999px;
+  background: #cbd5e1;
+  transition: background-color 150ms ease;
+}
+
+.status-switch-track > span {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(15 23 42 / 25%);
+  transition: transform 150ms ease;
+}
+
+.status-switch.is-on .status-switch-track { background: #10b981; }
+.status-switch.is-on .status-switch-track > span { transform: translateX(16px); }
+.status-switch:hover:not(:disabled) .status-switch-track { background: #94a3b8; }
+.status-switch.is-on:hover:not(:disabled) .status-switch-track { background: #059669; }
+.status-switch:focus-visible { outline: 2px solid #4f46e5; outline-offset: 2px; }
+.status-switch:disabled { cursor: wait; opacity: .6; }

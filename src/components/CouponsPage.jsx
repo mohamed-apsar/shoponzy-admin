@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { adminRequest } from "../api/adminApi";
 import { money, shortDate } from "../utils/format";
 import EditIcon from "./EditIcon";
+import StatusToggle from "./StatusToggle";
 
 /* eslint-disable react/prop-types */
 const emptyCoupon = () => ({
@@ -30,6 +31,7 @@ export default function CouponsPage({ query = "" }) {
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [pendingStatusIds, setPendingStatusIds] = useState([]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -97,11 +99,17 @@ export default function CouponsPage({ query = "" }) {
   }
 
   async function toggle(c) {
+    const nextStatus = c.status === "active" ? "disabled" : "active";
+    setItems((current) => current.map((item) => item.id === c.id ? { ...item, status: nextStatus } : item));
+    setPendingStatusIds((current) => [...current, c.id]);
+    setLoadError("");
     try {
-      await adminRequest(`/admin/coupons/${c.id}`, { method: "PATCH", body: JSON.stringify({ status: c.status === "active" ? "disabled" : "active" }) });
-      await load();
+      await adminRequest(`/admin/coupons/${c.id}`, { method: "PATCH", body: JSON.stringify({ status: nextStatus }) });
     } catch (requestError) {
+      setItems((current) => current.map((item) => item.id === c.id ? { ...item, status: c.status } : item));
       setLoadError(requestError.message);
+    } finally {
+      setPendingStatusIds((current) => current.filter((id) => id !== c.id));
     }
   }
 
@@ -139,7 +147,7 @@ export default function CouponsPage({ query = "" }) {
                     <td><span className={`products-status ${tone}`}>{label}</span></td>
                     <td><div className="action-buttons">
                       <button className="table-action edit-icon-button" aria-label={`Edit coupon ${c.code}`} title={`Edit coupon ${c.code}`} onClick={() => openEdit(c)}><EditIcon /></button>
-                      <button className="table-action" onClick={() => toggle(c)}>{c.status === "active" ? "Disable" : "Enable"}</button>
+                      <StatusToggle checked={c.status === "active"} label={`${c.status === "active" ? "Disable" : "Enable"} coupon ${c.code}`} onChange={() => toggle(c)} disabled={pendingStatusIds.includes(c.id)} />
                       <button className="table-action danger" onClick={() => remove(c)}>Delete</button>
                     </div></td>
                   </tr>
