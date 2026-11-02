@@ -37,3 +37,19 @@
 .status-switch.is-on:hover:not(:disabled) .status-switch-track { background: #059669; }
 .status-switch:focus-visible { outline: 2px solid #4f46e5; outline-offset: 2px; }
 .status-switch:disabled { cursor: wait; opacity: .6; }
+
+.status-switch.has-status-text {
+  width: auto;
+  min-height: 36px;
+  gap: 9px;
+  padding: 4px 8px;
+  color: #64748b;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  transition: color 150ms ease, background-color 150ms ease;
+}
+
+.status-switch.has-status-text.is-on { color: #047857; }
+.status-switch.has-status-text:hover:not(:disabled) { background: #f1f5f9; }
+.status-switch-text { white-space: nowrap; }

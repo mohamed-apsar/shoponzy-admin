@@ -358,10 +358,12 @@ export default function ProductsPage({ query = "", categories = [] }) {
                   <td>{product.category?.path || product.category?.name || "—"}</td>
                   <td>{money(product.minPrice)}{product.maxPrice > product.minPrice ? ` – ${money(product.maxPrice)}` : ""}</td>
                   <td>{product.totalStock ?? 0}{product.variants?.length > 1 ? ` (${product.variants.length} variants)` : ""}</td>
-                  <td><span className={`products-status ${product.status === "active" ? "enabled" : "disabled"}`}>{product.status === "active" ? "enabled" : product.status}</span></td>
+                  <td>{product.status === "archived"
+                    ? <span className="products-status disabled">archived</span>
+                    : <StatusToggle checked={product.status === "active"} label={`${product.status === "active" ? "Disable" : "Enable"} ${product.name}`} statusText={product.status === "active" ? "Enabled" : "Disabled"} onChange={() => toggleStatus(product)} disabled={pendingStatusIds.includes(product.id)} />}
+                  </td>
                   <td><div className="action-buttons">
                     <button className="table-action edit-icon-button" aria-label={`Edit ${product.name}`} title={`Edit ${product.name}`} onClick={() => openEditForm(product)}><EditIcon /></button>
-                    {product.status !== "archived" && <StatusToggle checked={product.status === "active"} label={`${product.status === "active" ? "Disable" : "Enable"} ${product.name}`} onChange={() => toggleStatus(product)} disabled={pendingStatusIds.includes(product.id)} />}
                     <button className="table-action danger" onClick={() => deleteProduct(product)}>Delete</button>
                   </div></td>
                 </tr>
