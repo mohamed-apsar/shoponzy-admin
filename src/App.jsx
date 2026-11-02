@@ -136,8 +136,8 @@ export default function App() {
   if (authStatus !== "authenticated") {
     return <div className="auth-screen">
       <form className="auth-card" onSubmit={submitLogin}>
-        <div className="brand-mark">S</div>
-        <p className="eyebrow">SHOPONZY ADMIN</p>
+        <img className="brand-logo auth-brand-logo" src="/shoponzy-logo.png" alt="Shoponzy" />
+        <p className="eyebrow">ADMIN PANEL</p>
         <h1>Sign in</h1>
         <p className="muted">Sign in with an administrator account to manage the store.</p>
         <label>Email<input type="email" autoComplete="username" required value={email} onChange={(event) => setEmail(event.target.value)} /></label>
@@ -170,8 +170,10 @@ export default function App() {
       {sidebarOpen && <button aria-label="Close menu" className="mobile-overlay" onClick={() => setSidebarOpen(false)} />}
       <aside className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
         <div className="brand">
-          <div className="brand-mark">S</div>
-          <div><strong>shoponzy</strong><span>ADMIN PANEL</span></div>
+          <div className="brand-logo-wrap">
+            <img className="brand-logo" src="/shoponzy-logo.png" alt="Shoponzy" />
+            <span>ADMIN PANEL</span>
+          </div>
         </div>
         <div className="menu-label">WORKSPACE</div>
         <nav>
@@ -234,7 +236,7 @@ export default function App() {
             </button>
           ))}
         </nav>
-        <div className="sidebar-footer"><div className="avatar">{(user?.name || "A").slice(0, 1).toUpperCase()}</div><div><strong>{user?.name || "Administrator"}</strong><span>{user?.email}</span></div><button className="sign-out" onClick={submitSignOut}>Sign out</button></div>
+        <div className="sidebar-footer"><div className="avatar">{(user?.name || "A").slice(0, 1).toUpperCase()}</div><div className="sidebar-user"><strong>{user?.name || "Administrator"}</strong><span title={user?.email}>{user?.email}</span></div><button type="button" className="sign-out" onClick={submitSignOut}>Sign out</button></div>
       </aside>
 
       <main className="main-area">

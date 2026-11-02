@@ -28,6 +28,7 @@ button { transition: background-color .18s ease, color .18s ease, border-color .
   box-shadow: 6px 0 24px rgba(25, 35, 70, .025); padding: 24px 16px !important;
 }
 .brand { padding: 0 10px 30px !important; gap: 12px !important; }
+.brand-logo-wrap > span { margin-top: 0 !important; font-size: 12px !important; }
 .brand-mark { background: var(--shoponzy-indigo) !important; color: #fff !important; border-radius: 13px !important; box-shadow: 0 7px 16px rgba(79,70,229,.2); }
 .brand strong { color: #202944 !important; font-weight: 800 !important; letter-spacing: -.045em; }
 .brand span { color: #8b93a8 !important; letter-spacing: .17em !important; }
@@ -47,7 +48,25 @@ button { transition: background-color .18s ease, color .18s ease, border-color .
 .nav-subitem { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px !important; border: 0 !important; border-radius: 9px !important; background: transparent !important; color: #7b849a !important; text-align: left; font: inherit; font-size: 13px !important; cursor: pointer; }
 .nav-subitem:hover, .nav-subitem.active { background: #f3f4ff !important; color: var(--shoponzy-indigo) !important; }
 .nav-subitem span { color: var(--shoponzy-indigo) !important; }
-.sidebar-footer { border-top: 1px solid var(--shoponzy-border) !important; color: #29334b !important; padding: 18px 10px 0 !important; }
+.sidebar-footer { border-top: 1px solid var(--shoponzy-border) !important; color: #29334b !important; padding: 18px 4px 0 !important; gap: 8px !important; }
+.sidebar-user { flex: 1 1 auto; min-width: 0; }
+.sidebar-user strong, .sidebar-user span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sign-out {
+  flex: 0 0 auto;
+  min-height: 36px;
+  min-width: 76px;
+  margin-left: auto;
+  padding: 7px 10px !important;
+  border: 1px solid #c7d2fe !important;
+  border-radius: 8px !important;
+  background: #eef2ff !important;
+  color: #4338ca !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  cursor: pointer;
+}
+.sign-out:hover { background: #e0e7ff !important; border-color: #a5b4fc !important; }
+.sign-out:focus-visible { outline: 2px solid #4f46e5; outline-offset: 2px; }
 .sidebar-footer strong { color: #27314a !important; }
 .sidebar-footer span:not(.online-dot) { color: #8b93a8 !important; }
 .avatar, .top-avatar { background: #e9eaff !important; color: var(--shoponzy-indigo) !important; font-weight: 700 !important; }
