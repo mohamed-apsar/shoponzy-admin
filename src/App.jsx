@@ -98,7 +98,9 @@ export default function App() {
 
   async function toggleCategoryStatus(id, status) {
     await adminRequest(`/admin/categories/${id}`, { method: "PATCH", body: JSON.stringify({ status }) });
-    await loadCategories();
+    setCategories((current) => current.map((category) => (
+      category.id === id ? { ...category, status } : category
+    )));
   }
 
   async function submitLogin(event) {

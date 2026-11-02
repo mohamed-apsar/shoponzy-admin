@@ -33,9 +33,14 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
   const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [statusOverrides, setStatusOverrides] = useState({});
+  const [pendingStatusIds, setPendingStatusIds] = useState([]);
   const [form, setForm] = useState({ name: "", slug: "", parentIds: ["","","",""], image: null, status: "enabled" });
 
-  const visible = categories.filter((item) => item.level === level);
+  const visible = categories.filter((item) => item.level === level).map((item) => ({
+    ...item,
+    status: statusOverrides[item.id] ?? item.status,
+  }));
   const filtered = visible.filter((item) => {
     const parent = categories.find((p) => p.id === item.parentId);
     const term = `${item.name} ${item.slug} ${parent?.name || ""}`.toLowerCase();
@@ -154,11 +159,21 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
   }
 
   async function toggleStatus(item) {
+    const nextStatus = item.status === "enabled" ? "disabled" : "enabled";
+    setStatusOverrides((current) => ({ ...current, [item.id]: nextStatus }));
+    setPendingStatusIds((current) => [...current, item.id]);
     setError("");
     try {
-      await onToggleStatus(item.id, item.status === "enabled" ? "disabled" : "enabled");
+      await onToggleStatus(item.id, nextStatus);
     } catch (statusError) {
+      setStatusOverrides((current) => {
+        const next = { ...current };
+        delete next[item.id];
+        return next;
+      });
       setError(statusError.message);
+    } finally {
+      setPendingStatusIds((current) => current.filter((id) => id !== item.id));
     }
   }
 
@@ -226,7 +241,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
                       title={`${item.status === "enabled" ? "Disable" : "Enable"} ${item.name}`}
                       className={`cm-status-toggle ${item.status}`}
                       onClick={() => toggleStatus(item)}
-                      disabled={loading}
+                      disabled={loading || pendingStatusIds.includes(item.id)}
                     >
                       <span className="cm-toggle-track" aria-hidden="true"><span /></span>
                       <span>{item.status === "enabled" ? "Enabled" : "Disabled"}</span>
