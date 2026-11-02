@@ -20,7 +20,7 @@ const emptyForm = () => ({
   name: "", sku: "", brand: "", description: "", status: "active",
   categoryIds: ["", "", "", "", ""],
   images: [],
-  colors: [], sizesText: "",
+  colors: [], contentBlocks: [], sizesText: "",
   price: "", mrp: "", stock: "0",
   rows: {},
   isNewArrival: false, isBestseller: false, isTrending: false, isFeatured: false, badge: "",
@@ -39,7 +39,7 @@ function combos(form) {
   return out;
 }
 
-function ImageUpload({ title, images, onChange, required = false, multiple = true }) {
+function ImageUpload({ title, images, onChange, required = false, multiple = true, hint = "Images are stored in Cloudinary. 800 × 800 px (square) recommended, max 5 MB." }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -81,7 +81,7 @@ function ImageUpload({ title, images, onChange, required = false, multiple = tru
         <span className="product-browse">Browse</span>
         <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple={multiple} disabled={busy} onChange={handleFiles} />
       </label>
-      <p className="product-image-hint">Images are stored in Cloudinary. 800 × 800 px (square) recommended, max 5 MB.</p>
+      <p className="product-image-hint">{hint}</p>
       {error && <p className="products-form-error">{error}</p>}
       {!!images.length && (
         <div className="product-image-previews">
@@ -209,6 +209,12 @@ export default function ProductsPage({ query = "", categories = [] }) {
         featuredImage: featuredImage ? { url: featuredImage.url, publicId: featuredImage.publicId, alt: featuredImage.alt || "" } : null,
         images: (images || []).map(({ url, publicId, alt }) => ({ url, publicId, alt: alt || "" })),
       })),
+      contentBlocks: (full.contentBlocks || []).map((block) => block.type === "banner"
+        ? { type: block.type, image: block.image ? { url: block.image.url, publicId: block.image.publicId, alt: block.image.alt || "" } : null }
+        : { type: block.type, images: Array.from({ length: 3 }, (_, index) => {
+          const image = block.images?.[index];
+          return image ? { url: image.url, publicId: image.publicId, alt: image.alt || "" } : null;
+        }) }),
       sizesText: (full.sizes || []).join(", "),
       price: single ? String(single.price) : "", mrp: single?.mrp ? String(single.mrp) : "", stock: single ? String(single.stock) : "0",
       rows,
@@ -247,6 +253,9 @@ export default function ProductsPage({ query = "", categories = [] }) {
     const colorNames = form.colors.map((c) => c.name.trim());
     if (colorNames.some((n) => !n)) return setError("Every colour needs a name.");
     if (new Set(colorNames).size !== colorNames.length) return setError("Colour names must be unique.");
+    if (form.contentBlocks.some((block) => block.type === "banner" ? !block.image : block.images.some((image) => !image))) {
+      return setError("Upload an image for every product banner and image-row position.");
+    }
 
     const variants = buildVariants();
     for (const v of variants) {
@@ -270,6 +279,11 @@ export default function ProductsPage({ query = "", categories = [] }) {
         featuredImage: color.featuredImage || null,
         images: color.images || [],
       })),
+      contentBlocks: form.contentBlocks.map((block, blockIndex) => block.type === "banner"
+        ? { type: block.type, image: { ...block.image, alt: block.image.alt || `${form.name.trim()} banner ${blockIndex + 1}` } }
+        : { type: block.type, images: block.images.map((image, imageIndex) => ({
+          ...image, alt: image.alt || `${form.name.trim()} image ${imageIndex + 1}`,
+        })) }),
       sizes: parseSizes(form.sizesText),
       variants,
       isNewArrival: form.isNewArrival, isBestseller: form.isBestseller, isTrending: form.isTrending, isFeatured: form.isFeatured,
@@ -461,6 +475,58 @@ export default function ProductsPage({ query = "", categories = [] }) {
                     </section>
                   ))}
                   <button type="button" className="table-action" style={{ marginTop: 8, width: "fit-content" }} onClick={() => updateField("colors", [...form.colors, { name: "", hex: "#111111", featuredImage: null, images: [] }])}>+ Add colour / variant</button>
+                </div>
+                <div className="products-form-field products-form-full">
+                  <span>Product page banners and image rows</span>
+                  <p className="muted">These images appear below the product details on the storefront, in the order shown.</p>
+                  {form.contentBlocks.map((block, index) => (
+                    <section className="product-content-block" key={index}>
+                      <div className="product-content-block-heading">
+                        <strong>{block.type === "banner" ? `Wide banner ${index + 1}` : `Three-image row ${index + 1}`}</strong>
+                        <div>
+                          <button type="button" className="table-action" aria-label={`Move content block ${index + 1} up`} disabled={index === 0} onClick={() => {
+                            const next = [...form.contentBlocks];
+                            [next[index - 1], next[index]] = [next[index], next[index - 1]];
+                            updateField("contentBlocks", next);
+                          }}>↑</button>
+                          <button type="button" className="table-action" aria-label={`Move content block ${index + 1} down`} disabled={index === form.contentBlocks.length - 1} onClick={() => {
+                            const next = [...form.contentBlocks];
+                            [next[index], next[index + 1]] = [next[index + 1], next[index]];
+                            updateField("contentBlocks", next);
+                          }}>↓</button>
+                          <button type="button" className="table-action danger" onClick={() => updateField("contentBlocks", form.contentBlocks.filter((_, blockIndex) => blockIndex !== index))}>Remove</button>
+                        </div>
+                      </div>
+                      {block.type === "banner" ? (
+                        <ImageUpload
+                          title={`Banner ${index + 1}`}
+                          images={block.image ? [block.image] : []}
+                          multiple={false}
+                          hint="Recommended: wide image (for example 1920 × 800). The full image is shown without cropping."
+                          onChange={(images) => updateField("contentBlocks", form.contentBlocks.map((item, blockIndex) => blockIndex === index ? { ...item, image: images[0] || null } : item))}
+                        />
+                      ) : (
+                        <div className="product-content-image-row">
+                          {Array.from({ length: 3 }, (_, imageIndex) => (
+                            <ImageUpload
+                              key={imageIndex}
+                              title={`Row ${index + 1} image ${imageIndex + 1}`}
+                              images={block.images[imageIndex] ? [block.images[imageIndex]] : []}
+                              multiple={false}
+                              hint="Recommended: square or portrait image."
+                              onChange={(images) => updateField("contentBlocks", form.contentBlocks.map((item, blockIndex) => blockIndex === index
+                                ? { ...item, images: item.images.map((image, itemIndex) => itemIndex === imageIndex ? images[0] || null : image) }
+                                : item))}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </section>
+                  ))}
+                  <div className="product-content-add-actions">
+                    <button type="button" className="table-action" onClick={() => updateField("contentBlocks", [...form.contentBlocks, { type: "banner", image: null }])}>+ Add wide banner</button>
+                    <button type="button" className="table-action" onClick={() => updateField("contentBlocks", [...form.contentBlocks, { type: "imageRow", images: [null, null, null] }])}>+ Add three-image row</button>
+                  </div>
                 </div>
                 <label className="products-form-field products-form-full">Sizes (comma separated, leave empty if none)
                   <input value={form.sizesText} onChange={(e) => updateField("sizesText", e.target.value)} placeholder="e.g. 6, 7, 8, 9 or S, M, L" />
