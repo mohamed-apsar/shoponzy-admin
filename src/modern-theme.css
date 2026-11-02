@@ -72,6 +72,14 @@ button { transition: background-color .18s ease, color .18s ease, border-color .
 .avatar, .top-avatar { background: #e9eaff !important; color: var(--shoponzy-indigo) !important; font-weight: 700 !important; }
 .online-dot { background: #22c55e !important; }
 
+/* Remove stacked margins in the sidebar and keep navigation rows compact. */
+.brand { margin: 0 !important; padding-bottom: 16px !important; }
+.menu-label { margin: 0 12px 8px !important; padding-bottom: 0 !important; }
+.sidebar nav { gap: 3px !important; }
+.nav-item { min-height: 44px; margin-bottom: 0 !important; padding-top: 10px !important; padding-bottom: 10px !important; }
+.nav-submenu { gap: 2px !important; padding-top: 2px !important; padding-bottom: 6px !important; }
+.nav-subitem { min-height: 38px !important; padding-top: 8px !important; padding-bottom: 8px !important; }
+
 .main-area { background: var(--shoponzy-page) !important; min-width: 0; }
 .topbar { background: rgba(255,255,255,.94) !important; border-bottom: 1px solid var(--shoponzy-border) !important; box-shadow: 0 2px 8px rgba(30,41,80,.02); }
 .breadcrumb { color: #8991a5 !important; }
