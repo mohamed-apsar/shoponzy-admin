@@ -181,3 +181,32 @@ tbody tr:hover td { background: #fafaff !important; }
   .search-box input { min-width: 0; width: 100%; }
   .products-filter-controls select { flex: 1 1 140px; }
 }
+
+/* Admin typography scale */
+body { font-size: 15px; }
+.nav-item { font-size: 14px !important; }
+.nav-subitem { font-size: 13px !important; }
+.brand span, .menu-label, .nav-count, .sidebar-footer div:nth-child(2) span,
+.avatar, .top-avatar,
+.eyebrow, .date-chip, .small-pill, .chart-column span, .chart-note,
+thead th, .status, .products-status, .ms-eyebrow { font-size: 12px !important; }
+.sidebar-footer strong, .sign-out { font-size: 14px !important; }
+.breadcrumb, .search-box input, .muted, .page-heading .muted,
+.panel-heading .muted, .stat-card .muted, .stat-change, .stat-note,
+.alert-copy p, .footer, .auth-card label, .simple-page ul { font-size: 14px !important; }
+.page-heading h1, .cm-heading h1, .products-page-heading h1,
+.ms-page-heading h1 { font-size: 28px !important; }
+.panel-heading h2, .simple-page h2, .ms-card-heading h2,
+.products-modal-heading h2 { font-size: 22px !important; }
+.ms-maintenance-preview h3 { font-size: 18px !important; }
+.alert-copy strong { font-size: 15px !important; }
+.text-button, .primary-button, .products-primary-btn, .products-cancel-btn,
+.products-row-actions button, .table-action { font-size: 14px !important; }
+thead th, .products-table th { font-size: 12px !important; }
+tbody td, .products-table td { font-size: 15px !important; }
+.status, .products-status { font-size: 12px !important; }
+.products-filter-controls input, .products-filter-controls select,
+.products-form-field input, .products-form-field select, .products-form-field textarea,
+.product-modal input, .product-modal select, .product-modal textarea,
+.products-filter-bar input, .products-filter-bar select { font-size: 15px !important; }
+.auth-card input { font-size: 15px !important; }

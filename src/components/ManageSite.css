@@ -186,3 +186,52 @@
   .ms-image-uploader { width: calc(50% - 8px); }
   .ms-image-uploader.compact { width: calc(50% - 8px); }
 }
+
+.manage-site .ms-tabs button,
+.manage-site .ms-field,
+.manage-site .ms-card-heading p,
+.manage-site .ms-button,
+.manage-site .ms-image-label,
+.manage-site .ms-link-button,
+.manage-site .ms-announcement-preview,
+.manage-site .ms-row-actions button,
+.manage-site .ms-category-options label,
+.manage-site .ms-category-order li,
+.manage-site .ms-field small,
+.manage-site .ms-toggle-row small,
+.manage-site .ms-upload-placeholder,
+.manage-site .ms-upload-placeholder small,
+.manage-site .ms-color-field span,
+.manage-site .ms-record-title small,
+.manage-site .ms-empty small,
+.manage-site .ms-section-main p,
+.manage-site .ms-section-main > small,
+.manage-site .ms-search-preview small,
+.manage-site .ms-maintenance-preview p,
+.manage-site .ms-maintenance-preview small,
+.manage-site .ms-maintenance-preview a,
+.manage-site .ms-preview-popup p,
+.manage-site .ms-toast,
+.manage-site .ms-category-picker > p { font-size: 14px; }
+.manage-site .ms-field input,
+.manage-site .ms-field select,
+.manage-site .ms-field textarea,
+.manage-site .ms-record-controls select,
+.manage-site .ms-search input,
+.manage-site .ms-table td,
+.manage-site .ms-record-title strong,
+.manage-site .ms-toggle-row strong,
+.manage-site .ms-section-title strong,
+.manage-site .ms-empty strong,
+.manage-site .ms-preview-popup strong,
+.manage-site .ms-category-picker > strong { font-size: 14px; }
+.manage-site .ms-preview-chip,
+.manage-site .ms-status,
+.manage-site .ms-preview-popup > span { font-size: 12px; }
+.manage-site .ms-field input,
+.manage-site .ms-field select,
+.manage-site .ms-field textarea,
+.manage-site .ms-record-controls select,
+.manage-site .ms-search input,
+.manage-site .ms-table td { font-size: 15px; }
+.manage-site .ms-table th { font-size: 12px; }
