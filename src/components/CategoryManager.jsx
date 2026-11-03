@@ -35,6 +35,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
   const [saving, setSaving] = useState(false);
   const [statusOverrides, setStatusOverrides] = useState({});
   const [pendingStatusIds, setPendingStatusIds] = useState([]);
+  const [exploreImageChanged, setExploreImageChanged] = useState(false);
   const [form, setForm] = useState({ name: "", slug: "", parentIds: ["","","",""], image: null, status: "enabled" });
 
   const visible = categories.filter((item) => item.level === level).map((item) => ({
@@ -60,6 +61,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
 
   function openAdd() {
     setEditingId(null);
+    setExploreImageChanged(false);
     setForm({ name: "", slug: "", parentIds: ["","","",""], image: null, exploreImage: null, status: "enabled" });
     setError("");
     setShowForm(true);
@@ -74,6 +76,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
       parentId = parent?.parentId || null;
     }
     setEditingId(item.id);
+    setExploreImageChanged(false);
     setForm({ name: item.name, slug: item.slug, parentIds, image: item.image || null, exploreImage: item.exploreImage || null, status: item.status });
     setError("");
     setShowForm(true);
@@ -98,6 +101,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
         ...previous,
         [field]: { url: result.url, publicId: result.publicId, alt: field === "exploreImage" ? `${previous.name} Shop all card background` : previous.name },
       }));
+      if (field === "exploreImage") setExploreImageChanged(true);
     } catch (uploadError) {
       setError(uploadError.message);
     } finally {
@@ -123,7 +127,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
       parent: parentId,
       status: form.status,
       ...(level === 1 || form.image ? { image: form.image } : {}),
-      ...(level === 1 ? { exploreImage: form.exploreImage || null } : {}),
+      ...(level === 1 && exploreImageChanged ? { exploreImage: form.exploreImage || null } : {}),
     };
     setSaving(true);
     setError("");
@@ -291,7 +295,10 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
                 {(form.exploreImagePreview || form.exploreImage?.url) && <div className="cm-explore-image-preview">
                   <img src={form.exploreImagePreview || form.exploreImage.url} alt={`${form.name || "Category"} Shop all card background preview`} />
                   <span>Preview: Shop all {form.name || "category"}</span>
-                  <button type="button" className="cm-secondary-btn" onClick={() => setForm((previous) => ({ ...previous, exploreImage: null, exploreImagePreview: "" }))}>Remove image</button>
+                  <button type="button" className="cm-secondary-btn" onClick={() => {
+                    setForm((previous) => ({ ...previous, exploreImage: null, exploreImagePreview: "" }));
+                    setExploreImageChanged(true);
+                  }}>Remove image</button>
                 </div>}
               </div>
             </>}
