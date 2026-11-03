@@ -72,6 +72,7 @@ export default function App() {
         name: category.name,
         slug: category.slug,
         image: category.image || null,
+        exploreImage: category.exploreImage || null,
         status: category.status,
       })));
     } catch (error) {

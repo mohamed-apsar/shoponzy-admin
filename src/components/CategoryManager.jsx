@@ -1,6 +1,6 @@
 import { useState } from "react";
 import "./CategoryManager.css";
-import { adminRequest } from "../api/adminApi";
+import { uploadImage } from "../api/adminApi";
 import EditIcon from "./EditIcon";
 
 /* eslint-disable react/prop-types */
@@ -60,7 +60,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
 
   function openAdd() {
     setEditingId(null);
-    setForm({ name: "", slug: "", parentIds: ["","","",""], image: null, status: "enabled" });
+    setForm({ name: "", slug: "", parentIds: ["","","",""], image: null, exploreImage: null, status: "enabled" });
     setError("");
     setShowForm(true);
   }
@@ -74,12 +74,12 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
       parentId = parent?.parentId || null;
     }
     setEditingId(item.id);
-    setForm({ name: item.name, slug: item.slug, parentIds, image: item.image || null, status: item.status });
+    setForm({ name: item.name, slug: item.slug, parentIds, image: item.image || null, exploreImage: item.exploreImage || null, status: item.status });
     setError("");
     setShowForm(true);
   }
 
-  async function onImageChange(event) {
+  async function onImageChange(event, field) {
     const file = event.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) {
@@ -92,14 +92,11 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
     setError("");
     try {
       const preview = await readImage(file);
-      setForm((previous) => ({ ...previous, imagePreview: preview }));
-      const body = new FormData();
-      body.append("file", file);
-      body.append("kind", "category");
-      const result = await adminRequest("/admin/uploads", { method: "POST", body });
+      setForm((previous) => ({ ...previous, [`${field}Preview`]: preview }));
+      const result = await uploadImage(file, "category");
       setForm((previous) => ({
         ...previous,
-        image: { url: result.data.url, publicId: result.data.publicId, alt: previous.name },
+        [field]: { url: result.url, publicId: result.publicId, alt: field === "exploreImage" ? `${previous.name} Shop all card background` : previous.name },
       }));
     } catch (uploadError) {
       setError(uploadError.message);
@@ -126,6 +123,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
       parent: parentId,
       status: form.status,
       ...(level === 1 || form.image ? { image: form.image } : {}),
+      ...(level === 1 ? { exploreImage: form.exploreImage || null } : {}),
     };
     setSaving(true);
     setError("");
@@ -279,7 +277,24 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
               setForm((previous) => ({ ...previous, name, slug: editingId ? previous.slug : slugify(name) }));
             }} /></div>
             <div className="cm-form-group"><label>Slug *</label><input required value={form.slug} placeholder="Enter Slug" onChange={(e) => setForm((previous) => ({ ...previous, slug: slugify(e.target.value) }))} /></div>
-            {level === 1 &&             <div className="cm-form-group"><label>Category Image</label><input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" onChange={onImageChange} />{(form.imagePreview || form.image?.url) && <img className="cm-image-preview" src={form.imagePreview || form.image.url} alt="Category preview" />}<small>Images are uploaded to the configured image service.</small></div>}
+            {level === 1 && <>
+              <div className="cm-form-group">
+                <label htmlFor="category-strip-image">Category strip image</label>
+                <p className="cm-image-help">Shown in the circular category link on the storefront. This does not change the Shop all card.</p>
+                <input id="category-strip-image" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" onChange={(event) => onImageChange(event, "image")} />
+                {(form.imagePreview || form.image?.url) && <img className="cm-image-preview" src={form.imagePreview || form.image.url} alt={`${form.name || "Category"} strip image preview`} />}
+              </div>
+              <div className="cm-form-group cm-explore-image-field">
+                <label htmlFor="category-explore-image">Shop all card background image</label>
+                <p className="cm-image-help">Shown behind “Shop all {form.name || "category"}” in the top navigation dropdown. Upload a wide image; the card text stays overlaid.</p>
+                <input id="category-explore-image" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" onChange={(event) => onImageChange(event, "exploreImage")} />
+                {(form.exploreImagePreview || form.exploreImage?.url) && <div className="cm-explore-image-preview">
+                  <img src={form.exploreImagePreview || form.exploreImage.url} alt={`${form.name || "Category"} Shop all card background preview`} />
+                  <span>Preview: Shop all {form.name || "category"}</span>
+                  <button type="button" className="cm-secondary-btn" onClick={() => setForm((previous) => ({ ...previous, exploreImage: null, exploreImagePreview: "" }))}>Remove image</button>
+                </div>}
+              </div>
+            </>}
             <div className="cm-form-group"><label>Status</label><select value={form.status} onChange={(e) => setForm((previous) => ({ ...previous, status: e.target.value }))}><option value="enabled">Enabled</option><option value="disabled">Disabled</option></select></div>
             {error && <p className="cm-error">{error}</p>}
             <div className="cm-modal-actions"><button type="button" className="cm-secondary-btn" onClick={() => setShowForm(false)} disabled={saving}>Cancel</button><button type="submit" className="cm-primary-btn" disabled={saving}>{saving ? "Saving…" : "Submit"}</button></div>

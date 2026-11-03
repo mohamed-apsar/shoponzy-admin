@@ -469,6 +469,48 @@
   border-radius: 10px;
 }
 
+.cm-image-help {
+  margin: -2px 0 2px;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.cm-explore-image-field {
+  padding: 16px;
+  border: 1px solid #e0e7ff;
+  border-radius: 12px;
+  background: #f8faff;
+}
+
+.cm-explore-image-preview {
+  display: grid;
+  grid-template-columns: minmax(0, 240px) 1fr;
+  align-items: center;
+  gap: 12px;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.cm-explore-image-preview img {
+  grid-row: span 2;
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
+  background: #fff;
+}
+
+.cm-explore-image-preview .cm-secondary-btn {
+  justify-self: start;
+  min-height: 34px;
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
 .cm-error {
   padding: 12px 14px;
   border: 1px solid #fecaca;
