@@ -24,6 +24,7 @@ const menuItems = [
 const manageSitePages = [
   "General Settings",
   "Homepage Categories",
+  "Category Artwork",
   "Homepage Banners",
   "Homepage Sections",
   "Branding & Colors",
@@ -45,6 +46,7 @@ export default function App() {
   const [categoriesLoading, setCategoriesLoading] = useState(false);
   const [categoriesError, setCategoriesError] = useState("");
   const [categoriesOpen, setCategoriesOpen] = useState(false);
+
   const [siteOpen, setSiteOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -73,6 +75,7 @@ export default function App() {
         slug: category.slug,
         image: category.image || null,
         exploreImage: category.exploreImage || null,
+        bannerImage: category.bannerImage || null,
         status: category.status,
       })));
     } catch (error) {
@@ -264,7 +267,7 @@ export default function App() {
           {page === "Child categories" && <CategoryManager categories={categories} mode={3} loading={categoriesLoading} loadError={categoriesError} onSave={saveCategory} onDelete={deleteCategory} onToggleStatus={toggleCategoryStatus} />}
           {page === "Child Second categories" && <CategoryManager categories={categories} mode={4} loading={categoriesLoading} loadError={categoriesError} onSave={saveCategory} onDelete={deleteCategory} onToggleStatus={toggleCategoryStatus} />}
           {page === "Child Third categories" && <CategoryManager categories={categories} mode={5} loading={categoriesLoading} loadError={categoriesError} onSave={saveCategory} onDelete={deleteCategory} onToggleStatus={toggleCategoryStatus} />}
-          {manageSitePages.includes(page) && <ManageSite activeSection={page} onSectionChange={navigate} categories={categories} />}
+          {manageSitePages.includes(page) && <ManageSite activeSection={page} onSectionChange={navigate} categories={categories} onCategoriesRefresh={loadCategories} />}
         </div>
         <footer className="footer">© 2026 Shoponzy · Admin dashboard <span>All changes are saved to the database</span></footer>
       </main>

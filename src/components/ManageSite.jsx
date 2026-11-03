@@ -9,6 +9,7 @@ import StatusToggle from "./StatusToggle";
 const sections = [
   { title: "General Settings", icon: "⚙" },
   { title: "Homepage Categories", icon: "◉" },
+  { title: "Category Artwork", icon: "▧" },
   { title: "Homepage Banners", icon: "▧" },
   { title: "Homepage Sections", icon: "▦" },
   { title: "Branding & Colors", icon: "◉" },
@@ -30,6 +31,9 @@ const toLocalDateTime = (value) => {
 };
 const fromLocalDateTime = (value) => (value ? new Date(value).toISOString() : null);
 const imageOut = (img) => (img?.url ? { url: img.url, publicId: img.publicId ?? null, alt: img.alt || "" } : null);
+const sameImage = (left, right) => left?.publicId && right?.publicId
+  ? left.publicId === right.publicId
+  : (left?.url || null) === (right?.url || null);
 const pick = (obj, keys) => Object.fromEntries(keys.map((k) => [k, obj[k]]));
 
 const POSITIONS = { top: "Top of page", "below-header": "Below header" };
@@ -348,7 +352,7 @@ function SettingsForm({ initial, children, onSave, onReset }) {
   return <form onSubmit={submit}>{children(values, update)}<FormActions onReset={reset} saving={saving} /></form>;
 }
 
-export default function ManageSite({ activeSection = "General Settings", onSectionChange, categories = [] }) {
+export default function ManageSite({ activeSection = "General Settings", onSectionChange, categories = [], onCategoriesRefresh }) {
   const [settings, setSettings] = useState(null);
   const [banners, setBanners] = useState([]);
   const [popups, setPopups] = useState([]);
@@ -361,6 +365,11 @@ export default function ManageSite({ activeSection = "General Settings", onSecti
   const [modal, setModal] = useState(null);
   const [urlFeedback, setUrlFeedback] = useState("");
   const [pendingToggleIds, setPendingToggleIds] = useState([]);
+  const [artworkCategoryId, setArtworkCategoryId] = useState("");
+  const [circleTargetId, setCircleTargetId] = useState("all");
+  const [bannerImage, setBannerImage] = useState(null);
+  const [circleImage, setCircleImage] = useState(null);
+  const [artworkSaving, setArtworkSaving] = useState(false);
 
   const setters = { banner: setBanners, popup: setPopups, page: setPages, section: setHomepageSections };
 
@@ -457,18 +466,101 @@ export default function ManageSite({ activeSection = "General Settings", onSecti
     (!search || `${item.title} ${item.slug}`.toLowerCase().includes(search.toLowerCase())) &&
     (statusFilter === "All" || item.status === statusFilter)), [pages, search, statusFilter]);
 
+  const artworkCategories = categories.filter((category) => category.level === 1);
+  const artworkCategory = artworkCategories.find((category) => category.id === artworkCategoryId) || artworkCategories[0];
+  const circleTargets = artworkCategory
+    ? [artworkCategory, ...categories.filter((category) => category.parentId === artworkCategory.id && category.level === 2)]
+    : [];
+  const circleTarget = circleTargets.find((category) => category.id === circleTargetId) || artworkCategory;
+
+  useEffect(() => {
+    setBannerImage(artworkCategory?.bannerImage || null);
+    setCircleImage(circleTarget?.image || null);
+  }, [artworkCategory, circleTarget]);
+
+  async function saveCategoryArtwork() {
+    if (!artworkCategory || !circleTarget) return;
+    const updates = new Map();
+    if (!sameImage(bannerImage, artworkCategory.bannerImage)) {
+      updates.set(artworkCategory.id, { ...(updates.get(artworkCategory.id) || {}), bannerImage: imageOut(bannerImage) });
+    }
+    if (!sameImage(circleImage, circleTarget.image)) {
+      updates.set(circleTarget.id, { ...(updates.get(circleTarget.id) || {}), image: imageOut(circleImage) });
+    }
+    if (!updates.size) {
+      notify("No category image changes to save.");
+      return;
+    }
+
+    setArtworkSaving(true);
+    try {
+      for (const [id, payload] of updates) {
+        await adminRequest(`/admin/categories/${id}`, { method: "PATCH", body: JSON.stringify(payload) });
+      }
+      await onCategoriesRefresh?.();
+      notify("Category artwork saved.");
+    } catch (error) {
+      notify(`Not saved: ${error.message}`);
+    } finally {
+      setArtworkSaving(false);
+    }
+  }
+
+  function renderCategoryArtwork() {
+    return <>
+      <SettingsCard title="Category page banner" description="Upload the wide image shown behind the title on a category page, like the Sunglass banner in your reference.">
+        <div className="ms-form-grid">
+          <Field label="Category">
+            <select value={artworkCategory?.id || ""} onChange={(event) => {
+              setArtworkCategoryId(event.target.value);
+              setCircleTargetId("all");
+            }} disabled={!artworkCategories.length}>
+              {!artworkCategories.length && <option value="">No categories available</option>}
+              {artworkCategories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+            </select>
+          </Field>
+          <ImageUploader label="Wide category banner image" kind="category" value={bannerImage} onChange={setBannerImage} />
+        </div>
+      </SettingsCard>
+      <SettingsCard title="Circular category links" description="Set the image for the selected category’s All circle, or choose a subcategory such as Eau de Parfum or Body Mist.">
+        {artworkCategory ? <>
+          <div className="ms-form-grid">
+            <Field label="Circle to edit">
+              <select value={circleTarget?.id || artworkCategory.id} onChange={(event) => setCircleTargetId(event.target.value)}>
+                <option value={artworkCategory.id}>All — {artworkCategory.name}</option>
+                {circleTargets.slice(1).map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+              </select>
+            </Field>
+            <ImageUploader
+              label={`${circleTarget?.name || artworkCategory.name} circle image`}
+              kind="category"
+              value={circleImage}
+              onChange={setCircleImage}
+            />
+          </div>
+          {!circleTargets.slice(1).length && <p className="ms-field"><small>This category has no direct subcategories yet.</small></p>}
+        </> : <p className="ms-error" role="alert">Add a top-level category before configuring its artwork.</p>}
+      </SettingsCard>
+      <div className="ms-form-actions">
+        <button type="button" className="ms-button ms-button-primary" onClick={saveCategoryArtwork} disabled={artworkSaving || !artworkCategory}>
+          {artworkSaving ? "Saving…" : "Save category artwork"}
+        </button>
+      </div>
+    </>;
+  }
+
   function renderHomeCategories() {
     const topCategories = categories.filter((category) => category.level === 1 && category.status === "enabled");
     return <SettingsForm initial={settings.homeCategories} onSave={(value) => saveSettings("homeCategories", value)} onReset={() => resetSettings("homeCategories")}>
       {(values, update) => <>
-        <SettingsCard title="Homepage category strip" description="Choose the circular category links shown near the top of the customer storefront. Category names and uploaded images come from Category Management.">
+        <SettingsCard title="Homepage category strip" description="Choose the circular category links shown near the top of the customer storefront. Configure their images under Category Artwork.">
           <div className="ms-toggle-list">
             <Toggle label="Show all active top-level categories" checked={values.showAllCategories} onChange={(value) => update("showAllCategories", value)} description="When enabled, categories follow their order in Category Management." />
           </div>
           {!values.showAllCategories && <div className="ms-form-grid">
             <div className="ms-category-picker full">
               <strong>Select categories</strong>
-              <p>Selected categories appear in the order listed below. Upload or change their circle images in Category Management.</p>
+              <p>Selected categories appear in the order listed below. Upload or change their circle images under Category Artwork.</p>
               <div className="ms-category-options">
                 {topCategories.map((category) => <label key={category.id}>
                   <input type="checkbox" checked={values.categories.includes(category.slug)} onChange={(event) => {
@@ -660,6 +752,7 @@ export default function ManageSite({ activeSection = "General Settings", onSecti
   const content = {
     "General Settings": renderGeneral,
     "Homepage Categories": renderHomeCategories,
+    "Category Artwork": renderCategoryArtwork,
     "Homepage Banners": renderBanners,
     "Homepage Sections": renderSections,
     "Branding & Colors": renderBranding,
