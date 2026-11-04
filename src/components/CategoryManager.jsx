@@ -38,7 +38,8 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
   const [imageChanged, setImageChanged] = useState(false);
   const [exploreImageChanged, setExploreImageChanged] = useState(false);
   const [bannerImageChanged, setBannerImageChanged] = useState(false);
-  const [form, setForm] = useState({ name: "", slug: "", parentIds: ["","","",""], image: null, bannerImage: null, status: "enabled" });
+  const [productImageChanged, setProductImageChanged] = useState(false);
+  const [form, setForm] = useState({ name: "", slug: "", parentIds: ["","","",""], image: null, productImage: null, bannerImage: null, status: "enabled" });
 
   const visible = categories.filter((item) => item.level === level).map((item) => ({
     ...item,
@@ -66,7 +67,8 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
     setImageChanged(false);
     setExploreImageChanged(false);
     setBannerImageChanged(false);
-    setForm({ name: "", slug: "", parentIds: ["","","",""], image: null, bannerImage: null, exploreImage: null, status: "enabled" });
+    setProductImageChanged(false);
+    setForm({ name: "", slug: "", parentIds: ["","","",""], image: null, productImage: null, bannerImage: null, exploreImage: null, status: "enabled" });
     setError("");
     setShowForm(true);
   }
@@ -83,12 +85,13 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
     setImageChanged(false);
     setExploreImageChanged(false);
     setBannerImageChanged(false);
-    setForm({ name: item.name, slug: item.slug, parentIds, image: item.image || null, bannerImage: item.bannerImage || null, exploreImage: item.exploreImage || null, status: item.status });
+    setProductImageChanged(false);
+    setForm({ name: item.name, slug: item.slug, parentIds, image: item.image || null, productImage: item.productImage || null, bannerImage: item.bannerImage || null, exploreImage: item.exploreImage || null, status: item.status });
     setError("");
     setShowForm(true);
   }
 
-  async function onImageChange(event, field) {
+  async function onImageChange(event, field, kind = "category") {
     const file = event.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) {
@@ -102,18 +105,19 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
     try {
       const preview = await readImage(file);
       setForm((previous) => ({ ...previous, [`${field}Preview`]: preview }));
-      const result = await uploadImage(file, "category");
+      const result = await uploadImage(file, kind);
       setForm((previous) => ({
         ...previous,
         [field]: {
           url: result.url,
           publicId: result.publicId,
-          alt: field === "exploreImage" ? `${previous.name} Shop all card background` : field === "bannerImage" ? `${previous.name} category banner` : previous.name,
+          alt: field === "productImage" ? `${previous.name} product image` : field === "exploreImage" ? `${previous.name} Shop all card background` : field === "bannerImage" ? `${previous.name} category banner` : previous.name,
         },
       }));
       if (field === "image") setImageChanged(true);
       if (field === "exploreImage") setExploreImageChanged(true);
       if (field === "bannerImage") setBannerImageChanged(true);
+      if (field === "productImage") setProductImageChanged(true);
     } catch (uploadError) {
       setError(uploadError.message);
     } finally {
@@ -139,6 +143,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
       parent: parentId,
       status: form.status,
       ...(level === 1 || imageChanged ? { image: form.image } : {}),
+      ...(level >= 3 && productImageChanged ? { productImage: form.productImage } : {}),
       ...(level === 1 && exploreImageChanged ? { exploreImage: form.exploreImage || null } : {}),
       ...(level === 1 && bannerImageChanged ? { bannerImage: form.bannerImage || null } : {}),
     };
@@ -304,6 +309,18 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
                   setForm((previous) => ({ ...previous, image: null, imagePreview: "" }));
                   setImageChanged(true);
                 }}>Remove image</button>
+              </div>}
+            </div>}
+            {level >= 3 && <div className="cm-form-group">
+              <label htmlFor="category-product-image">Product image</label>
+              <p className="cm-image-help">Upload a product photo for this category.</p>
+              <input id="category-product-image" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" onChange={(event) => onImageChange(event, "productImage", "product")} />
+              {(form.productImagePreview || form.productImage?.url) && <div className="cm-category-image-preview">
+                <img className="cm-image-preview" src={form.productImagePreview || form.productImage.url} alt={`${form.name || config.singular} product image preview`} />
+                <button type="button" className="cm-secondary-btn" onClick={() => {
+                  setForm((previous) => ({ ...previous, productImage: null, productImagePreview: "" }));
+                  setProductImageChanged(true);
+                }}>Remove product image</button>
               </div>}
             </div>}
             {level === 1 && <>

@@ -73,6 +73,7 @@ export default function App() {
         name: category.name,
         slug: category.slug,
         image: category.image || null,
+        productImage: category.productImage || null,
         exploreImage: category.exploreImage || null,
         bannerImage: category.bannerImage || null,
         status: category.status,
