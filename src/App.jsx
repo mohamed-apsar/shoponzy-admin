@@ -24,7 +24,6 @@ const menuItems = [
 const manageSitePages = [
   "General Settings",
   "Homepage Categories",
-  "Category Artwork",
   "Homepage Banners",
   "Homepage Sections",
   "Branding & Colors",
@@ -267,7 +266,7 @@ export default function App() {
           {page === "Child categories" && <CategoryManager categories={categories} mode={3} loading={categoriesLoading} loadError={categoriesError} onSave={saveCategory} onDelete={deleteCategory} onToggleStatus={toggleCategoryStatus} />}
           {page === "Child Second categories" && <CategoryManager categories={categories} mode={4} loading={categoriesLoading} loadError={categoriesError} onSave={saveCategory} onDelete={deleteCategory} onToggleStatus={toggleCategoryStatus} />}
           {page === "Child Third categories" && <CategoryManager categories={categories} mode={5} loading={categoriesLoading} loadError={categoriesError} onSave={saveCategory} onDelete={deleteCategory} onToggleStatus={toggleCategoryStatus} />}
-          {manageSitePages.includes(page) && <ManageSite activeSection={page} onSectionChange={navigate} categories={categories} onCategoriesRefresh={loadCategories} />}
+          {manageSitePages.includes(page) && <ManageSite activeSection={page} onSectionChange={navigate} categories={categories} />}
         </div>
         <footer className="footer">© 2026 Shoponzy · Admin dashboard <span>All changes are saved to the database</span></footer>
       </main>

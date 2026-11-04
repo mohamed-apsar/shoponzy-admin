@@ -10,4 +10,4 @@ The admin panel uses its own fixed port so it cannot collide with the storefront
 
 Product management uses the backend API. Add/Edit Product supports ordered wide banners and three-image rows, which appear below the product details on the storefront. Shop all card background images are saved as category `exploreImage` fields, so deploy the backend with category background-image support before using that control. Orders, dashboard figures, and Manage Site screens are not connected to the backend yet.
 
-Manage Site → Category Artwork configures each category page's wide banner (`bannerImage`), the category's “All” circle image, and its direct subcategory circle images. The backend must support category `bannerImage` for the category page banner to display.
+In Manage Categories, edit a top-level category to upload its circular category image, category page banner (`bannerImage`), and Shop all card background (`exploreImage`). Edit each subcategory to upload its own circular image. These images are configured alongside the category they belong to; there is no separate Category Artwork section under Manage Site.

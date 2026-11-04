@@ -35,8 +35,10 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
   const [saving, setSaving] = useState(false);
   const [statusOverrides, setStatusOverrides] = useState({});
   const [pendingStatusIds, setPendingStatusIds] = useState([]);
+  const [imageChanged, setImageChanged] = useState(false);
   const [exploreImageChanged, setExploreImageChanged] = useState(false);
-  const [form, setForm] = useState({ name: "", slug: "", parentIds: ["","","",""], image: null, status: "enabled" });
+  const [bannerImageChanged, setBannerImageChanged] = useState(false);
+  const [form, setForm] = useState({ name: "", slug: "", parentIds: ["","","",""], image: null, bannerImage: null, status: "enabled" });
 
   const visible = categories.filter((item) => item.level === level).map((item) => ({
     ...item,
@@ -61,8 +63,10 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
 
   function openAdd() {
     setEditingId(null);
+    setImageChanged(false);
     setExploreImageChanged(false);
-    setForm({ name: "", slug: "", parentIds: ["","","",""], image: null, exploreImage: null, status: "enabled" });
+    setBannerImageChanged(false);
+    setForm({ name: "", slug: "", parentIds: ["","","",""], image: null, bannerImage: null, exploreImage: null, status: "enabled" });
     setError("");
     setShowForm(true);
   }
@@ -76,8 +80,10 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
       parentId = parent?.parentId || null;
     }
     setEditingId(item.id);
+    setImageChanged(false);
     setExploreImageChanged(false);
-    setForm({ name: item.name, slug: item.slug, parentIds, image: item.image || null, exploreImage: item.exploreImage || null, status: item.status });
+    setBannerImageChanged(false);
+    setForm({ name: item.name, slug: item.slug, parentIds, image: item.image || null, bannerImage: item.bannerImage || null, exploreImage: item.exploreImage || null, status: item.status });
     setError("");
     setShowForm(true);
   }
@@ -99,9 +105,15 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
       const result = await uploadImage(file, "category");
       setForm((previous) => ({
         ...previous,
-        [field]: { url: result.url, publicId: result.publicId, alt: field === "exploreImage" ? `${previous.name} Shop all card background` : previous.name },
+        [field]: {
+          url: result.url,
+          publicId: result.publicId,
+          alt: field === "exploreImage" ? `${previous.name} Shop all card background` : field === "bannerImage" ? `${previous.name} category banner` : previous.name,
+        },
       }));
+      if (field === "image") setImageChanged(true);
       if (field === "exploreImage") setExploreImageChanged(true);
+      if (field === "bannerImage") setBannerImageChanged(true);
     } catch (uploadError) {
       setError(uploadError.message);
     } finally {
@@ -126,8 +138,9 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
       slug,
       parent: parentId,
       status: form.status,
-      ...(level === 1 || form.image ? { image: form.image } : {}),
+      ...(level === 1 || imageChanged ? { image: form.image } : {}),
       ...(level === 1 && exploreImageChanged ? { exploreImage: form.exploreImage || null } : {}),
+      ...(level === 1 && bannerImageChanged ? { bannerImage: form.bannerImage || null } : {}),
     };
     setSaving(true);
     setError("");
@@ -281,12 +294,30 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
               setForm((previous) => ({ ...previous, name, slug: editingId ? previous.slug : slugify(name) }));
             }} /></div>
             <div className="cm-form-group"><label>Slug *</label><input required value={form.slug} placeholder="Enter Slug" onChange={(e) => setForm((previous) => ({ ...previous, slug: slugify(e.target.value) }))} /></div>
+            {(level === 1 || level === 2) && <div className="cm-form-group">
+              <label htmlFor="category-strip-image">{level === 1 ? "Category strip image" : "Subcategory circular image"}</label>
+              <p className="cm-image-help">Shown in the circular {level === 1 ? "category" : "subcategory"} link on the storefront.</p>
+              <input id="category-strip-image" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" onChange={(event) => onImageChange(event, "image")} />
+              {(form.imagePreview || form.image?.url) && <div className="cm-category-image-preview">
+                <img className={`cm-image-preview${level === 2 ? " cm-circle-image-preview" : ""}`} src={form.imagePreview || form.image.url} alt={`${form.name || "Category"} circular image preview`} />
+                <button type="button" className="cm-secondary-btn" onClick={() => {
+                  setForm((previous) => ({ ...previous, image: null, imagePreview: "" }));
+                  setImageChanged(true);
+                }}>Remove image</button>
+              </div>}
+            </div>}
             {level === 1 && <>
               <div className="cm-form-group">
-                <label htmlFor="category-strip-image">Category strip image</label>
-                <p className="cm-image-help">Shown in the circular category link on the storefront. This does not change the Shop all card.</p>
-                <input id="category-strip-image" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" onChange={(event) => onImageChange(event, "image")} />
-                {(form.imagePreview || form.image?.url) && <img className="cm-image-preview" src={form.imagePreview || form.image.url} alt={`${form.name || "Category"} strip image preview`} />}
+                <label htmlFor="category-banner-image">Category page banner</label>
+                <p className="cm-image-help">Shown behind the title on this category’s storefront page. Upload a wide image.</p>
+                <input id="category-banner-image" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" onChange={(event) => onImageChange(event, "bannerImage")} />
+                {(form.bannerImagePreview || form.bannerImage?.url) && <div className="cm-explore-image-preview cm-banner-image-preview">
+                  <img src={form.bannerImagePreview || form.bannerImage.url} alt={`${form.name || "Category"} banner preview`} />
+                  <button type="button" className="cm-secondary-btn" onClick={() => {
+                    setForm((previous) => ({ ...previous, bannerImage: null, bannerImagePreview: "" }));
+                    setBannerImageChanged(true);
+                  }}>Remove image</button>
+                </div>}
               </div>
               <div className="cm-form-group cm-explore-image-field">
                 <label htmlFor="category-explore-image">Shop all card background image</label>

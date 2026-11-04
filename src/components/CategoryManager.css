@@ -476,6 +476,16 @@
   line-height: 1.5;
 }
 
+.cm-category-image-preview {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.cm-category-image-preview .cm-circle-image-preview {
+  border-radius: 50%;
+}
+
 .cm-explore-image-field {
   padding: 16px;
   border: 1px solid #e0e7ff;
@@ -502,6 +512,11 @@
   border: 1px solid #e2e8f0;
   border-radius: 9px;
   background: #fff;
+}
+
+.cm-banner-image-preview img {
+  max-width: 320px;
+  aspect-ratio: 16 / 9;
 }
 
 .cm-explore-image-preview .cm-secondary-btn {
