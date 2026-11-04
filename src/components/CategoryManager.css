@@ -476,6 +476,43 @@
   line-height: 1.5;
 }
 
+.cm-new-in-image {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 24px;
+  padding: 18px;
+  border: 1px solid #e0e7ff;
+  border-radius: 12px;
+  background: #f8faff;
+}
+
+.cm-new-in-image h2 {
+  margin: 0 0 8px;
+  color: #172033;
+  font-size: 16px;
+}
+
+.cm-new-in-image input[type="file"] {
+  max-width: 100%;
+  margin-top: 12px;
+}
+
+.cm-new-in-image-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.cm-new-in-image-preview {
+  flex: none;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+}
+
 .cm-explore-image-field {
   padding: 16px;
   border: 1px solid #e0e7ff;
@@ -518,6 +555,17 @@
   background: #fef2f2;
   color: #b91c1c;
   font-size: 14px;
+}
+
+@media (max-width: 640px) {
+  .cm-new-in-image {
+    align-items: flex-start;
+  }
+
+  .cm-new-in-image-preview {
+    width: 72px;
+    height: 72px;
+  }
 }
 
 /* Modal footer */

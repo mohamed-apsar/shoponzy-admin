@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "./CategoryManager.css";
-import { uploadImage } from "../api/adminApi";
+import { adminRequest, uploadImage } from "../api/adminApi";
 import EditIcon from "./EditIcon";
 
 /* eslint-disable react/prop-types */
@@ -36,7 +36,24 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
   const [statusOverrides, setStatusOverrides] = useState({});
   const [pendingStatusIds, setPendingStatusIds] = useState([]);
   const [exploreImageChanged, setExploreImageChanged] = useState(false);
+  const [newInImage, setNewInImage] = useState(null);
+  const [newInImagePreview, setNewInImagePreview] = useState("");
+  const [newInImageChanged, setNewInImageChanged] = useState(false);
+  const [newInImageLoading, setNewInImageLoading] = useState(false);
+  const [newInImageSaving, setNewInImageSaving] = useState(false);
+  const [newInImageError, setNewInImageError] = useState("");
   const [form, setForm] = useState({ name: "", slug: "", parentIds: ["","","",""], image: null, status: "enabled" });
+
+  useEffect(() => {
+    if (level !== 1) return undefined;
+    let active = true;
+    adminRequest("/admin/site-settings").then((result) => {
+      if (active) setNewInImage(result.data.homeCategories?.newInImage || null);
+    }).catch((error) => {
+      if (active) setNewInImageError(error.message);
+    });
+    return () => { active = false; };
+  }, [level]);
 
   const visible = categories.filter((item) => item.level === level).map((item) => ({
     ...item,
@@ -107,6 +124,49 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
     } finally {
       setSaving(false);
       event.target.value = "";
+    }
+  }
+
+  async function onNewInImageChange(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setNewInImageError("Choose an image file.");
+      event.target.value = "";
+      return;
+    }
+
+    setNewInImageLoading(true);
+    setNewInImageError("");
+    try {
+      const preview = await readImage(file);
+      const result = await uploadImage(file, "category");
+      setNewInImage({ url: result.url, publicId: result.publicId, alt: "New In circular category image" });
+      setNewInImagePreview(preview);
+      setNewInImageChanged(true);
+    } catch (uploadError) {
+      setNewInImageError(uploadError.message);
+    } finally {
+      setNewInImageLoading(false);
+      event.target.value = "";
+    }
+  }
+
+  async function saveNewInImage() {
+    setNewInImageSaving(true);
+    setNewInImageError("");
+    try {
+      const result = await adminRequest("/admin/site-settings/homeCategories", {
+        method: "PATCH",
+        body: JSON.stringify({ newInImage }),
+      });
+      setNewInImage(result.data.newInImage || null);
+      setNewInImagePreview("");
+      setNewInImageChanged(false);
+    } catch (saveError) {
+      setNewInImageError(saveError.message);
+    } finally {
+      setNewInImageSaving(false);
     }
   }
 
@@ -204,7 +264,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
   return (
     <div className="cm-page">
       <div className="cm-heading">
-        <div><h1>{config.title}</h1><p>Manage category names, slugs, parent relationships and status.</p></div>
+        <div><h1>{config.title}</h1><p>Manage category names, artwork, parent relationships and status.</p></div>
         <button className="cm-primary-btn" onClick={openAdd} disabled={loading}>＋ Add</button>
       </div>
 
@@ -212,6 +272,46 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
         {error && <p className="cm-error" role="alert">{error}</p>}
         {loadError && <p className="cm-error" role="alert">{loadError} <button type="button" onClick={() => window.location.reload()}>Reload</button></p>}
         {loading && <p role="status">Loading categories from the database…</p>}
+        {level === 1 && <div className="cm-new-in-image">
+          <div>
+            <h2>New In circular image</h2>
+            <p className="cm-image-help">Shown in the New In circle on the storefront category strip.</p>
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
+              aria-label="Upload New In circular category image"
+              onChange={onNewInImageChange}
+              disabled={newInImageLoading || newInImageSaving}
+            />
+            {newInImageError && <p className="cm-error" role="alert">{newInImageError}</p>}
+            <div className="cm-new-in-image-actions">
+              <button
+                type="button"
+                className="cm-secondary-btn"
+                onClick={() => {
+                  setNewInImage(null);
+                  setNewInImagePreview("");
+                  setNewInImageChanged(true);
+                  setNewInImageError("");
+                }}
+                disabled={newInImageLoading || newInImageSaving || (!newInImage && !newInImagePreview)}
+              >
+                Remove image
+              </button>
+              <button
+                type="button"
+                className="cm-primary-btn"
+                onClick={saveNewInImage}
+                disabled={!newInImageChanged || newInImageLoading || newInImageSaving}
+              >
+                {newInImageLoading ? "Uploading…" : newInImageSaving ? "Saving…" : "Save image"}
+              </button>
+            </div>
+          </div>
+          {(newInImagePreview || newInImage?.url) && (
+            <img className="cm-image-preview cm-new-in-image-preview" src={newInImagePreview || newInImage.url} alt="New In circular category image preview" />
+          )}
+        </div>}
         <div className="cm-toolbar">
           <label className="cm-page-size">Show
             <select value={pageSize} onChange={(e) => setPageSize(e.target.value)}>
