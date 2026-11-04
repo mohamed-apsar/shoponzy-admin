@@ -294,12 +294,12 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
               setForm((previous) => ({ ...previous, name, slug: editingId ? previous.slug : slugify(name) }));
             }} /></div>
             <div className="cm-form-group"><label>Slug *</label><input required value={form.slug} placeholder="Enter Slug" onChange={(e) => setForm((previous) => ({ ...previous, slug: slugify(e.target.value) }))} /></div>
-            {(level === 1 || level === 2) && <div className="cm-form-group">
-              <label htmlFor="category-strip-image">{level === 1 ? "Category strip image" : "Subcategory circular image"}</label>
-              <p className="cm-image-help">Shown in the circular {level === 1 ? "category" : "subcategory"} link on the storefront.</p>
+            {level <= LEVELS.length && <div className="cm-form-group">
+              <label htmlFor="category-strip-image">{level === 1 ? "Category strip image" : `${config.singular} circular image`}</label>
+              <p className="cm-image-help">Shown in the circular category link on the storefront.</p>
               <input id="category-strip-image" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" onChange={(event) => onImageChange(event, "image")} />
               {(form.imagePreview || form.image?.url) && <div className="cm-category-image-preview">
-                <img className={`cm-image-preview${level === 2 ? " cm-circle-image-preview" : ""}`} src={form.imagePreview || form.image.url} alt={`${form.name || "Category"} circular image preview`} />
+                <img className={`cm-image-preview${level > 1 ? " cm-circle-image-preview" : ""}`} src={form.imagePreview || form.image.url} alt={`${form.name || config.singular} circular image preview`} />
                 <button type="button" className="cm-secondary-btn" onClick={() => {
                   setForm((previous) => ({ ...previous, image: null, imagePreview: "" }));
                   setImageChanged(true);
