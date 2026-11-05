@@ -28,9 +28,42 @@ function ErrorMessage({ children }) {
   return children ? <p className="seo-error" role="alert">{children}</p> : null;
 }
 
+function parseRobotsMeta(value = "index, follow") {
+  const directives = value.split(",").map((directive) => directive.trim().toLowerCase());
+  const directiveValue = (name, fallback) => directives.find((item) => item.startsWith(`${name}:`))?.slice(name.length + 1) ?? fallback;
+  return {
+    index: !directives.includes("noindex"),
+    noFollow: directives.includes("nofollow"),
+    noArchive: directives.includes("noarchive"),
+    noImageIndex: directives.includes("noimageindex"),
+    noSnippet: directives.includes("nosnippet"),
+    maxSnippetEnabled: directives.some((item) => item.startsWith("max-snippet:")),
+    maxSnippet: directiveValue("max-snippet", "-1"),
+    maxVideoPreviewEnabled: directives.some((item) => item.startsWith("max-video-preview:")),
+    maxVideoPreview: directiveValue("max-video-preview", "-1"),
+    maxImagePreviewEnabled: directives.some((item) => item.startsWith("max-image-preview:")),
+    maxImagePreview: directiveValue("max-image-preview", "large"),
+  };
+}
+
+function formatRobotsMeta(options) {
+  return [
+    options.index ? "index" : "noindex",
+    options.noFollow ? "nofollow" : "follow",
+    options.noArchive && "noarchive",
+    options.noImageIndex && "noimageindex",
+    options.noSnippet && "nosnippet",
+    options.maxSnippetEnabled && `max-snippet:${options.maxSnippet}`,
+    options.maxVideoPreviewEnabled && `max-video-preview:${options.maxVideoPreview}`,
+    options.maxImagePreviewEnabled && `max-image-preview:${options.maxImagePreview}`,
+  ].filter(Boolean).join(", ");
+}
+
 export default function SeoSettings() {
   const [activeTab, setActiveTab] = useState(TABS[0]);
   const [settings, setSettings] = useState(null);
+  const [savedSettings, setSavedSettings] = useState(null);
+  const [editingDefaultMeta, setEditingDefaultMeta] = useState(false);
   const [pages, setPages] = useState([]);
   const [logs, setLogs] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
@@ -54,7 +87,11 @@ export default function SeoSettings() {
     let active = true;
     adminRequest("/admin/site-settings")
       .then((result) => {
-        if (active) setSettings({ ...DEFAULTS, ...result.data.seo });
+        if (active) {
+          const seo = { ...DEFAULTS, ...result.data.seo };
+          setSettings(seo);
+          setSavedSettings(seo);
+        }
       })
       .catch((loadError) => { if (active) setError(loadError.message); })
       .finally(() => { if (active) setLoading(false); });
@@ -84,6 +121,17 @@ export default function SeoSettings() {
     setSettings((current) => ({ ...current, [key]: value }));
   }
 
+  function updateRobotsOption(key, value) {
+    const options = { ...parseRobotsMeta(settings.robotsMeta), [key]: value };
+    update("robotsMeta", formatRobotsMeta(options));
+  }
+
+  function resetDefaultMetaForm() {
+    setSettings((current) => ({ ...current, ...savedSettings }));
+    setError("");
+    setMessage("");
+  }
+
   async function saveSettings(fields, successMessage = "SEO settings saved.") {
     setSaving(true);
     setError("");
@@ -94,9 +142,12 @@ export default function SeoSettings() {
         body: JSON.stringify(fields),
       });
       setSettings((current) => ({ ...current, ...result.data }));
+      setSavedSettings((current) => ({ ...current, ...result.data }));
       setMessage(successMessage);
+      return true;
     } catch (saveError) {
       setError(saveError.message);
+      return false;
     } finally {
       setSaving(false);
     }
@@ -108,7 +159,9 @@ export default function SeoSettings() {
     setMessage("");
     try {
       const result = await adminRequest("/admin/site-settings/seo/reset", { method: "POST" });
-      setSettings({ ...DEFAULTS, ...result.data });
+      const seo = { ...DEFAULTS, ...result.data };
+      setSettings(seo);
+      setSavedSettings(seo);
       setMessage("SEO settings reset to defaults.");
     } catch (resetError) {
       setError(resetError.message);
@@ -295,16 +348,64 @@ export default function SeoSettings() {
 
       {activeTab === "Robots Meta Content" && settings && <>
         <SeoCard title="Update Default Meta" description="Use this metadata on pages that do not have page-specific SEO content.">
-          <div className="seo-default-meta">
-            <SeoField label="Homepage SEO title"><input maxLength="70" value={settings.title} onChange={(event) => update("title", event.target.value)} /></SeoField>
-            <SeoField label="Meta description"><textarea rows="3" maxLength="160" value={settings.description} onChange={(event) => update("description", event.target.value)} /></SeoField>
-            <SeoField label="Search keywords" hint="Separate keywords with commas."><input maxLength="300" value={settings.keywords} onChange={(event) => update("keywords", event.target.value)} /></SeoField>
-            <SeoField label="Canonical URL"><input type="url" value={settings.canonical} onChange={(event) => update("canonical", event.target.value)} /></SeoField>
-            <SeoField label="Open Graph title"><input maxLength="90" value={settings.ogTitle} onChange={(event) => update("ogTitle", event.target.value)} /></SeoField>
-            <SeoField label="Open Graph description"><textarea rows="3" maxLength="200" value={settings.ogDescription} onChange={(event) => update("ogDescription", event.target.value)} /></SeoField>
-            <div className="seo-share-image"><SeoField label="Social sharing image"><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={uploadShareImage} /></SeoField>{settings.shareImage?.url && <div><img src={settings.shareImage.url} alt="Social sharing image preview" /><button type="button" onClick={() => update("shareImage", null)}>Remove image</button></div>}</div>
-            <div className="seo-actions"><button type="button" className="seo-button secondary" onClick={resetSeo} disabled={saving}>Reset</button><button type="button" className="seo-button primary" onClick={() => saveSettings({ title: settings.title, description: settings.description, keywords: settings.keywords, canonical: settings.canonical, ogTitle: settings.ogTitle, ogDescription: settings.ogDescription, shareImage: settings.shareImage, robotsMeta: settings.robotsMeta })} disabled={saving}>{saving ? "Saving…" : "Save information"}</button></div>
-          </div>
+          {!editingDefaultMeta ? <div className="seo-default-meta-preview">
+            <h3>Default meta content</h3>
+            <p>If you do not have any meta content on a page, it will automatically use the meta content from this section.</p>
+            <button type="button" className="seo-button seo-edit-content" onClick={() => { setEditingDefaultMeta(true); setError(""); setMessage(""); }}>＋ Edit Content</button>
+          </div> : <div className="seo-default-meta seo-default-meta-editor">
+            <div className="seo-meta-fields">
+              <SeoField label="Meta Title"><input maxLength="70" value={settings.title} onChange={(event) => update("title", event.target.value)} /></SeoField>
+              <SeoField label="Meta description"><textarea rows="4" maxLength="160" value={settings.description} onChange={(event) => update("description", event.target.value)} /></SeoField>
+              <div className="seo-share-image">
+                <SeoField label="Meta image"><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={uploadShareImage} /></SeoField>
+                {settings.shareImage?.url && <div><img src={settings.shareImage.url} alt="Meta image preview" /><button type="button" onClick={() => update("shareImage", null)}>Remove image</button></div>}
+              </div>
+            </div>
+            <div className="seo-canonical-panel"><strong>Canonical URL</strong><SeoField label="Canonical URL"><input type="url" value={settings.canonical} onChange={(event) => update("canonical", event.target.value)} /></SeoField></div>
+            <div className="seo-robots-editor">
+              {(() => {
+                const robots = parseRobotsMeta(settings.robotsMeta);
+                return <>
+                  <fieldset className="seo-robots-options">
+                    <legend>Robots directives</legend>
+                    <label><input type="radio" name="robots-index" checked={robots.index} onChange={() => updateRobotsOption("index", true)} /> Index</label>
+                    <label><input type="radio" name="robots-index" checked={!robots.index} onChange={() => updateRobotsOption("index", false)} /> No index</label>
+                    <label><input type="checkbox" checked={robots.noFollow} onChange={(event) => updateRobotsOption("noFollow", event.target.checked)} /> No Follow</label>
+                    <label><input type="checkbox" checked={robots.noArchive} onChange={(event) => updateRobotsOption("noArchive", event.target.checked)} /> No Archive</label>
+                    <label><input type="checkbox" checked={robots.noImageIndex} onChange={(event) => updateRobotsOption("noImageIndex", event.target.checked)} /> No Image Index</label>
+                    <label><input type="checkbox" checked={robots.noSnippet} onChange={(event) => updateRobotsOption("noSnippet", event.target.checked)} /> No Snippet</label>
+                  </fieldset>
+                  <fieldset className="seo-robots-options seo-robots-preview">
+                    <legend>Search preview limits</legend>
+                    <label><input type="checkbox" checked={robots.maxSnippetEnabled} onChange={(event) => updateRobotsOption("maxSnippetEnabled", event.target.checked)} /> Max Snippet</label>
+                    <input type="number" min="-1" aria-label="Maximum snippet length" value={robots.maxSnippet} onChange={(event) => updateRobotsOption("maxSnippet", event.target.value)} />
+                    <label><input type="checkbox" checked={robots.maxVideoPreviewEnabled} onChange={(event) => updateRobotsOption("maxVideoPreviewEnabled", event.target.checked)} /> Max Video Preview</label>
+                    <input type="number" min="-1" aria-label="Maximum video preview seconds" value={robots.maxVideoPreview} onChange={(event) => updateRobotsOption("maxVideoPreview", event.target.value)} />
+                    <label><input type="checkbox" checked={robots.maxImagePreviewEnabled} onChange={(event) => updateRobotsOption("maxImagePreviewEnabled", event.target.checked)} /> Max Image Preview</label>
+                    <select aria-label="Maximum image preview size" value={robots.maxImagePreview} onChange={(event) => updateRobotsOption("maxImagePreview", event.target.value)}>
+                      <option value="large">Large</option><option value="standard">Standard</option><option value="none">None</option>
+                    </select>
+                  </fieldset>
+                </>;
+              })()}
+            </div>
+            <details className="seo-advanced-meta">
+              <summary>Additional social metadata</summary>
+              <div className="seo-advanced-meta-fields">
+                <SeoField label="Search keywords" hint="Separate keywords with commas."><input maxLength="300" value={settings.keywords} onChange={(event) => update("keywords", event.target.value)} /></SeoField>
+                <SeoField label="Open Graph title"><input maxLength="90" value={settings.ogTitle} onChange={(event) => update("ogTitle", event.target.value)} /></SeoField>
+                <SeoField label="Open Graph description"><textarea rows="3" maxLength="200" value={settings.ogDescription} onChange={(event) => update("ogDescription", event.target.value)} /></SeoField>
+              </div>
+            </details>
+            <div className="seo-actions">
+              <button type="button" className="seo-button secondary" onClick={resetDefaultMetaForm} disabled={saving}>Reset</button>
+              <button type="button" className="seo-button secondary" onClick={() => { resetDefaultMetaForm(); setEditingDefaultMeta(false); }}>Cancel</button>
+              <button type="button" className="seo-button primary" onClick={async () => {
+                const saved = await saveSettings({ title: settings.title, description: settings.description, keywords: settings.keywords, canonical: settings.canonical, ogTitle: settings.ogTitle, ogDescription: settings.ogDescription, shareImage: settings.shareImage, robotsMeta: settings.robotsMeta });
+                if (saved) setEditingDefaultMeta(false);
+              }} disabled={saving}>{saving ? "Saving…" : "Submit"}</button>
+            </div>
+          </div>}
         </SeoCard>
         <SeoCard title="Page SEO metadata" description="Customize title, description and indexing rules for individual pages.">
           <div className="seo-table-wrap"><table className="seo-table"><thead><tr><th>Page</th><th>URL</th><th>SEO title</th><th>Meta description</th><th>Robots</th><th>Action</th></tr></thead><tbody>
