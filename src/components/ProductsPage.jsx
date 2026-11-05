@@ -20,6 +20,7 @@ const emptyForm = () => ({
   name: "", sku: "", brand: "", description: "", status: "active",
   categoryIds: ["", "", "", "", ""],
   images: [],
+  seo: { title: "", description: "", image: null, robots: "index, follow" },
   colors: [], contentBlocks: [], sizesText: "",
   price: "", mrp: "", stock: "0",
   rows: {},
@@ -28,6 +29,37 @@ const emptyForm = () => ({
 
 const comboKey = (color, size) => `${color ?? ""}|${size ?? ""}`;
 const parseSizes = (text) => [...new Set(text.split(",").map((s) => s.trim()).filter(Boolean))];
+
+function parseRobotsMeta(value = "index, follow") {
+  const directives = value.split(",").map((directive) => directive.trim().toLowerCase());
+  const directiveValue = (name, fallback) => directives.find((item) => item.startsWith(`${name}:`))?.slice(name.length + 1) ?? fallback;
+  return {
+    index: !directives.includes("noindex"),
+    noFollow: directives.includes("nofollow"),
+    noArchive: directives.includes("noarchive"),
+    noImageIndex: directives.includes("noimageindex"),
+    noSnippet: directives.includes("nosnippet"),
+    maxSnippetEnabled: directives.some((item) => item.startsWith("max-snippet:")),
+    maxSnippet: directiveValue("max-snippet", "-1"),
+    maxVideoPreviewEnabled: directives.some((item) => item.startsWith("max-video-preview:")),
+    maxVideoPreview: directiveValue("max-video-preview", "-1"),
+    maxImagePreviewEnabled: directives.some((item) => item.startsWith("max-image-preview:")),
+    maxImagePreview: directiveValue("max-image-preview", "large"),
+  };
+}
+
+function formatRobotsMeta(options) {
+  return [
+    options.index ? "index" : "noindex",
+    options.noFollow ? "nofollow" : "follow",
+    options.noArchive && "noarchive",
+    options.noImageIndex && "noimageindex",
+    options.noSnippet && "nosnippet",
+    options.maxSnippetEnabled && `max-snippet:${options.maxSnippet}`,
+    options.maxVideoPreviewEnabled && `max-video-preview:${options.maxVideoPreview}`,
+    options.maxImagePreviewEnabled && `max-image-preview:${options.maxImagePreview}`,
+  ].filter(Boolean).join(", ");
+}
 
 function combos(form) {
   const colors = form.colors.map((c) => c.name.trim()).filter(Boolean);
@@ -39,7 +71,7 @@ function combos(form) {
   return out;
 }
 
-function ImageUpload({ title, images, onChange, required = false, multiple = true, hint = "Images are stored in Cloudinary. 800 × 800 px (square) recommended, max 5 MB." }) {
+function ImageUpload({ title, images, onChange, required = false, multiple = true, kind = "product", hint = "Images are stored in Cloudinary. 800 × 800 px (square) recommended, max 5 MB." }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -54,7 +86,7 @@ function ImageUpload({ title, images, onChange, required = false, multiple = tru
     try {
       const uploaded = [];
       for (const file of valid) {
-        const result = await uploadImage(file, "product");
+        const result = await uploadImage(file, kind);
         uploaded.push({ url: result.url, publicId: result.publicId, alt: "" });
       }
       onChange(multiple ? [...images, ...uploaded] : uploaded.slice(-1));
@@ -161,6 +193,21 @@ export default function ProductsPage({ query = "", categories = [] }) {
     setForm((previous) => ({ ...previous, [field]: value }));
   }
 
+  function updateSeoField(field, value) {
+    setForm((previous) => ({ ...previous, seo: { ...previous.seo, [field]: value } }));
+  }
+
+  function updateRobotsOption(key, value) {
+    const options = { ...parseRobotsMeta(form.seo.robots), [key]: value };
+    updateSeoField("robots", formatRobotsMeta(options));
+  }
+
+  function generateProductSeo() {
+    const title = form.name.trim();
+    const description = (form.description.trim() || `${title}${form.brand ? ` by ${form.brand}` : ""}. Shop online at Shoponzy.`).slice(0, 160);
+    updateField("seo", { ...form.seo, title: title.slice(0, 70), description });
+  }
+
   function selectCategory(levelIndex, id) {
     setForm((previous) => {
       const categoryIds = [...previous.categoryIds];
@@ -215,6 +262,12 @@ export default function ProductsPage({ query = "", categories = [] }) {
           const image = block.images?.[index];
           return image ? { url: image.url, publicId: image.publicId, alt: image.alt || "" } : null;
         }) }),
+      seo: {
+        title: full.seo?.title || "",
+        description: full.seo?.description || "",
+        image: full.seo?.image ? { url: full.seo.image.url, publicId: full.seo.image.publicId, alt: full.seo.image.alt || "" } : null,
+        robots: full.seo?.robots || "index, follow",
+      },
       sizesText: (full.sizes || []).join(", "),
       price: single ? String(single.price) : "", mrp: single?.mrp ? String(single.mrp) : "", stock: single ? String(single.stock) : "0",
       rows,
@@ -288,6 +341,7 @@ export default function ProductsPage({ query = "", categories = [] }) {
       variants,
       isNewArrival: form.isNewArrival, isBestseller: form.isBestseller, isTrending: form.isTrending, isFeatured: form.isFeatured,
       badge: form.badge,
+      seo: form.seo,
       status: form.status,
     };
 
@@ -589,6 +643,57 @@ export default function ProductsPage({ query = "", categories = [] }) {
                     {BADGES.map((item) => <option key={item || "none"} value={item}>{item || "No badge"}</option>)}
                   </select>
                 </label>
+                <section className="product-seo-panel products-form-full" aria-labelledby="product-seo-title">
+                  <header className="product-seo-heading">
+                    <div><h3 id="product-seo-title">SEO section</h3><p>Customize how this product appears in search results and when shared.</p></div>
+                    <button type="button" className="table-action" onClick={generateProductSeo}>✦ Generate</button>
+                  </header>
+                  <div className="product-seo-fields">
+                    <label className="products-form-field">Meta Title
+                      <input maxLength={70} value={form.seo.title} onChange={(event) => updateSeoField("title", event.target.value)} placeholder="Meta Title" />
+                      <small>{form.seo.title.length}/70 characters</small>
+                    </label>
+                    <label className="products-form-field">Meta Description
+                      <textarea rows={4} maxLength={160} value={form.seo.description} onChange={(event) => updateSeoField("description", event.target.value)} placeholder="Write a short description for search engines" />
+                      <small>{form.seo.description.length}/160 characters</small>
+                    </label>
+                    <div className="product-seo-image">
+                      <ImageUpload
+                        title="Meta Image (Ratio 2:1)"
+                        images={form.seo.image ? [form.seo.image] : []}
+                        multiple={false}
+                        kind="seo"
+                        hint="Recommended 1200 × 600 px. JPG, PNG, WebP or GIF, max 5 MB."
+                        onChange={(images) => updateSeoField("image", images[0] || null)}
+                      />
+                    </div>
+                  </div>
+                  {(() => {
+                    const robots = parseRobotsMeta(form.seo.robots);
+                    return <div className="product-seo-robots">
+                      <fieldset className="product-seo-robots-card">
+                        <legend>Robots directives</legend>
+                        <label><input type="radio" name="product-robots-index" checked={robots.index} onChange={() => updateRobotsOption("index", true)} /> Index</label>
+                        <label><input type="radio" name="product-robots-index" checked={!robots.index} onChange={() => updateRobotsOption("index", false)} /> No index</label>
+                        <label><input type="checkbox" checked={robots.noFollow} onChange={(event) => updateRobotsOption("noFollow", event.target.checked)} /> No Follow</label>
+                        <label><input type="checkbox" checked={robots.noArchive} onChange={(event) => updateRobotsOption("noArchive", event.target.checked)} /> No Archive</label>
+                        <label><input type="checkbox" checked={robots.noImageIndex} onChange={(event) => updateRobotsOption("noImageIndex", event.target.checked)} /> No Image Index</label>
+                        <label><input type="checkbox" checked={robots.noSnippet} onChange={(event) => updateRobotsOption("noSnippet", event.target.checked)} /> No Snippet</label>
+                      </fieldset>
+                      <fieldset className="product-seo-robots-card product-seo-preview-card">
+                        <legend>Search preview limits</legend>
+                        <label><input type="checkbox" checked={robots.maxSnippetEnabled} onChange={(event) => updateRobotsOption("maxSnippetEnabled", event.target.checked)} /> Max Snippet</label>
+                        <input type="number" min="-1" aria-label="Maximum snippet length" value={robots.maxSnippet} onChange={(event) => updateRobotsOption("maxSnippet", event.target.value)} />
+                        <label><input type="checkbox" checked={robots.maxVideoPreviewEnabled} onChange={(event) => updateRobotsOption("maxVideoPreviewEnabled", event.target.checked)} /> Max Video Preview</label>
+                        <input type="number" min="-1" aria-label="Maximum video preview seconds" value={robots.maxVideoPreview} onChange={(event) => updateRobotsOption("maxVideoPreview", event.target.value)} />
+                        <label><input type="checkbox" checked={robots.maxImagePreviewEnabled} onChange={(event) => updateRobotsOption("maxImagePreviewEnabled", event.target.checked)} /> Max Image Preview</label>
+                        <select aria-label="Maximum image preview size" value={robots.maxImagePreview} onChange={(event) => updateRobotsOption("maxImagePreview", event.target.value)}>
+                          <option value="large">Large</option><option value="standard">Standard</option><option value="none">None</option>
+                        </select>
+                      </fieldset>
+                    </div>;
+                  })()}
+                </section>
                 <label className="products-form-field products-form-full">Description
                   <textarea rows={4} value={form.description} onChange={(e) => updateField("description", e.target.value)} placeholder="Enter product description" />
                 </label>
