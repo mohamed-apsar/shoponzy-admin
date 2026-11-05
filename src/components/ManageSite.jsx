@@ -15,7 +15,6 @@ const sections = [
   { title: "Header & Footer", icon: "▤" },
   { title: "Announcement Bar", icon: "↗" },
   { title: "Popup Management", icon: "▣" },
-  { title: "SEO Settings", icon: "⌕" },
   { title: "Pages & Policies", icon: "▥" },
   { title: "Contact & Social Links", icon: "◎" },
   { title: "Maintenance Mode", icon: "⏻" },
@@ -62,7 +61,7 @@ const SETTINGS = {
   },
   seo: {
     toUi: (v) => v,
-    toApi: (v) => ({ ...pick(v, ["title", "description", "keywords", "canonical", "ogTitle", "ogDescription"]), shareImage: imageOut(v.shareImage) }),
+    toApi: (v) => ({ ...pick(v, ["title", "description", "keywords", "canonical", "ogTitle", "ogDescription", "googleVerification", "bingVerification", "baiduVerification", "yandexVerification", "robotsTxt", "robotsMeta", "sitemapXml"]), shareImage: imageOut(v.shareImage) }),
   },
   contact: {
     toUi: (v) => v,
@@ -114,12 +113,12 @@ const RECORDS = {
     path: "/admin/pages",
     toUi: (p) => ({
       id: p.id, title: p.title, slug: p.slug, description: p.description || "", content: p.content || "",
-      seoTitle: p.seo?.title || "", metaDescription: p.seo?.description || "", status: p.status === "published" ? "Published" : "Draft",
+      seoTitle: p.seo?.title || "", metaDescription: p.seo?.description || "", robots: p.seo?.robots || "index, follow", status: p.status === "published" ? "Published" : "Draft",
       updated: shortDate(p.updatedAt),
     }),
     toApi: (v) => ({
       title: v.title.trim(), slug: v.slug.trim().toLowerCase(), description: v.description.trim(), content: v.content,
-      seo: { title: v.seoTitle.trim(), description: v.metaDescription.trim() }, status: v.status === "Published" ? "published" : "draft",
+      seo: { title: v.seoTitle.trim(), description: v.metaDescription.trim(), robots: v.robots }, status: v.status === "Published" ? "published" : "draft",
     }),
     toggle: (item) => ({ status: item.status === "Published" ? "draft" : "published" }),
   },
@@ -146,7 +145,7 @@ const RECORDS = {
 const emptyRecord = {
   banner: { title: "", subtitle: "", kicker: "", image: null, mobileImage: null, placement: "Homepage hero", order: 1, start: "", end: "", status: "Active", buttonText: "", url: "" },
   popup: { title: "", description: "", image: null, buttonText: "", url: "", trigger: "After 5 seconds", frequency: "Once per session", start: "", end: "", status: "Active" },
-  page: { title: "", slug: "", description: "", content: "", seoTitle: "", metaDescription: "", status: "Draft" },
+  page: { title: "", slug: "", description: "", content: "", seoTitle: "", metaDescription: "", robots: "index, follow", status: "Draft" },
   section: { title: "", subtitle: "", type: "Products", source: "new", category: "", count: 8, order: 1, buttonText: "View all", url: "", active: true },
 };
 
@@ -296,6 +295,7 @@ function RecordModal({ kind, record, categories = [], onClose, onSave }) {
               <Field label="Page content" className="full"><textarea rows="7" value={values.content} onChange={(e) => update("content", e.target.value)} placeholder="Write page content…" /></Field>
               <Field label="SEO title"><input maxLength={70} value={values.seoTitle} onChange={(e) => update("seoTitle", e.target.value)} /></Field>
               <Field label="Meta description"><textarea rows="2" maxLength={160} value={values.metaDescription} onChange={(e) => update("metaDescription", e.target.value)} /></Field>
+              <Field label="Robots directive"><select value={values.robots} onChange={(e) => update("robots", e.target.value)}><option>index, follow</option><option>noindex, follow</option><option>index, nofollow</option><option>noindex, nofollow</option></select></Field>
               <Field label="Status"><select value={values.status} onChange={(e) => update("status", e.target.value)}><option>Published</option><option>Draft</option></select></Field>
             </>}
             {kind === "section" && <>
@@ -615,21 +615,6 @@ export default function ManageSite({ activeSection = "General Settings", onSecti
     </SettingsForm>;
   }
 
-  function renderSeo() {
-    return <SettingsForm initial={settings.seo} onSave={(value) => saveSettings("seo", value)} onReset={() => resetSettings("seo")}>
-      {(values, update) => <><SettingsCard title="Search engine optimization" description="Improve how your store appears in search and social sharing."><div className="ms-form-grid">
-        <Field label="Homepage SEO title" className="full"><input maxLength="70" value={values.title} onChange={(e) => update("title", e.target.value)} /><small>{values.title.length}/70 characters</small></Field>
-        <Field label="Meta description" className="full"><textarea rows="4" maxLength="160" value={values.description} onChange={(e) => update("description", e.target.value)} /><small>{values.description.length}/160 characters</small></Field>
-        <Field label="Keywords" className="full"><input value={values.keywords} onChange={(e) => update("keywords", e.target.value)} placeholder="Comma-separated keywords" /></Field>
-        <Field label="Canonical URL"><input type="url" value={values.canonical} onChange={(e) => update("canonical", e.target.value)} /></Field>
-        <Field label="Open Graph title"><input maxLength="90" value={values.ogTitle} onChange={(e) => update("ogTitle", e.target.value)} /></Field>
-        <Field label="Open Graph description" className="full"><textarea rows="3" maxLength="200" value={values.ogDescription} onChange={(e) => update("ogDescription", e.target.value)} /></Field>
-        <ImageUploader label="Social sharing image" kind="seo" value={values.shareImage} onChange={(value) => update("shareImage", value)} />
-      </div></SettingsCard>
-      <SettingsCard title="Search result preview" description="A preview of how your homepage may appear in search results."><div className="ms-search-preview"><small>{values.canonical || "https://shoponzy.in"}</small><strong>{values.title || "Homepage title"}</strong><p>{values.description || "Your page description will appear here."}</p></div></SettingsCard></>}
-    </SettingsForm>;
-  }
-
   function renderContact() {
     const urls = ["instagram", "facebook", "youtube", "pinterest", "linkedin"];
     const labels = { instagram: "Instagram", facebook: "Facebook", youtube: "YouTube", pinterest: "Pinterest", linkedin: "LinkedIn" };
@@ -666,7 +651,6 @@ export default function ManageSite({ activeSection = "General Settings", onSecti
     "Header & Footer": renderHeaderFooter,
     "Announcement Bar": renderAnnouncement,
     "Popup Management": renderPopups,
-    "SEO Settings": renderSeo,
     "Pages & Policies": renderPages,
     "Contact & Social Links": renderContact,
     "Maintenance Mode": renderMaintenance,

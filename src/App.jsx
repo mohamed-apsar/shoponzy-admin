@@ -8,6 +8,7 @@ import OrdersPage from "./components/OrdersPage";
 import DashboardHome from "./components/DashboardHome";
 import CustomersPage from "./components/CustomersPage";
 import CouponsPage from "./components/CouponsPage";
+import SeoSettings from "./components/SeoSettings";
 import { adminRequest } from "./api/adminApi";
 import { useAdminAuth } from "./context/AdminAuthContext";
 
@@ -19,6 +20,7 @@ const menuItems = [
   { name: "Customer List", icon: "♙" },
   { name: "Coupons", icon: "%" },
   { name: "Manage Site", icon: "⚙" },
+  { name: "SEO Settings", icon: "⌕" },
 ];
 
 const manageSitePages = [
@@ -30,7 +32,6 @@ const manageSitePages = [
   "Header & Footer",
   "Announcement Bar",
   "Popup Management",
-  "SEO Settings",
   "Pages & Policies",
   "Contact & Social Links",
   "Maintenance Mode",
@@ -261,6 +262,7 @@ export default function App() {
           {page === "Manage Orders" && <OrdersPage query={query} onCountsChange={updateOrderCounts} />}
           {page === "Customer List" && <CustomersPage query={query} />}
           {page === "Coupons" && <CouponsPage query={query} />}
+          {page === "SEO Settings" && <SeoSettings />}
           {page === "Categories" && <CategoryManager categories={categories} mode={1} loading={categoriesLoading} loadError={categoriesError} onSave={saveCategory} onDelete={deleteCategory} onToggleStatus={toggleCategoryStatus} />}
           {page === "Sub categories" && <CategoryManager categories={categories} mode={2} loading={categoriesLoading} loadError={categoriesError} onSave={saveCategory} onDelete={deleteCategory} onToggleStatus={toggleCategoryStatus} />}
           {page === "Child categories" && <CategoryManager categories={categories} mode={3} loading={categoriesLoading} loadError={categoriesError} onSave={saveCategory} onDelete={deleteCategory} onToggleStatus={toggleCategoryStatus} />}
