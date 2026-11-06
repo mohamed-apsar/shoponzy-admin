@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { adminDownload, adminRequest } from "../api/adminApi";
 import { dateTime, titleCase } from "../utils/format";
 import {
-  Badge, ConfirmDialog, ErrorBanner, Field, Modal, PageHeading, Pagination, StatCards, TableBody, Thumb,
+  Badge, ConfirmDialog, ErrorBanner, ExportButton, Field, Modal, PageHeading, Pagination, StatCards, TableBody, Thumb,
   dayEnd, dayStart, qs, useAdminData, useToast,
 } from "./ops/OpsKit";
 
@@ -158,6 +158,8 @@ function StockTable({ stockStatus, categories, onAdjusted, onHistory, storeThres
           <select value={sort} onChange={(e) => reset(setSort)(e.target.value)} aria-label="Sort">
             <option value="stock_low">Stock: low to high</option><option value="stock_high">Stock: high to low</option><option value="name">Name A–Z</option><option value="updated">Recently updated</option>
           </select>
+          <ExportButton path={`/admin/inventory/export.csv?${qs({ q: q.trim(), category, stockStatus: effectiveStatus, sort })}`}
+            filename={`shoponzy-stock${effectiveStatus ? `-${effectiveStatus}` : ""}`} disabled={!meta?.total} />
         </div>
       </div>
       <ErrorBanner error={error} onRetry={reload} />
@@ -235,7 +237,7 @@ function HistoryTable({ productFilter, onClearProduct, compact = false }) {
             <label><input type="checkbox" checked={manual} disabled={Boolean(reason)} onChange={(e) => reset(setManual)(e.target.checked)} /> Manual only</label>
             <label>From <input type="date" value={from} max={to || undefined} onChange={(e) => reset(setFrom)(e.target.value)} /></label>
             <label>To <input type="date" value={to} min={from || undefined} onChange={(e) => reset(setTo)(e.target.value)} /></label>
-            <button type="button" className="secondary-button" disabled={exporting} onClick={exportCsv}>{exporting ? "Exporting…" : "Export CSV"}</button>
+            <button type="button" className="secondary-button" disabled={exporting} onClick={exportCsv}>{exporting ? "Exporting…" : "⤓ Export CSV"}</button>
           </div>
         )}
       </div>

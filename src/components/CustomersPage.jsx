@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { adminRequest } from "../api/adminApi";
 import { money, shortDate } from "../utils/format";
 import { OrdersTable } from "./OrdersPage";
+import { ExportButton } from "./ops/OpsKit";
 
 /* eslint-disable react/prop-types */
 const PAGE_SIZE = 20;
@@ -113,6 +114,7 @@ export default function CustomersPage({ query = "" }) {
             <select value={status} onChange={(e) => setStatus(e.target.value)} aria-label="Filter status">
               <option value="">All Statuses</option><option value="active">Active</option><option value="disabled">Disabled</option>
             </select>
+            <ExportButton path={`/admin/users/export.csv?${new URLSearchParams(Object.entries({ q: term, status }).filter(([, v]) => v))}`} filename="shoponzy-customers" disabled={!meta.total} />
           </div>
         </div>
         {error && <div className="products-form-error" role="alert">{error}</div>}

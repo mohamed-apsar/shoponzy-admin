@@ -2,7 +2,7 @@ import { useState } from "react";
 import { adminRequest } from "../api/adminApi";
 import { dateTime, money, shortDate, titleCase } from "../utils/format";
 import {
-  Badge, ConfirmDialog, ErrorBanner, Field, KeyValues, Modal, PageHeading, Pagination, StatCards, TableBody, Thumb,
+  Badge, ConfirmDialog, ErrorBanner, ExportButton, Field, KeyValues, Modal, PageHeading, Pagination, StatCards, TableBody, Thumb,
   dayEnd, dayStart, qs, useAdminData, useToast,
 } from "./ops/OpsKit";
 
@@ -254,6 +254,8 @@ function ReturnsTable({ view, status: fixedStatus, title, description, onOpen, r
             </select>
             <label>From <input type="date" value={from} max={to || undefined} onChange={(e) => reset(setFrom)(e.target.value)} /></label>
             <label>To <input type="date" value={to} min={from || undefined} onChange={(e) => reset(setTo)(e.target.value)} /></label>
+            <ExportButton path={`/admin/returns/export.csv?${qs({ view, status: fixedStatus || status, refundStatus, reason, q: q.trim(), from: dayStart(from), to: dayEnd(to) })}`}
+              filename={`shoponzy-returns${view ? `-${view}` : fixedStatus ? `-${fixedStatus}` : ""}`} disabled={!meta?.total} />
           </div>
         )}
       </div>
@@ -303,6 +305,7 @@ function ReturnedItemsTable({ onOpen, refreshKey }) {
           <select value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }} aria-label="Filter by return status">
             <option value="">All approved returns</option>{["approved", "pickup_scheduled", "in_transit", "received", "inspected", "completed"].map((s) => <option key={s} value={s}>{titleCase(s)}</option>)}
           </select>
+          <ExportButton path={`/admin/returns/items/export.csv?${qs({ q: q.trim(), status })}`} filename="shoponzy-returned-products" disabled={!meta?.total} />
         </div>
       </div>
       <ErrorBanner error={error} onRetry={reload} />
@@ -369,6 +372,7 @@ function ReasonsManager({ reasons, loading, error, onReload, onSaved }) {
       <div className="ops-toolbar">
         <div><h2>Return reasons</h2><p className="muted">The reasons customers choose from when they request a return, in this order. Disabled reasons are hidden from customers; a reason already used by a return can be renamed or disabled but not deleted.</p></div>
         <div className="ops-filters">
+          {!draft && <ExportButton path="/admin/returns/reasons.csv" filename="shoponzy-return-reasons" disabled={!list.length} />}
           {draft && <button type="button" className="secondary-button" onClick={() => setDraft(null)}>Discard changes</button>}
           <button type="button" className="primary-button" disabled={!draft || problems.length > 0} onClick={() => setConfirm(true)}>Save reasons</button>
         </div>

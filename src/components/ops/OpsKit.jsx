@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
-import { adminRequest } from "../../api/adminApi";
+import { adminDownload, adminRequest } from "../../api/adminApi";
 import { titleCase } from "../../utils/format";
 import "./ops.css";
 
@@ -231,3 +231,21 @@ export const qs = (params) => {
 /* "YYYY-MM-DD" from a date input → ISO start of that day in the admin's time zone. */
 export const dayStart = (d) => (d ? new Date(`${d}T00:00:00`).toISOString() : "");
 export const dayEnd = (d) => (d ? new Date(`${d}T23:59:59.999`).toISOString() : "");
+
+/* Downloads a server-generated CSV for the current filters. `path` already includes the query string. */
+export function ExportButton({ path, filename, label = "Export CSV", disabled = false }) {
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+  async function run() {
+    setBusy(true);
+    try {
+      await adminDownload(path, `${filename}-${new Date().toISOString().slice(0, 10)}.csv`);
+      toast("Report downloaded.");
+    } catch (e) {
+      toast(e.message, "error");
+    } finally {
+      setBusy(false);
+    }
+  }
+  return <button type="button" className="secondary-button ops-export" disabled={busy || disabled} onClick={run}>{busy ? "Exporting…" : `⤓ ${label}`}</button>;
+}

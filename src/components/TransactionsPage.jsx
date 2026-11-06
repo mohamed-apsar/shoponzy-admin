@@ -2,7 +2,7 @@ import { useState } from "react";
 import { adminDownload, adminRequest } from "../api/adminApi";
 import { dateTime, money, titleCase } from "../utils/format";
 import {
-  Badge, ConfirmDialog, ErrorBanner, Field, KeyValues, Modal, PageHeading, Pagination, StatCards, TableBody, Tabs,
+  Badge, ConfirmDialog, ErrorBanner, ExportButton, Field, KeyValues, Modal, PageHeading, Pagination, StatCards, TableBody, Tabs,
   dayEnd, dayStart, qs, useAdminData, useToast,
 } from "./ops/OpsKit";
 
@@ -175,7 +175,7 @@ function TransactionsTable({ status: fixedStatus, provider, method: fixedMethod,
             <select value={sort} onChange={(e) => reset(setSort)(e.target.value)} aria-label="Sort">
               <option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="amount_high">Amount: high to low</option><option value="amount_low">Amount: low to high</option>
             </select>
-            <button type="button" className="secondary-button" disabled={exporting} onClick={exportCsv}>{exporting ? "Exporting…" : "Export CSV"}</button>
+            <button type="button" className="secondary-button" disabled={exporting} onClick={exportCsv}>{exporting ? "Exporting…" : "⤓ Export CSV"}</button>
           </div>
         )}
       </div>
@@ -227,6 +227,7 @@ function RefundsTable({ onOpen, refreshKey, compact = false }) {
             </select>
             <label>From <input type="date" value={from} onChange={(e) => reset(setFrom)(e.target.value)} /></label>
             <label>To <input type="date" value={to} onChange={(e) => reset(setTo)(e.target.value)} /></label>
+            <ExportButton path={`/admin/refunds/export.csv?${qs({ q: q.trim(), status, from: dayStart(from), to: dayEnd(to) })}`} filename="shoponzy-refunds" disabled={!meta?.total} />
           </div>
         )}
       </div>
@@ -265,7 +266,8 @@ function MethodsView({ summary, onOpen, refreshKey }) {
   return (
     <div className="ops-stack">
       <section className="panel table-panel">
-        <div className="ops-toolbar"><div><h2>Payments by method</h2><p className="muted">Only the details Razorpay returns are stored — card network, type and last 4 digits, UPI ID, bank or wallet. Full card numbers and CVVs are never received or kept.</p></div></div>
+        <div className="ops-toolbar"><div><h2>Payments by method</h2><p className="muted">Only the details Razorpay returns are stored — card network, type and last 4 digits, UPI ID, bank or wallet. Full card numbers and CVVs are never received or kept.</p></div>
+          <div className="ops-filters"><ExportButton path="/admin/transactions/methods.csv" filename="shoponzy-payment-methods" label="Export breakdown" disabled={!rows.length} /></div></div>
         <div className="table-scroll">
           <table className="ops-table" style={{ minWidth: 720 }}>
             <thead><tr><th>Method</th><th className="num">Transactions</th><th className="num">Successful</th><th className="num">Failed</th><th className="num">Success rate</th><th className="num">Amount received</th><th className="num">Refunded</th><th /></tr></thead>
