@@ -2,16 +2,12 @@ import { useState } from "react";
 import { adminRequest } from "../api/adminApi";
 import { dateTime, money, shortDate, titleCase } from "../utils/format";
 import {
-  Badge, ConfirmDialog, ErrorBanner, Field, KeyValues, Modal, PageHeading, Pagination, StatCards, TableBody, Tabs, Thumb,
+  Badge, ConfirmDialog, ErrorBanner, Field, KeyValues, Modal, PageHeading, Pagination, StatCards, TableBody, Thumb,
   dayEnd, dayStart, qs, useAdminData, useToast,
 } from "./ops/OpsKit";
 
 /* eslint-disable react/prop-types */
 const PAGE_SIZE = 20;
-const RETURN_REASONS = {
-  damaged: "Damaged product", wrong_item: "Wrong product delivered", defective: "Defective product", size_fit: "Size or fit issue",
-  not_as_described: "Product not as described", missing_items: "Missing items", changed_mind: "Changed mind", other: "Other",
-};
 const STATUSES = ["requested", "approved", "rejected", "pickup_scheduled", "in_transit", "received", "inspected", "completed", "cancelled"];
 const REFUND_STATUSES = ["not_applicable", "pending", "processing", "completed", "failed"];
 const CONDITIONS = [["good", "Good — resellable"], ["opened", "Opened / used lightly"], ["damaged", "Damaged"], ["unsellable", "Unsellable"]];
@@ -172,7 +168,7 @@ function ReturnDetail({ id, onClose, onChanged }) {
           ["Refund status", <Badge key="r" value={r.status} />],
           ["Order", rr.order ? `#${rr.order.orderNumber} · ${titleCase(rr.order.status)}` : `#${rr.orderNumber}`],
           ["Customer", <span key="c">{rr.customer?.name}<br /><small className="muted">{[rr.customer?.phone, rr.customer?.email].filter(Boolean).join(" · ")}</small></span>],
-          ["Reason", RETURN_REASONS[rr.reason] || rr.reason],
+          ["Reason", rr.reasonLabel],
           ["Requested", dateTime(rr.createdAt)],
           ["Decision", rr.decidedAt ? `${dateTime(rr.decidedAt)}${rr.decidedBy ? ` by ${rr.decidedBy.name}` : ""}` : "—"],
           ["Received", dateTime(rr.receivedAt)],
@@ -224,14 +220,15 @@ function ReturnDetail({ id, onClose, onChanged }) {
 }
 
 /* ---------- Lists ---------- */
-function ReturnsTable({ view, status: fixedStatus, title, description, onOpen, refreshKey, compact = false }) {
+function ReturnsTable({ view, status: fixedStatus, title, description, onOpen, refreshKey, reasons = [], compact = false }) {
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("");
   const [refundStatus, setRefundStatus] = useState("");
+  const [reason, setReason] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [page, setPage] = useState(1);
-  const params = { view, status: fixedStatus || status, refundStatus, q: q.trim(), from: dayStart(from), to: dayEnd(to), page, limit: compact ? 6 : PAGE_SIZE, r: refreshKey };
+  const params = { view, status: fixedStatus || status, refundStatus, reason, q: q.trim(), from: dayStart(from), to: dayEnd(to), page, limit: compact ? 6 : PAGE_SIZE, r: refreshKey };
   const { data, meta, loading, error, reload } = useAdminData(`/admin/returns?${qs(params)}`, { debounce: q ? 300 : 0 });
   const rows = data || [];
   const reset = (fn) => (v) => { fn(v); setPage(1); };
@@ -245,6 +242,11 @@ function ReturnsTable({ view, status: fixedStatus, title, description, onOpen, r
             {!fixedStatus && view !== "refunds" && (
               <select value={status} onChange={(e) => reset(setStatus)(e.target.value)} aria-label="Filter by return status">
                 <option value="">All return statuses</option>{STATUSES.map((s) => <option key={s} value={s}>{titleCase(s)}</option>)}
+              </select>
+            )}
+            {!!reasons.length && (
+              <select value={reason} onChange={(e) => reset(setReason)(e.target.value)} aria-label="Filter by return reason">
+                <option value="">All reasons</option>{reasons.map((r) => <option key={r.code} value={r.code}>{r.label}{r.active ? "" : " (disabled)"}</option>)}
               </select>
             )}
             <select value={refundStatus} onChange={(e) => reset(setRefundStatus)(e.target.value)} aria-label="Filter by refund status">
@@ -270,7 +272,7 @@ function ReturnsTable({ view, status: fixedStatus, title, description, onOpen, r
                   <td><div className="ops-product"><Thumb src={first.image} /><div><strong>{first.name}</strong><small>{[first.color, first.size].filter(Boolean).join(" / ")}{rr.items.length > 1 ? ` · +${rr.items.length - 1} more` : ""}</small></div></div></td>
                   <td className="mono">{first.sku || "—"}</td>
                   <td className="num">{rr.quantity}</td>
-                  <td>{RETURN_REASONS[rr.reason] || rr.reason}</td>
+                  <td>{rr.reasonLabel}</td>
                   <td>{shortDate(rr.createdAt)}</td>
                   <td><Badge value={rr.status} /></td>
                   <td><Badge value={rr.refund.status} />{rr.refund.amount !== null && rr.refund.status !== "not_applicable" && <><br /><small className="muted">{money(rr.refund.amount)}</small></>}</td>
@@ -328,11 +330,97 @@ function ReturnedItemsTable({ onOpen, refreshKey }) {
   );
 }
 
-export default function ReturnsPage() {
-  const [tab, setTab] = useState("overview");
+/* ---------- Return reasons (offered to customers on the return form) ---------- */
+function ReasonsManager({ reasons, loading, error, onReload, onSaved }) {
+  const toast = useToast();
+  const [draft, setDraft] = useState(null); // edited copy of the list; null = no unsaved changes
+  const [newLabel, setNewLabel] = useState("");
+  const [newNeedsComment, setNewNeedsComment] = useState(false);
+  const [confirm, setConfirm] = useState(false);
+  const list = draft || reasons || [];
+  const edit = (code, patch) => setDraft(list.map((r) => (r.code === code ? { ...r, ...patch } : r)));
+  const move = (index, dir) => { const next = [...list]; [next[index], next[index + dir]] = [next[index + dir], next[index]]; setDraft(next); };
+  const remove = (code) => setDraft(list.filter((r) => r.code !== code));
+  const dupe = (label, code) => list.some((r) => r.code !== code && r.label.trim().toLowerCase() === label.trim().toLowerCase());
+  const problems = [
+    list.some((r) => r.label.trim().length < 2) && "Every reason needs a name.",
+    list.some((r) => dupe(r.label, r.code)) && "Two reasons have the same name.",
+    !list.some((r) => r.active) && "Keep at least one reason active.",
+  ].filter(Boolean);
+
+  function add() {
+    const label = newLabel.trim();
+    if (label.length < 2 || dupe(label)) return;
+    setDraft([...list, { code: `new:${Date.now()}`, label, active: true, requiresComment: newNeedsComment, used: 0, isNew: true }]);
+    setNewLabel("");
+    setNewNeedsComment(false);
+  }
+
+  async function save() {
+    const body = { reasons: list.map((r) => ({ ...(r.isNew ? {} : { code: r.code }), label: r.label.trim(), active: r.active, requiresComment: r.requiresComment })) };
+    await adminRequest("/admin/returns/reasons", { method: "PUT", body: JSON.stringify(body) });
+    toast("Return reasons saved. Customers see the active ones on the return form.");
+    setDraft(null);
+    onSaved();
+  }
+
+  return (
+    <section className="panel table-panel">
+      <div className="ops-toolbar">
+        <div><h2>Return reasons</h2><p className="muted">The reasons customers choose from when they request a return, in this order. Disabled reasons are hidden from customers; a reason already used by a return can be renamed or disabled but not deleted.</p></div>
+        <div className="ops-filters">
+          {draft && <button type="button" className="secondary-button" onClick={() => setDraft(null)}>Discard changes</button>}
+          <button type="button" className="primary-button" disabled={!draft || problems.length > 0} onClick={() => setConfirm(true)}>Save reasons</button>
+        </div>
+      </div>
+      <ErrorBanner error={error} onRetry={onReload} />
+      {draft && problems.length > 0 && <div className="ops-error" role="alert"><span>{problems[0]}</span></div>}
+      <div className="table-scroll">
+        <table className="ops-table" style={{ minWidth: 700 }}>
+          <thead><tr><th>Order</th><th>Reason shown to customers</th><th>Comment required</th><th>Active</th><th className="num">Used by</th><th>Actions</th></tr></thead>
+          <TableBody loading={loading} items={list} columns={6} empty="No reasons yet">
+            {list.map((r, i) => (
+              <tr key={r.code}>
+                <td><div className="ops-actions">
+                  <button type="button" className="table-action" aria-label={`Move ${r.label} up`} disabled={i === 0} onClick={() => move(i, -1)}>↑</button>
+                  <button type="button" className="table-action" aria-label={`Move ${r.label} down`} disabled={i === list.length - 1} onClick={() => move(i, 1)}>↓</button>
+                </div></td>
+                <td><input className="ops-inline-input" value={r.label} maxLength={80} aria-label="Reason name" onChange={(e) => edit(r.code, { label: e.target.value })} />{r.isNew && <small className="muted"> new</small>}</td>
+                <td><input type="checkbox" checked={r.requiresComment} aria-label={`Require a comment for ${r.label}`} onChange={(e) => edit(r.code, { requiresComment: e.target.checked })} /></td>
+                <td><input type="checkbox" checked={r.active} aria-label={`${r.label} active`} onChange={(e) => edit(r.code, { active: e.target.checked })} /> {r.active ? <Badge value="in" label="Shown" /> : <Badge value="inactive" label="Hidden" />}</td>
+                <td className="num">{r.used ? `${r.used} return${r.used === 1 ? "" : "s"}` : "—"}</td>
+                <td>{r.used ? <span className="muted">In use — disable instead</span> : <button type="button" className="table-action danger" onClick={() => remove(r.code)}>Delete</button>}</td>
+              </tr>
+            ))}
+          </TableBody>
+        </table>
+      </div>
+      <div className="ops-filters" style={{ marginTop: 14 }}>
+        <input value={newLabel} maxLength={80} placeholder="New reason, e.g. Arrived late" aria-label="New reason" onChange={(e) => setNewLabel(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") add(); }} />
+        <label><input type="checkbox" checked={newNeedsComment} onChange={(e) => setNewNeedsComment(e.target.checked)} /> Require a comment</label>
+        <button type="button" className="secondary-button" disabled={newLabel.trim().length < 2 || dupe(newLabel)} onClick={add}>Add reason</button>
+        {newLabel && dupe(newLabel) && <span className="muted">That reason already exists.</span>}
+      </div>
+      {confirm && <ConfirmDialog title="Save return reasons?" confirmLabel="Save reasons" onClose={() => setConfirm(false)} onConfirm={save}
+        message={<>Customers will choose from <b>{list.filter((r) => r.active).length}</b> active reason(s). Existing return requests keep the reason name they were submitted with.</>} />}
+    </section>
+  );
+}
+
+/* One page per sidebar entry; App.jsx maps the sidebar names to these view ids. */
+const VIEW_COPY = {
+  requests: ["Return Requests", "Every return request from customers. Open one to see its items, photos, refund and audit trail."],
+  decide: ["Approve or Reject Returns", "New requests waiting for a decision. Approving makes a refund due after inspection; rejecting needs a reason the customer sees."],
+  refunds: ["Refund Status", "Returns with a refund due, processing at Razorpay, completed or failed."],
+  reasons: ["Return Reasons", "Add, rename, reorder or disable the reasons customers can give for a return."],
+  items: ["Returned Products", "Each returned item — where it is, its condition after inspection and what went back into stock."],
+};
+
+export default function ReturnsPage({ view = "requests" }) {
   const [openId, setOpenId] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const summary = useAdminData(`/admin/returns/summary?r=${refreshKey}`, { debounce: 0 });
+  const reasons = useAdminData(`/admin/returns/reasons?r=${refreshKey}`, { debounce: 0 });
   const s = summary.data;
   const n = (v) => (s ? Number(v || 0).toLocaleString("en-IN") : "");
   const cards = [
@@ -344,31 +432,20 @@ export default function ReturnsPage() {
     { label: "Refunds pending", value: n(s?.refundsPending), tone: "amber", note: s?.refundsFailed ? `${s.refundsFailed} failed — retry` : "due or processing" },
     { label: "Refunds completed", value: n(s?.refundsCompleted), tone: "green", note: s ? money(s.refundedAmount) : "" },
   ];
-  const tabs = [
-    { id: "overview", label: "Overview" },
-    { id: "requests", label: "Return requests", count: s?.pending || null },
-    { id: "approved", label: "Approved returns" },
-    { id: "rejected", label: "Rejected returns" },
-    { id: "items", label: "Returned products" },
-    { id: "refunds", label: "Refund status", count: s?.refundsPending || null },
-  ];
-  const common = { onOpen: setOpenId, refreshKey };
+  const changed = () => setRefreshKey((k) => k + 1);
+  const common = { onOpen: setOpenId, refreshKey, reasons: reasons.data || [] };
+  const [title, description] = VIEW_COPY[view] || VIEW_COPY.requests;
   return (
     <>
-      <PageHeading eyebrow="SALES" title="Returns & Refunds" description="Review return requests, track returned items through inspection, and refund verified returns." />
+      <PageHeading eyebrow="RETURNS & REFUNDS" title={title} description={description} />
       <ErrorBanner error={summary.error} onRetry={summary.reload} />
       <StatCards items={cards} loading={!s && summary.loading} />
-      <Tabs label="Returns sections" tabs={tabs} active={tab} onChange={setTab} />
-      {tab === "overview" && <div className="ops-stack">
-        <ReturnsTable key="ov-req" compact status="requested" title="Waiting for review" description="New requests to approve or reject." {...common} />
-        <ReturnsTable key="ov-open" compact view="open" title="In progress" description="Approved returns on their way back or awaiting inspection/refund." {...common} />
-      </div>}
-      {tab === "requests" && <ReturnsTable key="req" title="All return requests" description="Every return request from customers." {...common} />}
-      {tab === "approved" && <ReturnsTable key="app" view="approved" title="Approved returns" description="Approved returns at any later stage." {...common} />}
-      {tab === "rejected" && <ReturnsTable key="rej" status="rejected" title="Rejected returns" {...common} />}
-      {tab === "items" && <ReturnedItemsTable {...common} />}
-      {tab === "refunds" && <ReturnsTable key="ref" view="refunds" title="Refund status" description="Returns with a refund due, processing, completed or failed." {...common} />}
-      {openId && <ReturnDetail id={openId} onClose={() => setOpenId(null)} onChanged={() => setRefreshKey((k) => k + 1)} />}
+      {view === "requests" && <ReturnsTable key="req" title="All return requests" {...common} />}
+      {view === "decide" && <ReturnsTable key="decide" status="requested" title="Waiting for a decision" description="Open a request and choose Approve or Reject." {...common} />}
+      {view === "refunds" && <ReturnsTable key="ref" view="refunds" title="Refund status" {...common} />}
+      {view === "reasons" && <ReasonsManager reasons={reasons.data} loading={!reasons.data && reasons.loading} error={reasons.error} onReload={reasons.reload} onSaved={changed} />}
+      {view === "items" && <ReturnedItemsTable {...common} />}
+      {openId && <ReturnDetail id={openId} onClose={() => setOpenId(null)} onChanged={changed} />}
     </>
   );
 }

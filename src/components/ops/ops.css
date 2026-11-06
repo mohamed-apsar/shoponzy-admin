@@ -143,3 +143,6 @@
 .ops-stack { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
 .ops-tabs { max-width: 100%; min-width: 0; }
 .page-content > .panel, .page-content > section { min-width: 0; max-width: 100%; }
+.ops-table tr.ops-row-selected { background: var(--shoponzy-indigo-soft); }
+.ops-inline-input { width: 100%; min-width: 200px; min-height: 36px; padding: 6px 10px; border: 1px solid #dfe3ed; border-radius: 8px; font-size: 14px; background: #fff; }
+.ops-inline-input:focus { outline: none; border-color: #a5b4fc; box-shadow: 0 0 0 3px rgba(99, 102, 241, .12); }

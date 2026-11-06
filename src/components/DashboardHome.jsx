@@ -115,7 +115,7 @@ export default function DashboardHome({ setPage }) {
               <div className="alert-copy"><strong>Orders need attention</strong><p>{data.needsAttention} orders need a refund or manual review.</p></div>
             </div>
           )}
-          <button className="text-button" onClick={() => setPage("Manage Products")}>
+          <button className="text-button" onClick={() => setPage("Low-Stock Alerts")}>
             Manage inventory →
           </button>
         </section>

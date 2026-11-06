@@ -125,7 +125,7 @@ function TransactionDetail({ id, onClose, onChanged }) {
   );
 }
 
-function TransactionsTable({ status: fixedStatus, refreshKey, onOpen, compact = false }) {
+function TransactionsTable({ status: fixedStatus, provider, method: fixedMethod, title, description, refreshKey, onOpen, compact = false }) {
   const toast = useToast();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("");
@@ -135,7 +135,7 @@ function TransactionsTable({ status: fixedStatus, refreshKey, onOpen, compact = 
   const [sort, setSort] = useState("newest");
   const [page, setPage] = useState(1);
   const [exporting, setExporting] = useState(false);
-  const filters = { q: q.trim(), status: fixedStatus || status, method, from: dayStart(from), to: dayEnd(to), sort };
+  const filters = { q: q.trim(), status: fixedStatus || status, provider, method: fixedMethod || method, from: dayStart(from), to: dayEnd(to), sort };
   const { data, meta, loading, error, reload } = useAdminData(`/admin/transactions?${qs({ ...filters, page, limit: compact ? 8 : PAGE_SIZE, r: refreshKey })}`, { debounce: q ? 300 : 0 });
   const rows = data || [];
   const reset = (fn) => (v) => { fn(v); setPage(1); };
@@ -155,8 +155,8 @@ function TransactionsTable({ status: fixedStatus, refreshKey, onOpen, compact = 
   return (
     <section className="panel table-panel">
       <div className="ops-toolbar">
-        <div><h2>{compact ? "Latest transactions" : fixedStatus ? `${titleCase(fixedStatus === "success" ? "successful" : fixedStatus)} payments` : "All transactions"}</h2>
-          <p className="muted">{compact ? "Most recent payment attempts." : "Search by transaction ID, Razorpay payment/order ID, order number or customer."}</p></div>
+        <div><h2>{title || (compact ? "Latest transactions" : fixedStatus ? `${titleCase(fixedStatus === "success" ? "successful" : fixedStatus)} payments` : "All transactions")}</h2>
+          <p className="muted">{description || (compact ? "Most recent payment attempts." : "Search by transaction ID, Razorpay payment/order ID, order number or customer.")}</p></div>
         {!compact && (
           <div className="ops-filters">
             <input type="search" value={q} onChange={(e) => reset(setQ)(e.target.value)} placeholder="Search IDs, order or customer…" aria-label="Search transactions" />
@@ -165,9 +165,11 @@ function TransactionsTable({ status: fixedStatus, refreshKey, onOpen, compact = 
                 <option value="">All statuses</option><option value="success">Success</option><option value="failed">Failed</option><option value="pending">Pending</option><option value="refunded">Refunded</option><option value="partially_refunded">Partially refunded</option>
               </select>
             )}
-            <select value={method} onChange={(e) => reset(setMethod)(e.target.value)} aria-label="Filter by payment method">
-              <option value="">All methods</option>{METHODS.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
-            </select>
+            {!fixedMethod && (
+              <select value={method} onChange={(e) => reset(setMethod)(e.target.value)} aria-label="Filter by payment method">
+                <option value="">All methods</option>{METHODS.filter(([id]) => provider !== "razorpay" || id !== "cod").map(([id, label]) => <option key={id} value={id}>{label}</option>)}
+              </select>
+            )}
             <label>From <input type="date" value={from} max={to || undefined} onChange={(e) => reset(setFrom)(e.target.value)} /></label>
             <label>To <input type="date" value={to} min={from || undefined} onChange={(e) => reset(setTo)(e.target.value)} /></label>
             <select value={sort} onChange={(e) => reset(setSort)(e.target.value)} aria-label="Sort">
@@ -255,10 +257,117 @@ function RefundsTable({ onOpen, refreshKey, compact = false }) {
   );
 }
 
-export default function TransactionsPage() {
-  const [tab, setTab] = useState("overview");
+/* ---------- Payment method details: breakdown per method ---------- */
+const METHOD_NAMES = { ...METHOD_LABEL, unknown: "Not chosen yet" };
+function MethodsView({ summary, onOpen, refreshKey }) {
+  const [method, setMethod] = useState("");
+  const rows = summary?.byMethod || [];
+  return (
+    <div className="ops-stack">
+      <section className="panel table-panel">
+        <div className="ops-toolbar"><div><h2>Payments by method</h2><p className="muted">Only the details Razorpay returns are stored — card network, type and last 4 digits, UPI ID, bank or wallet. Full card numbers and CVVs are never received or kept.</p></div></div>
+        <div className="table-scroll">
+          <table className="ops-table" style={{ minWidth: 720 }}>
+            <thead><tr><th>Method</th><th className="num">Transactions</th><th className="num">Successful</th><th className="num">Failed</th><th className="num">Success rate</th><th className="num">Amount received</th><th className="num">Refunded</th><th /></tr></thead>
+            <TableBody loading={!summary} items={rows} columns={8} empty="No payments yet" emptyHint="Payment methods appear once customers check out.">
+              {rows.map((m) => (
+                <tr key={m.method} className={method === m.method ? "ops-row-selected" : ""}>
+                  <td><strong>{METHOD_NAMES[m.method] || titleCase(m.method)}</strong></td>
+                  <td className="num">{m.total}</td><td className="num">{m.successful}</td><td className="num">{m.failed}</td>
+                  <td className="num">{m.successRate === null ? "—" : `${m.successRate}%`}</td>
+                  <td className="num"><b>{money(m.amount)}</b></td><td className="num">{m.refunded ? money(m.refunded) : "—"}</td>
+                  <td>{m.method !== "unknown" && <button type="button" className="table-action" onClick={() => setMethod(method === m.method ? "" : m.method)}>{method === m.method ? "Hide" : "View payments"}</button>}</td>
+                </tr>
+              ))}
+            </TableBody>
+          </table>
+        </div>
+      </section>
+      {method && <TransactionsTable key={method} method={method} title={`${METHOD_NAMES[method]} payments`} description="Each payment with the method details Razorpay reported." onOpen={onOpen} refreshKey={refreshKey} />}
+    </div>
+  );
+}
+
+/* ---------- Transaction reports (CSV) ---------- */
+const isoDay = (d) => new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
+const PRESETS = [
+  ["today", "Today", () => { const t = isoDay(new Date()); return [t, t]; }],
+  ["7d", "Last 7 days", () => [isoDay(new Date(Date.now() - 6 * 86_400_000)), isoDay(new Date())]],
+  ["30d", "Last 30 days", () => [isoDay(new Date(Date.now() - 29 * 86_400_000)), isoDay(new Date())]],
+  ["month", "This month", () => { const n = new Date(); return [isoDay(new Date(n.getFullYear(), n.getMonth(), 1)), isoDay(n)]; }],
+  ["all", "All time", () => ["", ""]],
+];
+function ReportsView() {
+  const toast = useToast();
+  const [preset, setPreset] = useState("30d");
+  const [[from, to], setRange] = useState(PRESETS[2][2]());
+  const [status, setStatus] = useState("");
+  const [method, setMethod] = useState("");
+  const [exporting, setExporting] = useState(false);
+  const filters = { status, method, from: dayStart(from), to: dayEnd(to) };
+  const preview = useAdminData(`/admin/transactions?${qs({ ...filters, limit: 1 })}`, { debounce: 200 });
+  const count = preview.meta?.total;
+  const s = preview.meta?.summary;
+  const choose = (id) => { setPreset(id); setRange(PRESETS.find((p) => p[0] === id)[2]()); };
+
+  async function download() {
+    setExporting(true);
+    try {
+      const name = `shoponzy-transactions-${from || "all"}${to && to !== from ? `-to-${to}` : ""}.csv`;
+      await adminDownload(`/admin/transactions/export.csv?${qs(filters)}`, name);
+      toast(`Report downloaded (${count} transaction${count === 1 ? "" : "s"}).`);
+    } catch (e) {
+      toast(e.message, "error");
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  return (
+    <section className="panel">
+      <div className="ops-toolbar"><div><h2>Download a transaction report</h2><p className="muted">CSV with transaction, Razorpay payment and order IDs, customer, amount, currency, method, status, refund amount and status, and date.</p></div></div>
+      <div className="ops-form">
+        <Field label="Period" full>
+          <div className="ops-segment" role="radiogroup" aria-label="Report period" style={{ flexWrap: "wrap" }}>
+            {PRESETS.map(([id, label]) => <button key={id} type="button" role="radio" aria-checked={preset === id} className={preset === id ? "active" : ""} onClick={() => choose(id)}>{label}</button>)}
+          </div>
+        </Field>
+        <Field label="From"><input type="date" value={from} max={to || undefined} onChange={(e) => { setPreset(""); setRange([e.target.value, to]); }} /></Field>
+        <Field label="To"><input type="date" value={to} min={from || undefined} onChange={(e) => { setPreset(""); setRange([from, e.target.value]); }} /></Field>
+        <Field label="Payment status">
+          <select value={status} onChange={(e) => setStatus(e.target.value)}>
+            <option value="">All statuses</option><option value="success">Success</option><option value="failed">Failed</option><option value="pending">Pending</option><option value="refunded">Refunded</option><option value="partially_refunded">Partially refunded</option>
+          </select>
+        </Field>
+        <Field label="Payment method">
+          <select value={method} onChange={(e) => setMethod(e.target.value)}><option value="">All methods</option>{METHODS.map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select>
+        </Field>
+      </div>
+      <ErrorBanner error={preview.error} onRetry={preview.reload} />
+      <div className="ops-preview">
+        {preview.loading && count === undefined ? "Counting transactions…" : <>{count ?? 0} transaction{count === 1 ? "" : "s"} match{s ? <> · {money(s.totalAmount)} received · {money(s.totalRefunded)} refunded</> : null}</>}
+      </div>
+      <div className="modal-actions" style={{ justifyContent: "flex-start" }}>
+        <button type="button" className="primary-button" disabled={exporting || !count} onClick={download}>{exporting ? "Preparing…" : "Download CSV"}</button>
+      </div>
+    </section>
+  );
+}
+
+/* One page per sidebar entry; App.jsx maps the sidebar names to these view ids. */
+const VIEW_COPY = {
+  razorpay: ["Razorpay Transactions", "Online payments made through Razorpay — search by transaction ID, Razorpay payment or order ID, order number or customer."],
+  status: ["Payment Success & Failure", "Which payments succeeded, failed or are still pending — with the reason Razorpay gave for each failure."],
+  refunds: ["Refund Tracking", "Every refund with its original payment, order and linked return, and its status at Razorpay."],
+  methods: ["Payment Methods", "How customers pay, how often each method succeeds, and the details of each payment."],
+  reports: ["Transaction Reports", "Download transaction reports as CSV for any period, status or payment method."],
+};
+const STATUS_TABS = [{ id: "success", label: "Successful" }, { id: "failed", label: "Failed" }, { id: "pending", label: "Pending" }, { id: "refunded", label: "Refunded" }];
+
+export default function TransactionsPage({ view = "razorpay" }) {
   const [openId, setOpenId] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [status, setStatus] = useState("success");
   const summary = useAdminData(`/admin/transactions/summary?r=${refreshKey}`, { debounce: 0 });
   const s = summary.data;
   const cards = [
@@ -269,25 +378,24 @@ export default function TransactionsPage() {
     { label: "Total payment amount", value: s ? money(s.totalAmount) : "", tone: "green", note: "received (before refunds)" },
     { label: "Total refunded", value: s ? money(s.totalRefunded) : "", tone: "slate", note: s?.refundsPending?.count ? `${money(s.refundsPending.amount)} pending at Razorpay` : "confirmed by Razorpay" },
   ];
-  const tabs = [
-    { id: "overview", label: "Overview" }, { id: "all", label: "All transactions" },
-    { id: "success", label: "Successful", count: s?.successful || null }, { id: "failed", label: "Failed", count: s?.failed || null },
-    { id: "pending", label: "Pending", count: s?.pending || null }, { id: "refunds", label: "Refund tracking", count: s?.refundsPending?.count || null },
-  ];
-  const changed = () => setRefreshKey((k) => k + 1);
   const common = { onOpen: setOpenId, refreshKey };
+  const [title, description] = VIEW_COPY[view] || VIEW_COPY.razorpay;
+  const counts = { success: s?.successful, failed: s?.failed, pending: s?.pending, refunded: s?.refundedTransactions };
 
   return (
     <>
-      <PageHeading eyebrow="SALES" title="Transactions & Payments" description="Razorpay and cash-on-delivery payments, failures and refunds — from verified gateway records." />
+      <PageHeading eyebrow="TRANSACTIONS & PAYMENTS" title={title} description={description} />
       <ErrorBanner error={summary.error} onRetry={summary.reload} />
       <StatCards items={cards} loading={!s && summary.loading} />
-      <Tabs label="Transaction sections" tabs={tabs} active={tab} onChange={setTab} />
-      {tab === "overview" && <div className="ops-stack"><TransactionsTable compact {...common} /><RefundsTable compact {...common} /></div>}
-      {tab === "all" && <TransactionsTable key="all" {...common} />}
-      {["success", "failed", "pending"].includes(tab) && <TransactionsTable key={tab} status={tab} {...common} />}
-      {tab === "refunds" && <RefundsTable {...common} />}
-      {openId && <TransactionDetail id={openId} onClose={() => setOpenId(null)} onChanged={changed} />}
+      {view === "razorpay" && <TransactionsTable key="rzp" provider="razorpay" title="Razorpay transactions" {...common} />}
+      {view === "status" && <>
+        <Tabs label="Payment status" tabs={STATUS_TABS.map((t) => ({ ...t, count: counts[t.id] || null }))} active={status} onChange={setStatus} />
+        <TransactionsTable key={status} status={status} {...common} />
+      </>}
+      {view === "refunds" && <RefundsTable {...common} />}
+      {view === "methods" && <MethodsView summary={s} {...common} />}
+      {view === "reports" && <ReportsView />}
+      {openId && <TransactionDetail id={openId} onClose={() => setOpenId(null)} onChanged={() => setRefreshKey((k) => k + 1)} />}
     </>
   );
 }

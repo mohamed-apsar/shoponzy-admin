@@ -1,8 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { adminDownload, adminRequest } from "../api/adminApi";
 import { dateTime, titleCase } from "../utils/format";
 import {
-  Badge, ConfirmDialog, ErrorBanner, Field, Modal, PageHeading, Pagination, StatCards, TableBody, Tabs, Thumb,
+  Badge, ConfirmDialog, ErrorBanner, Field, Modal, PageHeading, Pagination, StatCards, TableBody, Thumb,
   dayEnd, dayStart, qs, useAdminData, useToast,
 } from "./ops/OpsKit";
 
@@ -127,11 +127,11 @@ function ThresholdModal({ row, storeThreshold, onClose, onSaved }) {
 }
 
 /* ---------- Stock list (all / low / out) ---------- */
-function StockTable({ stockStatus, categories, onAdjusted, onHistory, storeThreshold }) {
+function StockTable({ stockStatus, categories, onAdjusted, onHistory, storeThreshold, title, description, defaultSort = "stock_low" }) {
   const [q, setQ] = useState("");
   const [category, setCategory] = useState("");
   const [status, setStatus] = useState("");
-  const [sort, setSort] = useState("stock_low");
+  const [sort, setSort] = useState(defaultSort);
   const [page, setPage] = useState(1);
   const [adjusting, setAdjusting] = useState(null);
   const [threshold, setThreshold] = useState(null);
@@ -145,8 +145,8 @@ function StockTable({ stockStatus, categories, onAdjusted, onHistory, storeThres
   return (
     <section className="panel table-panel">
       <div className="ops-toolbar">
-        <div><h2>{stockStatus === "low" ? "Low-stock variants" : stockStatus === "out" ? "Out-of-stock variants" : "Stock list"}</h2>
-          <p className="muted">{stockStatus === "low" ? `Variants at or below their alert level (store default ${storeThreshold ?? "…"}).` : stockStatus === "out" ? "Active variants with no units left to sell." : "Available stock per variant. Units in unshipped orders are shown as reserved."}</p></div>
+        <div><h2>{title || (stockStatus === "low" ? "Low-stock variants" : stockStatus === "out" ? "Out-of-stock variants" : "Stock list")}</h2>
+          <p className="muted">{description || (stockStatus === "low" ? `Variants at or below their alert level (store default ${storeThreshold ?? "…"}).` : stockStatus === "out" ? "Active variants with no units left to sell." : "Available stock per variant. Units in unshipped orders are shown as reserved.")}</p></div>
         <div className="ops-filters">
           <input type="search" value={q} onChange={(e) => reset(setQ)(e.target.value)} placeholder="Search product, brand or SKU…" aria-label="Search products" />
           <CategorySelect categories={categories} value={category} onChange={reset(setCategory)} />
@@ -285,9 +285,19 @@ function ThresholdSettings({ current, onSaved }) {
   );
 }
 
-export default function InventoryPage({ categories = [] }) {
-  const [tab, setTab] = useState("overview");
+/* One page per sidebar entry; App.jsx maps the sidebar names to these view ids. */
+const VIEW_COPY = {
+  stock: ["Available Stock", "Current stock for every product variant, with what unshipped orders are holding."],
+  update: ["Update Stock", "Find a product, then add stock, remove stock or set an exact quantity. Every change needs a reason."],
+  alerts: ["Low-Stock Alerts", "Set when products count as low on stock, and see which ones are at or below their alert level."],
+  out: ["Out-of-Stock Products", "Active variants with nothing left to sell. Restock them straight from this list."],
+  history: ["Stock Adjustments", "Every stock change — manual adjustments, orders, cancellations and returns — with who made it."],
+};
+
+export default function InventoryPage({ categories = [], view = "stock", onNavigate }) {
   const [historyProduct, setHistoryProduct] = useState(null);
+  // The product filter only applies to the visit that set it.
+  useEffect(() => { if (view !== "history") setHistoryProduct(null); }, [view]);
   const summary = useAdminData("/admin/inventory/summary", { debounce: 0 });
   const s = summary.data;
   const threshold = s?.lowStockThreshold;
@@ -299,36 +309,27 @@ export default function InventoryPage({ categories = [] }) {
     { label: "Low-stock products", value: fmt(s?.lowStockProducts), note: `${fmt(s?.lowStockVariants)} variants ≤ alert level`, tone: "amber" },
     { label: "Out-of-stock products", value: fmt(s?.outOfStockProducts), note: `${fmt(s?.outOfStockVariants)} variants at 0`, tone: "red" },
   ];
-  const tabs = [
-    { id: "overview", label: "Overview" },
-    { id: "stock", label: "Stock list" },
-    { id: "low", label: "Low stock", count: s?.lowStockVariants || null },
-    { id: "out", label: "Out of stock", count: s?.outOfStockVariants || null },
-    { id: "history", label: "Adjustment history" },
-  ];
-  const openHistory = (row) => { setHistoryProduct({ productId: row.productId, name: row.name }); setTab("history"); };
+  // "History" on a row opens Stock Adjustments filtered to that product.
+  const openHistory = (row) => { setHistoryProduct({ productId: row.productId, name: row.name }); onNavigate?.("Stock Adjustments"); };
   const props = { categories, onAdjusted: summary.reload, onHistory: openHistory, storeThreshold: threshold };
+  const [title, description] = VIEW_COPY[view] || VIEW_COPY.stock;
 
   return (
     <>
-      <PageHeading eyebrow="CATALOGUE" title="Inventory Management" description="Track available stock, act on low and out-of-stock items, and review every stock change."
-        actions={<button type="button" className="secondary-button" onClick={() => setTab("history")}>View stock history</button>} />
+      <PageHeading eyebrow="INVENTORY MANAGEMENT" title={title} description={description} />
       <ErrorBanner error={summary.error} onRetry={summary.reload} />
       <StatCards items={cards} loading={!s && summary.loading} />
-      <p className="ops-hint" style={{ margin: "-8px 0 16px" }}>Stock value isn’t shown: products have no cost price recorded, only selling prices.</p>
-      <Tabs label="Inventory sections" tabs={tabs} active={tab} onChange={(t) => { setTab(t); if (t !== "history") setHistoryProduct(null); }} />
-      {tab === "overview" && (
+      {view === "stock" && <StockTable key="stock" {...props} />}
+      {view === "update" && <StockTable key="update" {...props} defaultSort="name" title="Find a product to update"
+        description="Search by name, brand or SKU, then choose Update stock on the variant." />}
+      {view === "alerts" && (
         <div className="ops-stack">
           <ThresholdSettings current={threshold} onSaved={summary.reload} />
-          <StockTable key="ov-low" stockStatus="low" {...props} />
-          <HistoryTable compact />
+          <StockTable key="low" stockStatus="low" {...props} />
         </div>
       )}
-      {tab === "stock" && <StockTable key="all" {...props} />}
-      {tab === "low" && <StockTable key="low" stockStatus="low" {...props} />}
-      {tab === "out" && <StockTable key="out" stockStatus="out" {...props} />}
-      {tab === "history" && <HistoryTable key={historyProduct?.productId || "all"} productFilter={historyProduct} onClearProduct={() => setHistoryProduct(null)} />}
+      {view === "out" && <StockTable key="out" stockStatus="out" {...props} />}
+      {view === "history" && <HistoryTable key={historyProduct?.productId || "all"} productFilter={historyProduct} onClearProduct={() => setHistoryProduct(null)} />}
     </>
   );
 }
-

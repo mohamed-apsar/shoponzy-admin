@@ -30,6 +30,23 @@ const menuItems = [
   { name: "SEO Settings", icon: "⌕" },
 ];
 
+/* Inventory, Transactions and Returns: one sidebar entry per task; each maps to a view of its page. */
+const opsGroups = {
+  "Inventory Management": {
+    "Available Stock": "stock", "Update Stock": "update", "Low-Stock Alerts": "alerts",
+    "Out-of-Stock Products": "out", "Stock Adjustments": "history",
+  },
+  "Transactions & Payments": {
+    "Razorpay Transactions": "razorpay", "Payment Success & Failure": "status", "Refund Tracking": "refunds",
+    "Payment Methods": "methods", "Transaction Reports": "reports",
+  },
+  "Returns & Refunds": {
+    "Return Requests": "requests", "Approve or Reject": "decide", "Refund Status": "refunds",
+    "Return Reasons": "reasons", "Returned Products": "items",
+  },
+};
+const opsGroupOf = (page) => Object.keys(opsGroups).find((group) => page in opsGroups[group]) || null;
+
 const manageSitePages = [
   "General Settings",
   "Homepage Categories",
@@ -55,6 +72,7 @@ export default function App() {
   const [categoriesOpen, setCategoriesOpen] = useState(false);
 
   const [siteOpen, setSiteOpen] = useState(false);
+  const [opsOpen, setOpsOpen] = useState(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
@@ -178,6 +196,7 @@ export default function App() {
 
     setCategoriesOpen(categoryPages.includes(name));
     setSiteOpen(manageSitePages.includes(name));
+    setOpsOpen(opsGroupOf(name));
   }
 
   return (
@@ -193,7 +212,31 @@ export default function App() {
         </div>
         <div className="menu-label">WORKSPACE</div>
         <nav>
-          {menuItems.map((item) => ["Manage Categories", "Manage Site"].includes(item.name) ? (
+          {menuItems.map((item) => opsGroups[item.name] ? (
+            <div key={item.name} className="nav-group">
+              <button
+                type="button"
+                aria-expanded={opsOpen === item.name}
+                className={`nav-item ${opsGroupOf(page) === item.name ? "active" : ""}`}
+                onClick={() => (opsOpen === item.name ? setOpsOpen(null) : navigate(Object.keys(opsGroups[item.name])[0]))}
+              >
+                <span className="nav-icon">{item.icon}</span>
+                <span>{item.name}</span>
+                {item.name === "Returns & Refunds" && pendingReturns > 0 && <span className="nav-count" title="Return requests awaiting review">{pendingReturns}</span>}
+                <span className="nav-chevron">{opsOpen === item.name ? "⌄" : "›"}</span>
+              </button>
+              {opsOpen === item.name && (
+                <div className="nav-submenu">
+                  {Object.keys(opsGroups[item.name]).map((label) => (
+                    <button type="button" key={label} className={`nav-subitem ${page === label ? "active" : ""}`} onClick={() => navigate(label)}>
+                      <span>•</span>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : ["Manage Categories", "Manage Site"].includes(item.name) ? (
             <div key={item.name} className="nav-group">
               <button
                 type="button"
@@ -249,7 +292,6 @@ export default function App() {
               <span className="nav-icon">{item.icon}</span>
               <span>{item.name}</span>
               {item.name === "Manage Orders" && openOrders > 0 && <span className="nav-count">{openOrders}</span>}
-              {item.name === "Returns & Refunds" && pendingReturns > 0 && <span className="nav-count" title="Return requests awaiting review">{pendingReturns}</span>}
             </button>
           ))}
         </nav>
@@ -271,9 +313,9 @@ export default function App() {
           {page === "Dashboard" && <DashboardHome setPage={navigate} />}
           {page === "Manage Products" && <ProductsPage query={query} categories={categories} />}
           {page === "Manage Orders" && <OrdersPage query={query} onCountsChange={updateOrderCounts} />}
-          {page === "Inventory Management" && <InventoryPage categories={categories} />}
-          {page === "Transactions & Payments" && <TransactionsPage />}
-          {page === "Returns & Refunds" && <ReturnsPage />}
+          {opsGroupOf(page) === "Inventory Management" && <InventoryPage categories={categories} view={opsGroups["Inventory Management"][page]} onNavigate={navigate} />}
+          {opsGroupOf(page) === "Transactions & Payments" && <TransactionsPage view={opsGroups["Transactions & Payments"][page]} />}
+          {opsGroupOf(page) === "Returns & Refunds" && <ReturnsPage view={opsGroups["Returns & Refunds"][page]} />}
           {page === "Customer List" && <CustomersPage query={query} />}
           {page === "Coupons" && <CouponsPage query={query} />}
           {page === "SEO Settings" && <SeoSettings />}
