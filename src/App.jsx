@@ -20,13 +20,13 @@ const menuItems = [
   { name: "Dashboard", icon: "▦" },
   { name: "Manage Categories", icon: "▤" },
   { name: "Manage Products", icon: "□" },
-  { name: "Inventory Management", icon: "▥" },
   { name: "Manage Orders", icon: "▣" },
-  { name: "Transactions & Payments", icon: "₹" },
-  { name: "Returns & Refunds", icon: "↺" },
   { name: "Customer List", icon: "♙" },
   { name: "Coupons", icon: "%" },
   { name: "Manage Site", icon: "⚙" },
+  { name: "Inventory Management", icon: "▥" },
+  { name: "Transactions & Payments", icon: "₹" },
+  { name: "Returns & Refunds", icon: "↺" },
   { name: "SEO Settings", icon: "⌕" },
 ];
 
