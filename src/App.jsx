@@ -9,6 +9,10 @@ import DashboardHome from "./components/DashboardHome";
 import CustomersPage from "./components/CustomersPage";
 import CouponsPage from "./components/CouponsPage";
 import SeoSettings from "./components/SeoSettings";
+import InventoryPage from "./components/InventoryPage";
+import TransactionsPage from "./components/TransactionsPage";
+import ReturnsPage from "./components/ReturnsPage";
+import { ToastProvider } from "./components/ops/OpsKit";
 import { adminRequest } from "./api/adminApi";
 import { useAdminAuth } from "./context/AdminAuthContext";
 
@@ -16,7 +20,10 @@ const menuItems = [
   { name: "Dashboard", icon: "▦" },
   { name: "Manage Categories", icon: "▤" },
   { name: "Manage Products", icon: "□" },
+  { name: "Inventory Management", icon: "▥" },
   { name: "Manage Orders", icon: "▣" },
+  { name: "Transactions & Payments", icon: "₹" },
+  { name: "Returns & Refunds", icon: "↺" },
   { name: "Customer List", icon: "♙" },
   { name: "Coupons", icon: "%" },
   { name: "Manage Site", icon: "⚙" },
@@ -52,6 +59,7 @@ export default function App() {
   const [password, setPassword] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
   const [openOrders, setOpenOrders] = useState(null);
+  const [pendingReturns, setPendingReturns] = useState(null);
 
   const updateOrderCounts = useCallback((counts) => {
     setOpenOrders(["placed", "confirmed", "packed"].reduce((sum, s) => sum + (counts[s] || 0), 0));
@@ -60,7 +68,8 @@ export default function App() {
   useEffect(() => {
     if (authStatus !== "authenticated") return;
     adminRequest("/admin/orders?limit=1").then((result) => updateOrderCounts(result.meta?.statusCounts || {})).catch(() => {});
-  }, [authStatus, updateOrderCounts]);
+    adminRequest("/admin/returns/summary").then((result) => setPendingReturns(result.data.pending)).catch(() => {});
+  }, [authStatus, updateOrderCounts, page]);
 
   const loadCategories = useCallback(async () => {
     setCategoriesLoading(true);
@@ -172,6 +181,7 @@ export default function App() {
   }
 
   return (
+    <ToastProvider>
     <div className="app-shell">
       {sidebarOpen && <button aria-label="Close menu" className="mobile-overlay" onClick={() => setSidebarOpen(false)} />}
       <aside className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
@@ -239,6 +249,7 @@ export default function App() {
               <span className="nav-icon">{item.icon}</span>
               <span>{item.name}</span>
               {item.name === "Manage Orders" && openOrders > 0 && <span className="nav-count">{openOrders}</span>}
+              {item.name === "Returns & Refunds" && pendingReturns > 0 && <span className="nav-count" title="Return requests awaiting review">{pendingReturns}</span>}
             </button>
           ))}
         </nav>
@@ -260,6 +271,9 @@ export default function App() {
           {page === "Dashboard" && <DashboardHome setPage={navigate} />}
           {page === "Manage Products" && <ProductsPage query={query} categories={categories} />}
           {page === "Manage Orders" && <OrdersPage query={query} onCountsChange={updateOrderCounts} />}
+          {page === "Inventory Management" && <InventoryPage categories={categories} />}
+          {page === "Transactions & Payments" && <TransactionsPage />}
+          {page === "Returns & Refunds" && <ReturnsPage />}
           {page === "Customer List" && <CustomersPage query={query} />}
           {page === "Coupons" && <CouponsPage query={query} />}
           {page === "SEO Settings" && <SeoSettings />}
@@ -273,5 +287,6 @@ export default function App() {
         <footer className="footer">© 2026 Shoponzy · Admin dashboard <span>All changes are saved to the database</span></footer>
       </main>
     </div>
+    </ToastProvider>
   );
 }

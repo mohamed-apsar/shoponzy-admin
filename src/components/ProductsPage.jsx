@@ -480,7 +480,7 @@ export default function ProductsPage({ query = "", categories = [] }) {
                 </label>
 
                 <div className="products-form-field products-form-full">
-                  <ImageUpload title="Shared Product Gallery (optional when every colour has a featured image)" images={form.images} onChange={(value) => updateField("images", value)} />
+                  <ImageUpload kind="productGallery" title="Shared Product Gallery (optional when every colour has a featured image)" images={form.images} onChange={(value) => updateField("images", value)} />
                 </div>
 
                 {LEVEL_LABELS.map((label, index) => (
@@ -521,6 +521,7 @@ export default function ProductsPage({ query = "", categories = [] }) {
                           onChange={(images) => updateField("colors", form.colors.map((c, i) => i === index ? { ...c, featuredImage: images[0] || null } : c))}
                         />
                         <ImageUpload
+                          kind="productVariant"
                           title={`${color.name || `Colour ${index + 1}`} product gallery`}
                           images={color.images || []}
                           onChange={(images) => updateField("colors", form.colors.map((c, i) => i === index ? { ...c, images } : c))}
@@ -553,6 +554,7 @@ export default function ProductsPage({ query = "", categories = [] }) {
                       </div>
                       {block.type === "banner" ? (
                         <ImageUpload
+                          kind="productGallery"
                           title={`Banner ${index + 1}`}
                           images={block.image ? [block.image] : []}
                           multiple={false}
@@ -563,6 +565,7 @@ export default function ProductsPage({ query = "", categories = [] }) {
                         <div className="product-content-image-row">
                           {Array.from({ length: 3 }, (_, imageIndex) => (
                             <ImageUpload
+                              kind="productGallery"
                               key={imageIndex}
                               title={`Row ${index + 1} image ${imageIndex + 1}`}
                               images={block.images[imageIndex] ? [block.images[imageIndex]] : []}

@@ -240,3 +240,12 @@ tbody td, .products-table td { font-size: 15px !important; }
 .auth-card input { font-size: 15px !important; }
 .edit-icon-button { width: 32px; height: 32px; padding: 7px !important; display: inline-grid; place-items: center; }
 .edit-icon-button svg, .cm-edit-icon-button svg, .ms-edit-icon-button svg { display: block; width: 16px; height: 16px; }
+
+/* Narrow screens: long page names truncate and the search box shrinks instead of pushing the top bar off-screen. */
+@media (max-width: 600px) {
+  .topbar { min-width: 0; gap: 8px; }
+  .breadcrumb { flex: 1 1 auto; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .topbar-actions { flex: 0 1 auto; min-width: 0; }
+  .topbar-actions .search-box { flex: 1 1 auto; min-width: 0; width: auto; }
+  .topbar-actions .search-box input { width: 100%; min-width: 0; }
+}

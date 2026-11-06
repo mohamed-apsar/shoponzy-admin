@@ -153,6 +153,13 @@ function OrderDetail({ id, onClose, onChanged }) {
               ))}
             </div>
 
+            {!!data.returns?.length && (
+              <div style={{ marginTop: 16 }}>
+                <h3>Return requests</h3>
+                <ul className="muted">{data.returns.map((r) => <li key={r.id}>{r.returnNumber} — {titleCase(r.status)} · {r.quantity} item(s) · refund {titleCase(r.refundStatus || "not_applicable")}{r.refundAmount ? ` (${money(r.refundAmount)})` : ""} · {shortDate(r.createdAt)} <small>(manage under Returns &amp; Refunds)</small></li>)}</ul>
+              </div>
+            )}
+
             {!!order.history?.length && (
               <div style={{ marginTop: 16 }}>
                 <h3>History</h3>

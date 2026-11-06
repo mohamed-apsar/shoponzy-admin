@@ -41,6 +41,23 @@ export async function adminRequest(path, options = {}) {
   return decode(response);
 }
 
+/* Downloads a file (e.g. a CSV export) with the admin session, refreshing it once if it expired. */
+export async function adminDownload(path, filename) {
+  let response = await send(path);
+  if (response.status === 401) {
+    await send("/admin/auth/refresh", { method: "POST" });
+    response = await send(path);
+  }
+  if (!response.ok) await decode(response); // throws the API's error message
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const link = Object.assign(document.createElement("a"), { href: url, download: filename });
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 /* Uploads one image to Cloudinary through the API; returns { url, publicId, ... }. */
 export async function uploadImage(file, kind) {
   const body = new FormData();

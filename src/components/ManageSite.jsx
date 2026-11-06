@@ -266,7 +266,7 @@ function RecordModal({ kind, record, categories = [], onClose, onSave }) {
               <Field label="Subtitle or description"><input value={values.subtitle} onChange={(e) => update("subtitle", e.target.value)} /></Field>
               <Field label="Small heading above the title"><input value={values.kicker} onChange={(e) => update("kicker", e.target.value)} maxLength={60} /></Field>
               <ImageUploader label="Desktop banner image" kind="banner" value={values.image} onChange={(value) => update("image", value)} />
-              <ImageUploader label="Mobile banner image" kind="banner" value={values.mobileImage} onChange={(value) => update("mobileImage", value)} />
+              <ImageUploader label="Mobile banner image" kind="bannerMobile" value={values.mobileImage} onChange={(value) => update("mobileImage", value)} />
               <Field label="Button text"><input value={values.buttonText} onChange={(e) => update("buttonText", e.target.value)} /></Field>
               <Field label="Destination URL" hint={urlHint}><input value={values.url} onChange={(e) => update("url", e.target.value)} placeholder="https:// or /categories/..." /></Field>
               <Field label="Placement"><select value={values.placement} onChange={(e) => update("placement", e.target.value)}>{Object.values(PLACEMENTS).map((p) => <option key={p}>{p}</option>)}</select></Field>

@@ -102,7 +102,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
     try {
       const preview = await readImage(file);
       setForm((previous) => ({ ...previous, [`${field}Preview`]: preview }));
-      const result = await uploadImage(file, "category");
+      const result = await uploadImage(file, field === "bannerImage" ? "categoryBanner" : "category");
       setForm((previous) => ({
         ...previous,
         [field]: {
