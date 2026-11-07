@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { adminDownload, adminRequest } from "../api/adminApi";
 import { dateTime, titleCase } from "../utils/format";
 import {
-  Badge, ConfirmDialog, ErrorBanner, ExportButton, Field, Modal, PageHeading, Pagination, StatCards, TableBody, Thumb,
+  Badge, ConfirmDialog, ErrorBanner, ExportButton, Field, Modal, MoreMenu, PageHeading, Pagination, StatCards, TableBody, Thumb,
   dayEnd, dayStart, qs, useAdminData, useToast,
 } from "./ops/OpsKit";
 
@@ -176,13 +176,15 @@ function StockTable({ stockStatus, categories, onAdjusted, onHistory, storeThres
                 <td>{row.category?.name || "—"}</td>
                 <td className="num"><b>{fmt(row.stock)}</b></td>
                 <td className="num">{row.reserved ? fmt(row.reserved) : "—"}</td>
-                <td className="num">{row.threshold}{row.productThreshold !== null && row.productThreshold !== undefined ? "" : <small className="muted"> (default)</small>}</td>
+                <td className="num">{row.threshold}<small>{row.productThreshold !== null && row.productThreshold !== undefined ? "product" : "default"}</small></td>
                 <td><Badge value={row.stockStatus} /></td>
                 <td>{dateTime(row.lastUpdated)}</td>
                 <td><div className="ops-actions">
                   <button type="button" className="table-action" onClick={() => setAdjusting(row)}>{row.stockStatus === "out" ? "Restock" : "Update stock"}</button>
-                  <button type="button" className="table-action" onClick={() => setThreshold(row)}>Alert level</button>
-                  <button type="button" className="table-action" onClick={() => onHistory(row)}>History</button>
+                  <MoreMenu label={`More actions for ${row.name}`} items={[
+                    { label: "Set alert level", onClick: () => setThreshold(row) },
+                    { label: "View stock history", onClick: () => onHistory(row) },
+                  ]} />
                 </div></td>
               </tr>
             ))}
@@ -235,8 +237,7 @@ function HistoryTable({ productFilter, onClearProduct, compact = false }) {
               <option value="">All reasons</option>{Object.entries(ALL_REASONS).map(([id, label]) => <option key={id} value={id}>{label}</option>)}
             </select>
             <label><input type="checkbox" checked={manual} disabled={Boolean(reason)} onChange={(e) => reset(setManual)(e.target.checked)} /> Manual only</label>
-            <label>From <input type="date" value={from} max={to || undefined} onChange={(e) => reset(setFrom)(e.target.value)} /></label>
-            <label>To <input type="date" value={to} min={from || undefined} onChange={(e) => reset(setTo)(e.target.value)} /></label>
+            <div className="ops-daterange" role="group" aria-label="Date range"><span>From</span><input type="date" aria-label="From date" value={from} max={to || undefined} onChange={(e) => reset(setFrom)(e.target.value)} /><span>To</span><input type="date" aria-label="To date" value={to} min={from || undefined} onChange={(e) => reset(setTo)(e.target.value)} /></div>
             <button type="button" className="secondary-button" disabled={exporting} onClick={exportCsv}>{exporting ? "Exporting…" : "⤓ Export CSV"}</button>
           </div>
         )}

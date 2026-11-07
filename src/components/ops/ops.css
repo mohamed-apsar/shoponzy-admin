@@ -148,3 +148,126 @@
 .ops-inline-input:focus { outline: none; border-color: #a5b4fc; box-shadow: 0 0 0 3px rgba(99, 102, 241, .12); }
 .ops-export { min-height: 40px; padding: 8px 14px; font-weight: 650; white-space: nowrap; cursor: pointer; }
 .products-filter-controls .ops-export { font-size: 14px !important; border-radius: 10px !important; }
+
+/* ===== Layout fixes (Nov 2026): consistent toolbars, compact tables, row action menus ===== */
+/* Toolbar = heading row, then one filter row. Export always sits at the right end of the filter row. */
+.ops-toolbar { flex-direction: column; align-items: stretch; gap: 14px; }
+.ops-toolbar > div:first-child { min-width: 0; }
+.ops-toolbar .muted { margin: 4px 0 0; font-size: 13.5px; }
+.ops-filters { width: 100%; align-items: center; gap: 10px; }
+.ops-filters > input[type="search"] { flex: 1 1 240px; max-width: 360px; min-width: 180px; }
+.ops-filters > select { flex: 0 1 auto; min-width: 150px; max-width: 220px; }
+.ops-filters input, .ops-filters select { height: 40px; min-height: 40px; font-size: 14px; }
+.ops-filters > .ops-export, .ops-filters > .secondary-button:last-child { margin-left: auto; }
+/* Date range: one control, never split across lines. */
+.ops-daterange { display: inline-flex; align-items: center; gap: 0; height: 40px; border: 1px solid #dfe3ed; border-radius: 10px; background: #fff; overflow: hidden; flex: 0 0 auto; }
+.ops-daterange > span { padding: 0 10px; color: var(--shoponzy-muted); font-size: 13px; background: #f8f9fc; height: 100%; display: flex; align-items: center; border-right: 1px solid #eef0f6; }
+.ops-daterange > span + input + span { border-left: 1px solid #eef0f6; }
+.ops-daterange input[type="date"] { border: 0 !important; border-radius: 0 !important; height: 38px !important; min-height: 38px !important; padding: 0 8px !important; box-shadow: none !important; width: 138px; }
+/* Buttons in toolbars: same height and legible size as the inputs. */
+.ops-export, .ops-filters .secondary-button, .ops-filters .primary-button, .ops-heading-actions button {
+  min-height: 40px !important; height: 40px; padding: 0 16px !important; font-size: 14px !important; font-weight: 650 !important;
+  border-radius: 10px !important; display: inline-flex !important; align-items: center; gap: 6px; white-space: nowrap; cursor: pointer;
+}
+/* Summary cards: up to 7 fit one row on a laptop screen. */
+.ops-stats { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.ops-stat { padding: 16px !important; }
+.ops-stat h2 { font-size: clamp(19px, 1.7vw, 24px); }
+/* Tables: compact rows, headers that never collide. */
+.ops-table { min-width: 760px; }
+.ops-table th { padding: 12px 12px !important; font-size: 11.5px !important; letter-spacing: .05em; white-space: nowrap; }
+.ops-table td { padding: 12px 12px !important; font-size: 14px !important; line-height: 1.35; }
+.ops-table td small, .ops-sub { display: block; font-size: 12.5px; color: var(--shoponzy-muted); margin-top: 2px; }
+.ops-table .ops-actions { flex-wrap: nowrap; justify-content: flex-start; }
+.ops-ids { display: grid; gap: 2px; }
+.ops-ids .ops-mono { font-size: 12px; }
+.ops-ids span.muted { font-size: 11.5px; }
+/* Row "more actions" menu */
+.ops-more { position: relative; display: inline-block; }
+.ops-more > button { min-width: 34px; }
+.ops-more-menu { position: absolute; right: 0; top: calc(100% + 4px); z-index: 30; min-width: 170px; padding: 6px; background: #fff; border: 1px solid var(--shoponzy-border); border-radius: 10px; box-shadow: 0 12px 30px rgba(20, 28, 60, .14); display: grid; }
+.ops-more-menu button { text-align: left; border: 0; background: none; padding: 9px 10px; border-radius: 8px; font-size: 14px; color: #2a3450; cursor: pointer; }
+.ops-more-menu button:hover, .ops-more-menu button:focus-visible { background: var(--shoponzy-indigo-soft); color: var(--shoponzy-indigo); outline: none; }
+.table-scroll:has(.ops-more-menu) { overflow: visible; }
+/* Section cards stacked with consistent spacing */
+.ops-stack { gap: 20px; }
+.panel.table-panel { padding: 22px !important; }
+@media (max-width: 900px) {
+  .ops-filters > input[type="search"], .ops-filters > select { max-width: none; flex: 1 1 calc(50% - 10px); }
+  .ops-filters > .ops-export, .ops-filters > .secondary-button:last-child { margin-left: 0; }
+  .ops-daterange { flex: 1 1 100%; }
+  .ops-daterange input[type="date"] { flex: 1; width: auto; }
+}
+
+/* Export sits at the top-right of the card heading, so it never wraps onto its own line. */
+.ops-toolbar { position: relative; }
+.ops-toolbar:has(.ops-filters > .ops-export) > div:first-child,
+.ops-toolbar:has(.ops-filters > .secondary-button:last-child) > div:first-child { padding-right: 180px; }
+.ops-toolbar .ops-filters > .ops-export,
+.ops-toolbar .ops-filters > .secondary-button:last-child { position: absolute; top: 0; right: 0; margin: 0; }
+@media (max-width: 900px) {
+  .ops-toolbar > div:first-child { padding-right: 0 !important; }
+  .ops-toolbar .ops-filters > .ops-export, .ops-toolbar .ops-filters > .secondary-button:last-child { position: static; }
+}
+.ops-table td.ops-nowrap, .ops-table th.ops-nowrap { white-space: nowrap; }
+
+/* ===== FAQ, Notifications, Help & Support ===== */
+.ops-clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.ops-empty-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; padding: 4px 0 18px; }
+.ops-empty-actions button { min-height: 40px; padding: 0 16px !important; font-size: 14px !important; border-radius: 10px !important; cursor: pointer; }
+.ops-callout { margin: 0 0 16px; padding: 12px 16px; border-radius: 12px; background: var(--shoponzy-indigo-soft); border: 1px solid #e0e7ff; color: #312e81; font-size: 14px; line-height: 1.5; }
+.ops-callout.warn { background: #fffbeb; border-color: #fde68a; color: #92400e; }
+.ops-row-new td:first-child { box-shadow: inset 3px 0 0 #d97706; }
+.ops-row-new td strong { font-weight: 750; }
+/* switches */
+.ops-switches { display: grid; gap: 2px; }
+.ops-switch-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 4px; border-bottom: 1px solid #eef0f6; cursor: pointer; }
+.ops-switch-row:last-child { border-bottom: 0; }
+.ops-switch-row strong { display: block; color: #1f2940; font-size: 14.5px; }
+.ops-switch-row small { display: block; color: var(--shoponzy-muted); font-size: 13px; margin-top: 2px; }
+.ops-switch-row input[role="switch"] { appearance: none; -webkit-appearance: none; flex: 0 0 auto; width: 44px; height: 24px; border-radius: 999px; background: #d6dae5; position: relative; cursor: pointer; transition: background .2s; margin: 0; }
+.ops-switch-row input[role="switch"]::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.2); transition: transform .2s; }
+.ops-switch-row input[role="switch"]:checked { background: var(--shoponzy-indigo); }
+.ops-switch-row input[role="switch"]:checked::after { transform: translateX(20px); }
+.ops-switch-row input[role="switch"]:focus-visible { outline: 2px solid var(--shoponzy-indigo); outline-offset: 2px; }
+.ops-switch-row input[role="switch"]:disabled { opacity: .5; cursor: not-allowed; }
+/* campaign editor / sending */
+.ops-picker input[type="search"] { width: 100%; min-height: 40px; padding: 8px 12px; border: 1px solid #dfe3ed; border-radius: 10px; font-size: 14px; }
+.ops-picker-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; margin-top: 10px; max-height: 260px; overflow-y: auto; }
+.ops-picker-list label { display: flex !important; flex-direction: row !important; align-items: center; gap: 10px; padding: 8px; border: 1px solid #e6e9f2; border-radius: 10px; cursor: pointer; font-weight: 500 !important; }
+.ops-picker-list label.on { border-color: #a5b4fc; background: var(--shoponzy-indigo-soft); }
+.ops-picker-list label span { min-width: 0; }
+.ops-picker-list label strong { display: block; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ops-picker-list label small { color: var(--shoponzy-muted); }
+.ops-picker-list .ops-thumb { width: 36px; height: 36px; flex-basis: 36px; }
+.ops-email-frame { width: 100%; height: 62vh; border: 1px solid var(--shoponzy-border); border-radius: 12px; background: #f4f5fa; }
+.ops-progress { height: 12px; border-radius: 999px; background: #eef0f6; overflow: hidden; margin: 6px 0 14px; }
+.ops-progress span { display: block; height: 100%; background: linear-gradient(90deg, #818cf8, #4f46e5); transition: width .3s; }
+/* support thread */
+.ops-thread { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.ops-thread li { padding: 12px 14px; border-radius: 12px; font-size: 14px; line-height: 1.5; }
+.ops-thread li.reply { background: var(--shoponzy-indigo-soft); border: 1px solid #e0e7ff; }
+.ops-thread li.note { background: #fffbeb; border: 1px dashed #fcd34d; }
+.ops-thread-head { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 4px; font-size: 12.5px; color: var(--shoponzy-muted); }
+.ops-thread-head b { color: #2a3450; }
+.ops-textarea { width: 100%; min-height: 96px; padding: 10px 12px; border: 1px solid #dfe3ed; border-radius: 10px; font: inherit; font-size: 14px; resize: vertical; }
+.ops-textarea:focus { outline: none; border-color: #a5b4fc; box-shadow: 0 0 0 3px rgba(99, 102, 241, .12); }
+.ops-reply-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 10px; }
+.ops-reply-bar label { display: inline-flex; align-items: center; gap: 6px; font-size: 13.5px; color: #3b4560; }
+.ops-reply-bar > button { margin-left: auto; min-height: 40px; padding: 0 16px !important; font-size: 14px !important; border-radius: 10px !important; cursor: pointer; }
+.ops-reply-bar > .ops-inline-input { flex: 1 1 320px; min-height: 40px; }
+.ops-inline-select { min-height: 40px; padding: 0 12px; border: 1px solid #dfe3ed; border-radius: 10px; font-size: 14px; margin-right: auto; }
+@media (max-width: 600px) { .ops-reply-bar > button { margin-left: 0; width: 100%; } }
+
+/* Inside ops modals, don't let the legacy .product-modal input/select rules stretch checkboxes and inline selects. */
+.ops-modal input[type="checkbox"], .ops-modal input[type="radio"] {
+  width: 18px !important; height: 18px !important; min-height: 0 !important; padding: 0 !important; margin: 0;
+  flex: 0 0 auto; accent-color: var(--shoponzy-indigo); box-shadow: none !important;
+}
+.ops-modal .ops-inline-select { width: auto !important; min-width: 150px; flex: 0 0 auto; }
+.ops-modal-footer { align-items: center; }
+.ops-form { align-items: start; }
+.ops-field { align-content: start; }
+.ops-field > input, .ops-field > select, .ops-field > textarea, .ops-field > .ops-segment, .ops-field > .ops-picker { width: 100%; }
+.ops-reply-bar label { flex: 0 0 auto; width: auto !important; flex-direction: row !important; }
+.ops-picker-list label input[type="checkbox"] { order: -1; }

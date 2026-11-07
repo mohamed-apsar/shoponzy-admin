@@ -170,8 +170,7 @@ function TransactionsTable({ status: fixedStatus, provider, method: fixedMethod,
                 <option value="">All methods</option>{METHODS.filter(([id]) => provider !== "razorpay" || id !== "cod").map(([id, label]) => <option key={id} value={id}>{label}</option>)}
               </select>
             )}
-            <label>From <input type="date" value={from} max={to || undefined} onChange={(e) => reset(setFrom)(e.target.value)} /></label>
-            <label>To <input type="date" value={to} min={from || undefined} onChange={(e) => reset(setTo)(e.target.value)} /></label>
+            <div className="ops-daterange" role="group" aria-label="Date range"><span>From</span><input type="date" aria-label="From date" value={from} max={to || undefined} onChange={(e) => reset(setFrom)(e.target.value)} /><span>To</span><input type="date" aria-label="To date" value={to} min={from || undefined} onChange={(e) => reset(setTo)(e.target.value)} /></div>
             <select value={sort} onChange={(e) => reset(setSort)(e.target.value)} aria-label="Sort">
               <option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="amount_high">Amount: high to low</option><option value="amount_low">Amount: low to high</option>
             </select>
@@ -182,19 +181,20 @@ function TransactionsTable({ status: fixedStatus, provider, method: fixedMethod,
       <ErrorBanner error={error} onRetry={reload} />
       <div className="table-scroll">
         <table className="ops-table">
-          <thead><tr><th>Transaction ID</th><th>Razorpay payment ID</th><th>Razorpay order ID</th><th>Order</th><th>Customer</th><th className="num">Amount</th><th>Method</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
-          <TableBody loading={loading} items={rows} columns={10} empty="No transactions found" emptyHint={q || status || method || from || to ? "Try clearing the search or filters." : "Payments appear here as customers check out."}>
+          <thead><tr><th>Transaction</th><th>Order / date</th><th>Customer</th><th className="num">Amount</th><th>Method</th><th>Status</th><th>Actions</th></tr></thead>
+          <TableBody loading={loading} items={rows} columns={7} empty="No transactions found" emptyHint={q || status || method || from || to ? "Try clearing the search or filters." : "Payments appear here as customers check out."}>
             {rows.map((t) => (
               <tr key={t.id}>
-                <td className="mono" title={t.id}>{shortId(t.id)}</td>
-                <td className="mono">{t.razorpayPaymentId || "—"}</td>
-                <td className="mono">{t.razorpayOrderId || "—"}</td>
-                <td>{t.order ? `#${t.order.orderNumber}` : "—"}</td>
-                <td>{t.customer?.name || "—"}{t.customer?.email && <><br /><small className="muted">{t.customer.email}</small></>}</td>
-                <td className="num"><b>{money(t.amount)}</b>{t.refundedAmount > 0 && <><br /><small className="muted">−{money(t.refundedAmount)} refunded</small></>}</td>
+                <td><div className="ops-ids">
+                  <span className="ops-mono" title={`Transaction ID ${t.id}`}>{shortId(t.id)}</span>
+                  {t.razorpayPaymentId && <span className="ops-mono" title="Razorpay payment ID">{t.razorpayPaymentId}</span>}
+                  {t.razorpayOrderId && <span className="ops-mono muted" title="Razorpay order ID">{t.razorpayOrderId}</span>}
+                </div></td>
+                <td className="ops-nowrap">{t.order ? `#${t.order.orderNumber}` : "—"}<small>{dateTime(t.createdAt)}</small></td>
+                <td>{t.customer?.name || "—"}{t.customer?.email && <small>{t.customer.email}</small>}</td>
+                <td className="num"><b>{money(t.amount)}</b>{t.refundedAmount > 0 && <small>−{money(t.refundedAmount)} refunded</small>}</td>
                 <td>{methodLabel(t)}</td>
-                <td><Badge value={t.status} />{t.failure?.description && <><br /><small className="muted" title={t.failure.description}>{t.failure.description.slice(0, 40)}{t.failure.description.length > 40 ? "…" : ""}</small></>}</td>
-                <td>{dateTime(t.createdAt)}</td>
+                <td><Badge value={t.status} />{t.failure?.description && <small title={t.failure.description}>{t.failure.description.slice(0, 40)}{t.failure.description.length > 40 ? "…" : ""}</small>}</td>
                 <td><button type="button" className="table-action" onClick={() => onOpen(t.id)}>View</button></td>
               </tr>
             ))}
@@ -225,8 +225,7 @@ function RefundsTable({ onOpen, refreshKey, compact = false }) {
             <select value={status} onChange={(e) => reset(setStatus)(e.target.value)} aria-label="Filter by refund status">
               <option value="">All refund statuses</option><option value="pending">Pending</option><option value="processed">Completed</option><option value="failed">Failed</option>
             </select>
-            <label>From <input type="date" value={from} onChange={(e) => reset(setFrom)(e.target.value)} /></label>
-            <label>To <input type="date" value={to} onChange={(e) => reset(setTo)(e.target.value)} /></label>
+            <div className="ops-daterange" role="group" aria-label="Date range"><span>From</span><input type="date" aria-label="From date" value={from} onChange={(e) => reset(setFrom)(e.target.value)} /><span>To</span><input type="date" aria-label="To date" value={to} onChange={(e) => reset(setTo)(e.target.value)} /></div>
             <ExportButton path={`/admin/refunds/export.csv?${qs({ q: q.trim(), status, from: dayStart(from), to: dayEnd(to) })}`} filename="shoponzy-refunds" disabled={!meta?.total} />
           </div>
         )}
@@ -234,18 +233,19 @@ function RefundsTable({ onOpen, refreshKey, compact = false }) {
       <ErrorBanner error={error} onRetry={reload} />
       <div className="table-scroll">
         <table className="ops-table">
-          <thead><tr><th>Refund ID</th><th>Payment ID</th><th>Order</th><th>Customer</th><th className="num">Amount</th><th>Status</th><th>Initiated</th><th>Completed</th><th>Return</th><th>Actions</th></tr></thead>
-          <TableBody loading={loading} items={rows} columns={10} empty={compact ? "No refunds pending" : "No refunds found"} emptyHint={compact ? "Every refund has been confirmed by Razorpay." : "Refunds issued from orders or returns appear here."}>
+          <thead><tr><th>Refund</th><th>Order</th><th>Customer</th><th className="num">Amount</th><th>Status</th><th>Initiated / completed</th><th>Return</th><th>Actions</th></tr></thead>
+          <TableBody loading={loading} items={rows} columns={8} empty={compact ? "No refunds pending" : "No refunds found"} emptyHint={compact ? "Every refund has been confirmed by Razorpay." : "Refunds issued from orders or returns appear here."}>
             {rows.map((r) => (
               <tr key={r.refundId}>
-                <td className="mono">{r.refundId}{r.manual && <><br /><small className="muted">manual (COD)</small></>}</td>
-                <td className="mono">{r.razorpayPaymentId || "—"}</td>
+                <td><div className="ops-ids">
+                  <span className="ops-mono" title="Refund ID">{r.refundId}</span>
+                  {r.razorpayPaymentId ? <span className="ops-mono muted" title="Razorpay payment ID">{r.razorpayPaymentId}</span> : r.manual && <small>Manual (COD)</small>}
+                </div></td>
                 <td>{r.order ? `#${r.order.orderNumber}` : "—"}</td>
                 <td>{r.customer?.name || "—"}</td>
                 <td className="num"><b>{money(r.amount)}</b></td>
-                <td><Badge value={r.status} />{r.failureReason && <><br /><small className="muted">{r.failureReason}</small></>}</td>
-                <td>{dateTime(r.initiatedAt)}</td>
-                <td>{dateTime(r.processedAt)}</td>
+                <td><Badge value={r.status} />{r.failureReason && <small>{r.failureReason}</small>}</td>
+                <td>{dateTime(r.initiatedAt)}<small>{r.processedAt ? `Done ${dateTime(r.processedAt)}` : "Not completed yet"}</small></td>
                 <td>{r.returnRequest?.returnNumber || "—"}</td>
                 <td><button type="button" className="table-action" onClick={() => onOpen(r.transactionId)}>Transaction</button></td>
               </tr>

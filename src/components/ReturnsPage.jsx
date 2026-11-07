@@ -252,8 +252,7 @@ function ReturnsTable({ view, status: fixedStatus, title, description, onOpen, r
             <select value={refundStatus} onChange={(e) => reset(setRefundStatus)(e.target.value)} aria-label="Filter by refund status">
               <option value="">All refund statuses</option>{REFUND_STATUSES.filter((s) => view !== "refunds" || s !== "not_applicable").map((s) => <option key={s} value={s}>{titleCase(s)}</option>)}
             </select>
-            <label>From <input type="date" value={from} max={to || undefined} onChange={(e) => reset(setFrom)(e.target.value)} /></label>
-            <label>To <input type="date" value={to} min={from || undefined} onChange={(e) => reset(setTo)(e.target.value)} /></label>
+            <div className="ops-daterange" role="group" aria-label="Date range"><span>From</span><input type="date" aria-label="From date" value={from} max={to || undefined} onChange={(e) => reset(setFrom)(e.target.value)} /><span>To</span><input type="date" aria-label="To date" value={to} min={from || undefined} onChange={(e) => reset(setTo)(e.target.value)} /></div>
             <ExportButton path={`/admin/returns/export.csv?${qs({ view, status: fixedStatus || status, refundStatus, reason, q: q.trim(), from: dayStart(from), to: dayEnd(to) })}`}
               filename={`shoponzy-returns${view ? `-${view}` : fixedStatus ? `-${fixedStatus}` : ""}`} disabled={!meta?.total} />
           </div>
@@ -262,22 +261,20 @@ function ReturnsTable({ view, status: fixedStatus, title, description, onOpen, r
       <ErrorBanner error={error} onRetry={reload} />
       <div className="table-scroll">
         <table className="ops-table">
-          <thead><tr><th>Return ID</th><th>Order</th><th>Customer</th><th>Product</th><th>SKU</th><th className="num">Qty</th><th>Reason</th><th>Requested</th><th>Return status</th><th>Refund</th><th>Actions</th></tr></thead>
-          <TableBody loading={loading} items={rows} columns={11} empty="No return requests found" emptyHint={q || status || refundStatus || from || to ? "Try clearing the search or filters." : "Customers request returns from their order page after delivery."}>
+          <thead><tr><th>Return</th><th>Customer</th><th>Product</th><th className="num">Qty</th><th>Reason</th><th>Requested</th><th>Return status</th><th>Refund</th><th>Actions</th></tr></thead>
+          <TableBody loading={loading} items={rows} columns={9} empty="No return requests found" emptyHint={q || status || refundStatus || from || to ? "Try clearing the search or filters." : "Customers request returns from their order page after delivery."}>
             {rows.map((rr) => {
               const first = rr.items[0] || {};
               return (
                 <tr key={rr.id}>
-                  <td><button type="button" className="ops-link" onClick={() => onOpen(rr.id)}>{rr.returnNumber}</button></td>
-                  <td>#{rr.orderNumber}</td>
-                  <td>{rr.customer?.name || "—"}{rr.customer?.phone && <><br /><small className="muted">{rr.customer.phone}</small></>}</td>
-                  <td><div className="ops-product"><Thumb src={first.image} /><div><strong>{first.name}</strong><small>{[first.color, first.size].filter(Boolean).join(" / ")}{rr.items.length > 1 ? ` · +${rr.items.length - 1} more` : ""}</small></div></div></td>
-                  <td className="mono">{first.sku || "—"}</td>
+                  <td><button type="button" className="ops-link" onClick={() => onOpen(rr.id)}>{rr.returnNumber}</button><small>Order #{rr.orderNumber}</small></td>
+                  <td>{rr.customer?.name || "—"}{rr.customer?.phone && <small>{rr.customer.phone}</small>}</td>
+                  <td><div className="ops-product"><Thumb src={first.image} /><div><strong>{first.name}</strong><small>{[[first.color, first.size].filter(Boolean).join(" / "), first.sku].filter(Boolean).join(" · ")}{rr.items.length > 1 ? ` · +${rr.items.length - 1} more` : ""}</small></div></div></td>
                   <td className="num">{rr.quantity}</td>
                   <td>{rr.reasonLabel}</td>
                   <td>{shortDate(rr.createdAt)}</td>
                   <td><Badge value={rr.status} /></td>
-                  <td><Badge value={rr.refund.status} />{rr.refund.amount !== null && rr.refund.status !== "not_applicable" && <><br /><small className="muted">{money(rr.refund.amount)}</small></>}</td>
+                  <td><Badge value={rr.refund.status} />{rr.refund.amount !== null && rr.refund.status !== "not_applicable" && <small>{money(rr.refund.amount)}</small>}</td>
                   <td><button type="button" className="table-action" onClick={() => onOpen(rr.id)}>{rr.status === "requested" ? "Review" : "View"}</button></td>
                 </tr>
               );

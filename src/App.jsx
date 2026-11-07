@@ -12,6 +12,9 @@ import SeoSettings from "./components/SeoSettings";
 import InventoryPage from "./components/InventoryPage";
 import TransactionsPage from "./components/TransactionsPage";
 import ReturnsPage from "./components/ReturnsPage";
+import FaqPage from "./components/FaqPage";
+import NotificationsPage from "./components/NotificationsPage";
+import SupportPage from "./components/SupportPage";
 import { ToastProvider } from "./components/ops/OpsKit";
 import { adminRequest } from "./api/adminApi";
 import { useAdminAuth } from "./context/AdminAuthContext";
@@ -27,6 +30,9 @@ const menuItems = [
   { name: "Inventory Management", icon: "▥" },
   { name: "Transactions & Payments", icon: "₹" },
   { name: "Returns & Refunds", icon: "↺" },
+  { name: "FAQ Management", icon: "?" },
+  { name: "Notifications", icon: "✉" },
+  { name: "Help & Support", icon: "☏" },
   { name: "SEO Settings", icon: "⌕" },
 ];
 
@@ -44,6 +50,11 @@ const opsGroups = {
     "Return Requests": "requests", "Approve or Reject": "decide", "Refund Status": "refunds",
     "Return Reasons": "reasons", "Returned Products": "items",
   },
+  "Notifications": {
+    "New Arrivals": "arrivals", "Offers & Discounts": "offers", "Sales & Promotions": "sales",
+    "Email Notifications": "email", "Notification History": "history",
+  },
+  "Help & Support": { "Support Requests": "requests", "Support Settings": "settings" },
 };
 const opsGroupOf = (page) => Object.keys(opsGroups).find((group) => page in opsGroups[group]) || null;
 
@@ -78,6 +89,13 @@ export default function App() {
   const [loginLoading, setLoginLoading] = useState(false);
   const [openOrders, setOpenOrders] = useState(null);
   const [pendingReturns, setPendingReturns] = useState(null);
+  const [newSupport, setNewSupport] = useState(null);
+
+  // Keep the open page visible in the (scrollable) sidebar menu after its group expands.
+  useEffect(() => {
+    const el = document.querySelector(".nav-subitem.active") || document.querySelector(".nav-item.active");
+    el?.scrollIntoView({ block: "nearest" });
+  }, [page, opsOpen]);
 
   const updateOrderCounts = useCallback((counts) => {
     setOpenOrders(["placed", "confirmed", "packed"].reduce((sum, s) => sum + (counts[s] || 0), 0));
@@ -87,6 +105,7 @@ export default function App() {
     if (authStatus !== "authenticated") return;
     adminRequest("/admin/orders?limit=1").then((result) => updateOrderCounts(result.meta?.statusCounts || {})).catch(() => {});
     adminRequest("/admin/returns/summary").then((result) => setPendingReturns(result.data.pending)).catch(() => {});
+    adminRequest("/admin/contact-messages?limit=1&status=new").then((result) => setNewSupport(result.meta?.total || 0)).catch(() => {});
   }, [authStatus, updateOrderCounts, page]);
 
   const loadCategories = useCallback(async () => {
@@ -223,6 +242,7 @@ export default function App() {
                 <span className="nav-icon">{item.icon}</span>
                 <span>{item.name}</span>
                 {item.name === "Returns & Refunds" && pendingReturns > 0 && <span className="nav-count" title="Return requests awaiting review">{pendingReturns}</span>}
+                {item.name === "Help & Support" && newSupport > 0 && <span className="nav-count" title="New support requests">{newSupport}</span>}
                 <span className="nav-chevron">{opsOpen === item.name ? "⌄" : "›"}</span>
               </button>
               {opsOpen === item.name && (
@@ -316,6 +336,9 @@ export default function App() {
           {opsGroupOf(page) === "Inventory Management" && <InventoryPage categories={categories} view={opsGroups["Inventory Management"][page]} onNavigate={navigate} />}
           {opsGroupOf(page) === "Transactions & Payments" && <TransactionsPage view={opsGroups["Transactions & Payments"][page]} />}
           {opsGroupOf(page) === "Returns & Refunds" && <ReturnsPage view={opsGroups["Returns & Refunds"][page]} />}
+          {page === "FAQ Management" && <FaqPage />}
+          {opsGroupOf(page) === "Notifications" && <NotificationsPage view={opsGroups["Notifications"][page]} />}
+          {opsGroupOf(page) === "Help & Support" && <SupportPage view={opsGroups["Help & Support"][page]} />}
           {page === "Customer List" && <CustomersPage query={query} />}
           {page === "Coupons" && <CouponsPage query={query} />}
           {page === "SEO Settings" && <SeoSettings />}

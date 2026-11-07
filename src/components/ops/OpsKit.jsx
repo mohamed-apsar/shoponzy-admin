@@ -249,3 +249,26 @@ export function ExportButton({ path, filename, label = "Export CSV", disabled = 
   }
   return <button type="button" className="secondary-button ops-export" disabled={busy || disabled} onClick={run}>{busy ? "Exporting…" : `⤓ ${label}`}</button>;
 }
+
+/* "⋯" menu for secondary row actions. items: [{ label, onClick }]. Closes on outside click / Escape. */
+export function MoreMenu({ items, label = "More actions" }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return undefined;
+    const close = (e) => { if (e.type === "keydown" ? e.key === "Escape" : !ref.current?.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", close);
+    document.addEventListener("keydown", close);
+    return () => { document.removeEventListener("mousedown", close); document.removeEventListener("keydown", close); };
+  }, [open]);
+  return (
+    <span className="ops-more" ref={ref}>
+      <button type="button" className="table-action" aria-haspopup="menu" aria-expanded={open} aria-label={label} title={label} onClick={() => setOpen((o) => !o)}>⋯</button>
+      {open && (
+        <span className="ops-more-menu" role="menu">
+          {items.map((it) => <button key={it.label} type="button" role="menuitem" onClick={() => { setOpen(false); it.onClick(); }}>{it.label}</button>)}
+        </span>
+      )}
+    </span>
+  );
+}

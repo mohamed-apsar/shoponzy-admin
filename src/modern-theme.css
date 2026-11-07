@@ -249,3 +249,13 @@ tbody td, .products-table td { font-size: 15px !important; }
   .topbar-actions .search-box { flex: 1 1 auto; min-width: 0; width: auto; }
   .topbar-actions .search-box input { width: 100%; min-width: 0; }
 }
+
+/* Short laptop screens: a more compact sidebar so expanded groups stay in view. */
+@media (max-height: 920px) and (min-width: 901px) {
+  .brand { padding-bottom: 8px !important; }
+  .brand-logo-wrap .brand-logo { width: min(100%, 170px); }
+  .menu-label { margin-bottom: 4px !important; }
+  .nav-item { min-height: 38px; padding-top: 7px !important; padding-bottom: 7px !important; }
+  .nav-subitem { min-height: 32px !important; padding-top: 6px !important; padding-bottom: 6px !important; }
+  .sidebar-footer { padding-top: 10px !important; }
+}
