@@ -20,7 +20,7 @@ const emptyForm = () => ({
   name: "", sku: "", brand: "", description: "", status: "active",
   categoryIds: ["", "", "", "", ""],
   images: [],
-  seo: { title: "", description: "", image: null, robots: "index, follow" },
+  seo: { title: "", description: "", image: null, imageTitle: "", robots: "index, follow" },
   colors: [], contentBlocks: [], sizesText: "",
   price: "", mrp: "", stock: "0",
   rows: {},
@@ -230,6 +230,7 @@ export default function ProductsPage({ query = "", categories = [] }) {
         title: full.seo?.title || "",
         description: full.seo?.description || "",
         image: full.seo?.image ? { url: full.seo.image.url, publicId: full.seo.image.publicId, alt: full.seo.image.alt || "" } : null,
+        imageTitle: full.seo?.image?.alt || "",
         robots: full.seo?.robots || "index, follow",
       },
       sizesText: (full.sizes || []).join(", "),
@@ -305,7 +306,12 @@ export default function ProductsPage({ query = "", categories = [] }) {
       variants,
       isNewArrival: form.isNewArrival, isBestseller: form.isBestseller, isTrending: form.isTrending, isFeatured: form.isFeatured,
       badge: form.badge,
-      seo: form.seo,
+      seo: {
+        title: form.seo.title,
+        description: form.seo.description,
+        image: form.seo.image ? { ...form.seo.image, alt: form.seo.imageTitle.trim() } : null,
+        robots: form.seo.robots,
+      },
       status: form.status,
     };
 
@@ -636,9 +642,8 @@ export default function ProductsPage({ query = "", categories = [] }) {
                       <label className="products-form-field product-seo-image-title">Meta Image Title
                         <input
                           maxLength={200}
-                          value={form.seo.image?.alt || ""}
-                          disabled={!form.seo.image}
-                          onChange={(event) => updateSeoField("image", { ...form.seo.image, alt: event.target.value })}
+                          value={form.seo.imageTitle}
+                          onChange={(event) => updateSeoField("imageTitle", event.target.value)}
                           placeholder="Enter a title for the meta image"
                         />
                       </label>
