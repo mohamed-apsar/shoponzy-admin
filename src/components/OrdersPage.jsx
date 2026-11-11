@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { adminRequest } from "../api/adminApi";
 import { API_BASE } from "../api/config";
 import { dateTime, money, shortDate, titleCase } from "../utils/format";
@@ -26,6 +27,79 @@ export function OrderStatus({ status }) {
   return <span className={`status ${STATUS_CLASS[status] || "pending"}`}>{titleCase(status)}</span>;
 }
 
+function OrderStatusDropdown({ order, onChange, busy }) {
+  const [open, setOpen] = useState(false);
+  const [position, setPosition] = useState(null);
+  const buttonRef = useRef(null);
+  const menuRef = useRef(null);
+  const options = STATUS_DROPDOWN_OPTIONS.filter(([value]) => (STATUS_TRANSITIONS[order.status] || []).includes(value));
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const closeOutside = (event) => {
+      if (!buttonRef.current?.contains(event.target) && !menuRef.current?.contains(event.target)) setOpen(false);
+    };
+    const closeOnEscape = (event) => { if (event.key === "Escape") setOpen(false); };
+    document.addEventListener("mousedown", closeOutside);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("mousedown", closeOutside);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [open]);
+
+  function toggle(event) {
+    event.stopPropagation();
+    if (open) return setOpen(false);
+    const rect = buttonRef.current.getBoundingClientRect();
+    const menuHeight = options.length * 40 + 8;
+    setPosition({
+      left: Math.max(8, Math.min(rect.left, window.innerWidth - Math.max(rect.width, 150) - 8)),
+      top: rect.bottom + menuHeight > window.innerHeight ? Math.max(8, rect.top - menuHeight - 4) : rect.bottom + 4,
+      width: Math.max(rect.width, 150),
+    });
+    setOpen(true);
+  }
+
+  const selected = STATUS_DROPDOWN_OPTIONS.find(([value]) => value === order.status);
+  return (
+    <>
+      <button
+        ref={buttonRef}
+        type="button"
+        className={`order-status-dropdown status-${STATUS_CLASS[order.status] || "pending"}`}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={`Status for order ${order.orderNumber}`}
+        disabled={busy}
+        onClick={toggle}
+      >
+        {selected?.[1] || titleCase(order.status)}
+      </button>
+      {open && position && createPortal(
+        <div ref={menuRef} className="order-status-menu" role="menu" style={position}>
+          {options.map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              role="menuitem"
+              className={`order-status-option status-${STATUS_CLASS[value] || "pending"}`}
+              onClick={(event) => {
+                event.stopPropagation();
+                setOpen(false);
+                onChange(order, value);
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>,
+        document.body,
+      )}
+    </>
+  );
+}
+
 const paymentLabel = (order) => `${order.paymentMethod === "cod" ? "COD" : "Prepaid"} · ${titleCase(order.paymentStatus || "pending")}`;
 
 export function OrdersTable({ items, onOpen, onStatusChange, busyOrderId }) {
@@ -47,21 +121,9 @@ export function OrdersTable({ items, onOpen, onStatusChange, busyOrderId }) {
               <td>{money(order.total)}</td>
               <td>{paymentLabel(order)}</td>
               <td onClick={(event) => event.stopPropagation()}>
-                {onStatusChange && (STATUS_TRANSITIONS[order.status] || []).length > 0 ? (
-                  <select
-                    className={`order-status-dropdown status-${STATUS_CLASS[order.status] || "pending"}`}
-                    value={order.status}
-                    disabled={busyOrderId === order.id}
-                    aria-label={`Status for order ${order.orderNumber}`}
-                    onClick={(event) => event.stopPropagation()}
-                    onChange={(event) => onStatusChange(order, event.target.value)}
-                  >
-                    {!STATUS_DROPDOWN_OPTIONS.some(([value]) => value === order.status) && <option value={order.status} disabled>{titleCase(order.status)}</option>}
-                    {STATUS_DROPDOWN_OPTIONS.filter(([value]) => value === order.status || (STATUS_TRANSITIONS[order.status] || []).includes(value)).map(([value, label]) => (
-                      <option key={value} value={value}>{label}</option>
-                    ))}
-                  </select>
-                ) : <OrderStatus status={order.status} />}
+                {onStatusChange && (STATUS_TRANSITIONS[order.status] || []).length > 0
+                  ? <OrderStatusDropdown order={order} onChange={onStatusChange} busy={busyOrderId === order.id} />
+                  : <OrderStatus status={order.status} />}
               </td>
             </tr>
           ))}
