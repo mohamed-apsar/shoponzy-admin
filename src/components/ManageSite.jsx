@@ -41,7 +41,7 @@ const SETTINGS = {
   },
   general: {
     toUi: (v) => ({ ...v, productsPerPage: String(v.productsPerPage), gridColumns: String(v.gridColumns) }),
-    toApi: (v) => ({ ...pick(v, ["websiteName", "tagline", "websiteUrl", "currency", "language", "breadcrumbs", "wishlist", "comparison"]), productsPerPage: Number(v.productsPerPage), gridColumns: Number(v.gridColumns) }),
+    toApi: (v) => ({ ...pick(v, ["websiteName", "tagline", "websiteUrl", "currency", "language", "breadcrumbs", "wishlist", "comparison"]), taxRate: Number(v.taxRate), productsPerPage: Number(v.productsPerPage), gridColumns: Number(v.gridColumns) }),
   },
   branding: {
     toUi: (v) => v,
@@ -521,6 +521,7 @@ export default function ManageSite({ activeSection = "General Settings", onSecti
           <Field label="Default language"><select value={values.language} onChange={(e) => update("language", e.target.value)}><option>English</option></select></Field>
           <Field label="Products per page"><select value={values.productsPerPage} onChange={(e) => update("productsPerPage", e.target.value)}>{["12", "24", "36", "48"].map((item) => <option key={item}>{item}</option>)}</select></Field>
           <Field label="Product grid columns"><select value={values.gridColumns} onChange={(e) => update("gridColumns", e.target.value)}>{["2", "3", "4", "5", "6"].map((item) => <option key={item}>{item}</option>)}</select></Field>
+          <Field label="Product tax (%)"><input type="number" min="0" max="100" step="0.01" required value={values.taxRate ?? 0} onChange={(e) => update("taxRate", e.target.value)} /><small className="muted">Added to the discounted product amount at checkout. Shipping is excluded.</small></Field>
         </div>
         <div className="ms-toggle-list">
           <Toggle label="Show breadcrumbs" checked={values.breadcrumbs} onChange={(value) => update("breadcrumbs", value)} />
