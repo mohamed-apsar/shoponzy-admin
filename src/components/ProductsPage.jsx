@@ -584,9 +584,9 @@ export default function ProductsPage({ query = "", categories = [] }) {
                   <input value={form.sizesText} onChange={(e) => updateField("sizesText", e.target.value)} placeholder="e.g. 6, 7, 8, 9 or S, M, L" />
                 </label>
 
-                <label className="products-form-field">{hasOptions ? "Default Current Price" : "Current Price *"}
+                {!form.colors.length && <label className="products-form-field">{hasOptions ? "Default Current Price" : "Current Price *"}
                   <div className="products-price-input"><span>₹</span><input required={!hasOptions} type="number" min="0" step="0.01" value={form.price} onChange={(e) => updateField("price", e.target.value)} placeholder="Enter current price" /></div>
-                </label>
+                </label>}
                 {hasOptions && hasSizeOptions && <div className="products-form-field products-form-full">
                   <span>Variant pricing and stock ({variantList.length})</span>
                   <p className="products-variant-hint">Set individual values for each variant. Colour stock values are used as defaults.</p>
