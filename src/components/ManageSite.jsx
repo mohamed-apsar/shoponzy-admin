@@ -348,6 +348,36 @@ function SettingsForm({ initial, children, onSave, onReset }) {
   return <form onSubmit={submit}>{children(values, update)}<FormActions onReset={reset} saving={saving} /></form>;
 }
 
+function AdminPasswordForm() {
+  const [values, setValues] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  async function submit(event) {
+    event.preventDefault(); setError(""); setSuccess("");
+    if (values.newPassword !== values.confirmPassword) return setError("The new passwords do not match.");
+    setSaving(true);
+    try {
+      await adminRequest("/admin/auth/password", { method: "POST", body: JSON.stringify({ currentPassword: values.currentPassword, newPassword: values.newPassword }) });
+      setValues({ currentPassword: "", newPassword: "", confirmPassword: "" });
+      setSuccess("Admin password changed. Other signed-in sessions have been signed out.");
+    } catch (e) { setError(e.message); }
+    finally { setSaving(false); }
+  }
+  return <SettingsCard title="Change admin password" description="Verify your current password, then choose a new password for this admin account.">
+    <form onSubmit={submit}>
+      <div className="ms-form-grid">
+        <Field label="Current password"><input type="password" autoComplete="current-password" required maxLength={128} value={values.currentPassword} onChange={(e) => setValues({ ...values, currentPassword: e.target.value })} /></Field>
+        <Field label="New password"><input type="password" autoComplete="new-password" required minLength={8} maxLength={128} value={values.newPassword} onChange={(e) => setValues({ ...values, newPassword: e.target.value })} /><small>Use at least 8 characters.</small></Field>
+        <Field label="Confirm new password"><input type="password" autoComplete="new-password" required minLength={8} maxLength={128} value={values.confirmPassword} onChange={(e) => setValues({ ...values, confirmPassword: e.target.value })} /></Field>
+      </div>
+      {error && <p className="ms-error" role="alert">{error}</p>}
+      {success && <p className="ms-valid" role="status">{success}</p>}
+      <div className="ms-form-actions"><button className="ms-button ms-button-primary" type="submit" disabled={saving}>{saving ? "Changing password…" : "Change password"}</button></div>
+    </form>
+  </SettingsCard>;
+}
+
 export default function ManageSite({ activeSection = "General Settings", onSectionChange, categories = [] }) {
   const [settings, setSettings] = useState(null);
   const [banners, setBanners] = useState([]);
@@ -511,7 +541,7 @@ export default function ManageSite({ activeSection = "General Settings", onSecti
   }
 
   function renderGeneral() {
-    return <SettingsForm initial={settings.general} onSave={(value) => saveSettings("general", value)} onReset={() => resetSettings("general")}>
+    return <><SettingsForm initial={settings.general} onSave={(value) => saveSettings("general", value)} onReset={() => resetSettings("general")}>
       {(values, update) => <SettingsCard title="Store information" description="Set the details and storefront defaults customers will see.">
         <div className="ms-form-grid">
           <Field label="Website name"><input required value={values.websiteName} onChange={(e) => update("websiteName", e.target.value)} /></Field>
@@ -529,7 +559,7 @@ export default function ManageSite({ activeSection = "General Settings", onSecti
           <Toggle label="Show product comparison" checked={values.comparison} onChange={(value) => update("comparison", value)} />
         </div>
       </SettingsCard>}
-    </SettingsForm>;
+    </SettingsForm><AdminPasswordForm /></>;
   }
 
   function renderBanners() {
