@@ -2,6 +2,7 @@ import { useState } from "react";
 import "./CategoryManager.css";
 import { uploadImage } from "../api/adminApi";
 import EditIcon from "./EditIcon";
+import DeleteConfirmDialog from "./DeleteConfirmDialog";
 
 /* eslint-disable react/prop-types */
 const LEVELS = [
@@ -35,6 +36,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
   const [saving, setSaving] = useState(false);
   const [statusOverrides, setStatusOverrides] = useState({});
   const [pendingStatusIds, setPendingStatusIds] = useState([]);
+  const [deleting, setDeleting] = useState(null);
   const [imageChanged, setImageChanged] = useState(false);
   const [exploreImageChanged, setExploreImageChanged] = useState(false);
   const [bannerImageChanged, setBannerImageChanged] = useState(false);
@@ -165,13 +167,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
       return false;
     });
     if (hasDescendants) return alert("Delete this item's child categories first.");
-    if (!window.confirm(`Delete "${item.name}"?`)) return;
-    setError("");
-    try {
-      await onDelete(item.id);
-    } catch (deleteError) {
-      setError(deleteError.message);
-    }
+    setDeleting(item);
   }
 
   async function toggleStatus(item) {
@@ -343,6 +339,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
           </form>
         </section>
       </div>}
+      {deleting && <DeleteConfirmDialog title={`Delete ${config.singular}?`} message={`“${deleting.name}” will be permanently deleted.`} onCancel={() => setDeleting(null)} onConfirm={() => onDelete(deleting.id)} />}
     </div>
   );
 }

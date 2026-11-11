@@ -3,6 +3,7 @@ import { adminRequest, uploadImage } from "../api/adminApi";
 import { money } from "../utils/format";
 import EditIcon from "./EditIcon";
 import StatusToggle from "./StatusToggle";
+import DeleteConfirmDialog from "./DeleteConfirmDialog";
 
 /* eslint-disable react/prop-types */
 const LEVEL_LABELS = ["Select Category *", "Select Sub Category", "Select Child Category", "Select Second Child Category", "Select Third Child Category"];
@@ -114,6 +115,7 @@ export default function ProductsPage({ query = "", categories = [] }) {
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [pendingStatusIds, setPendingStatusIds] = useState([]);
+  const [deleting, setDeleting] = useState(null);
 
   const term = `${search} ${query}`.trim();
 
@@ -345,13 +347,17 @@ export default function ProductsPage({ query = "", categories = [] }) {
   }
 
   async function deleteProduct(product) {
-    if (!window.confirm(`Are you sure you want to delete "${product.name}"? Products that appear in orders are archived instead.`)) return;
+    setDeleting(product);
+  }
+
+  async function confirmDeleteProduct() {
     try {
-      const result = await adminRequest(`/admin/products/${product.id}`, { method: "DELETE" });
+      const result = await adminRequest(`/admin/products/${deleting.id}`, { method: "DELETE" });
       if (result.data.archived) window.alert("This product appears in past orders, so it was archived instead of deleted.");
       await load();
     } catch (requestError) {
       setLoadError(requestError.message);
+      throw requestError;
     }
   }
 
@@ -686,6 +692,7 @@ export default function ProductsPage({ query = "", categories = [] }) {
           </section>
         </div>
       )}
+      {deleting && <DeleteConfirmDialog title="Delete product?" message={`“${deleting.name}” will be deleted. Products that appear in orders are archived instead.`} onCancel={() => setDeleting(null)} onConfirm={confirmDeleteProduct} />}
     </>
   );
 }

@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { adminRequest } from "../api/adminApi";
+import DeleteConfirmDialog from "./DeleteConfirmDialog";
 import { dateTime } from "../utils/format";
 import {
-  Badge, ConfirmDialog, ErrorBanner, ExportButton, Field, Modal, MoreMenu, PageHeading, StatCards, TableBody,
+  Badge, ErrorBanner, ExportButton, Field, Modal, MoreMenu, PageHeading, StatCards, TableBody,
   qs, useAdminData, useToast,
 } from "./ops/OpsKit";
 
@@ -135,8 +136,8 @@ export default function FaqPage() {
         )}
       </section>
       {editing && <FaqEditor faq={editing.id ? editing : null} categories={meta?.categories || []} onClose={() => setEditing(null)} onSaved={reload} />}
-      {deleting && <ConfirmDialog title="Delete this FAQ?" tone="danger" confirmLabel="Delete FAQ" onClose={() => setDeleting(null)}
-        message={<>“{deleting.question}” will be removed from the storefront Help page. To keep it for later, hide it instead.</>}
+      {deleting && <DeleteConfirmDialog title="Delete this FAQ?" confirmLabel="Yes, Delete" onCancel={() => setDeleting(null)}
+        message={`“${deleting.question}” will be removed from the storefront Help page. You can hide it instead if you want to keep it.`}
         onConfirm={async () => { await adminRequest(`/admin/faqs/${deleting.id}`, { method: "DELETE" }); toast("FAQ deleted."); await reload(); }} />}
     </>
   );

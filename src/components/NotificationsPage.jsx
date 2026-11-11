@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { adminRequest } from "../api/adminApi";
 import { useAdminAuth } from "../context/AdminAuthContext";
+import DeleteConfirmDialog from "./DeleteConfirmDialog";
 import { dateTime, money, titleCase } from "../utils/format";
 import {
   Badge, ConfirmDialog, ErrorBanner, ExportButton, Field, Modal, MoreMenu, PageHeading, Pagination, StatCards, TableBody, Thumb,
@@ -258,7 +259,7 @@ function CampaignTable({ type, summary, refresh, onChanged, createKey = 0 }) {
         message={<>This emails <b>{summary?.subscribers}</b> newsletter subscriber{summary?.subscribers === 1 ? "" : "s"}. It can’t be unsent. Send yourself a test first if you haven’t.</>}
         onConfirm={async () => { setSending(confirmSend); }} />}
       {sending && <SendProgress campaign={sending} onClose={() => { setSending(null); changed(); }} onDone={reload} />}
-      {deleting && <ConfirmDialog title="Delete this notification?" tone="danger" confirmLabel="Delete" onClose={() => setDeleting(null)} message={<>“{deleting.title}” will be deleted.</>}
+      {deleting && <DeleteConfirmDialog title="Delete this notification?" confirmLabel="Yes, Delete" onCancel={() => setDeleting(null)} message={`“${deleting.title}” will be deleted.`}
         onConfirm={async () => { await adminRequest(`/admin/notifications/${deleting.id}`, { method: "DELETE" }); toast("Notification deleted."); changed(); }} />}
     </section>
   );

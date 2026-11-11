@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { adminRequest } from "../api/adminApi";
+import DeleteConfirmDialog from "./DeleteConfirmDialog";
 
 const empty = { states: [], pincodes: [] };
 const cardStyle = { background: "var(--surface, #fff)", border: "1px solid var(--border, #e2e7f0)", borderRadius: 16, padding: 24, minWidth: 0 };
@@ -16,6 +17,7 @@ export default function ShippingPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [stateName, setStateName] = useState("");
   const [districtDrafts, setDistrictDrafts] = useState({});
   const [form, setForm] = useState({ state: "", district: "", code: "", price: "" });
@@ -85,8 +87,26 @@ export default function ShippingPage() {
   }
   function removeDistrict(si, di) {
     const state = states[si]; const district = state.districts[di];
-    if (!window.confirm(`Delete ${district.name} and its PIN code rates?`)) return;
-    save({ ...data, states: states.map((s, i) => i === si ? { ...s, districts: s.districts.filter((_, j) => j !== di) } : s), pincodes: data.pincodes.filter((p) => !(p.state === state.name && p.district === district.name)) });
+    setDeleteTarget({ type: "district", si, di, name: district.name, state: state.name });
+  }
+  async function confirmDelete() {
+    let next; let message;
+    if (deleteTarget.type === "state") {
+      next = { ...data, states: states.filter((_, i) => i !== deleteTarget.si), pincodes: data.pincodes.filter((p) => p.state !== deleteTarget.name) };
+      message = "State and delivery rates deleted.";
+    } else if (deleteTarget.type === "district") {
+      next = { ...data, states: states.map((s, i) => i === deleteTarget.si ? { ...s, districts: s.districts.filter((_, j) => j !== deleteTarget.di) } : s), pincodes: data.pincodes.filter((p) => !(p.state === deleteTarget.state && p.district === deleteTarget.name)) };
+      message = "District and its PIN code rates deleted.";
+    } else {
+      next = { ...data, pincodes: data.pincodes.filter((_, i) => i !== deleteTarget.index) };
+      message = "PIN code delivery rate deleted.";
+    }
+    setSaving(true); setError(""); setNotice("");
+    try {
+      const result = await adminRequest("/admin/site-settings/shipping", { method: "PATCH", body: JSON.stringify(next) });
+      setData(result.data); setNotice(message); setDeleteTarget(null);
+    } catch (e) { setError(e.message); throw e; }
+    finally { setSaving(false); }
   }
 
   return <section className="shipping-page">
@@ -99,7 +119,7 @@ export default function ShippingPage() {
           <h2>Add a state and districts</h2>
           <form onSubmit={addState} style={{ marginBottom: 20 }}><label className="shipping-label">State name <b>*</b></label><div style={rowStyle}><input style={inputStyle} value={stateName} onChange={(e) => setStateName(e.target.value)} required aria-label="State name" /><button style={btnStyle} disabled={saving}>＋ Add state</button></div></form>
           <div className="shipping-state-list">{states.map((state, si) => <article className="shipping-state" key={`${state.name}-${si}`}>
-            <div style={rowStyle}><h3 style={{ margin: "0 auto 0 0" }}>{state.name}</h3><label className="shipping-toggle"><input type="checkbox" checked={state.enabled} disabled={saving} onChange={(e) => updateState(si, { enabled: e.target.checked })} /> Enabled</label><button type="button" style={secondaryStyle} aria-label={`Edit ${state.name}`} onClick={() => renameState(si)}>✎</button><button type="button" className="shipping-delete" onClick={() => { if (window.confirm(`Delete ${state.name} and all its districts and PIN rates?`)) save({ ...data, states: states.filter((_, i) => i !== si), pincodes: data.pincodes.filter((p) => p.state !== state.name) }); }}>Delete</button></div>
+            <div style={rowStyle}><h3 style={{ margin: "0 auto 0 0" }}>{state.name}</h3><label className="shipping-toggle"><input type="checkbox" checked={state.enabled} disabled={saving} onChange={(e) => updateState(si, { enabled: e.target.checked })} /> Enabled</label><button type="button" style={secondaryStyle} aria-label={`Edit ${state.name}`} onClick={() => renameState(si)}>✎</button><button type="button" className="shipping-delete" onClick={() => setDeleteTarget({ type: "state", si, name: state.name })}>Delete</button></div>
             <form onSubmit={(e) => addDistrict(e, si)} style={{ ...rowStyle, margin: "14px 0 10px" }}><input style={inputStyle} placeholder="District name" aria-label={`District name for ${state.name}`} value={districtDrafts[si] || ""} onChange={(e) => setDistrictDrafts((v) => ({ ...v, [si]: e.target.value }))} /><button type="submit" style={secondaryStyle} disabled={saving}>＋ District</button></form>
             <div className="shipping-chips">{state.districts.map((district, di) => <div className="shipping-chip" key={`${district.name}-${di}`}><strong>{district.name}</strong><button type="button" onClick={() => updateDistrict(si, di, { enabled: !district.enabled })}>{district.enabled ? "Disable" : "Enable"}</button><button type="button" onClick={() => renameDistrict(si, di)}>Edit</button><button type="button" className="shipping-delete" onClick={() => removeDistrict(si, di)}>Delete</button></div>)}</div>
           </article>)}</div>
@@ -116,9 +136,10 @@ export default function ShippingPage() {
         </section>
       </div>
       <section style={{ ...cardStyle, marginTop: 24 }}><h2>⌖ PIN code delivery rates</h2>
-        {!data.pincodes.length ? <p className="muted">No PIN code rates yet.</p> : <div className="shipping-rate-list">{data.pincodes.map((rate, i) => <div className="shipping-rate" key={`${rate.code}-${i}`}><div><strong>{rate.code}</strong><p>{rate.district}, {rate.state} · ₹{Number(rate.price).toLocaleString("en-IN")}</p></div><div style={rowStyle}><label className="shipping-toggle"><input type="checkbox" checked={rate.enabled} disabled={saving} onChange={(e) => updateRate(i, { enabled: e.target.checked })} /> Enabled</label><button type="button" style={secondaryStyle} aria-label={`Edit rate for ${rate.code}`} onClick={() => editRate(i)}>✎</button><button type="button" className="shipping-delete" onClick={() => { if (window.confirm(`Delete delivery rate ${rate.code}?`)) save({ ...data, pincodes: data.pincodes.filter((_, j) => j !== i) }, "PIN code delivery rate deleted."); }}>Delete</button></div></div>)}</div>}
+        {!data.pincodes.length ? <p className="muted">No PIN code rates yet.</p> : <div className="shipping-rate-list">{data.pincodes.map((rate, i) => <div className="shipping-rate" key={`${rate.code}-${i}`}><div><strong>{rate.code}</strong><p>{rate.district}, {rate.state} · ₹{Number(rate.price).toLocaleString("en-IN")}</p></div><div style={rowStyle}><label className="shipping-toggle"><input type="checkbox" checked={rate.enabled} disabled={saving} onChange={(e) => updateRate(i, { enabled: e.target.checked })} /> Enabled</label><button type="button" style={secondaryStyle} aria-label={`Edit rate for ${rate.code}`} onClick={() => editRate(i)}>✎</button><button type="button" className="shipping-delete" onClick={() => setDeleteTarget({ type: "pincode", index: i, name: rate.code })}>Delete</button></div></div>)}</div>}
       </section>
       {saving && <p role="status" className="muted">Saving changes…</p>}
     </>}
+    {deleteTarget && <DeleteConfirmDialog title={deleteTarget.type === "pincode" ? "Delete PIN code rate?" : `Delete ${deleteTarget.type}?`} message={deleteTarget.type === "state" ? `“${deleteTarget.name}” and all its districts and PIN code rates will be deleted.` : deleteTarget.type === "district" ? `“${deleteTarget.name}” and its PIN code rates will be deleted.` : `The delivery rate for PIN code ${deleteTarget.name} will be deleted.`} onCancel={() => setDeleteTarget(null)} onConfirm={confirmDelete} />}
   </section>;
 }

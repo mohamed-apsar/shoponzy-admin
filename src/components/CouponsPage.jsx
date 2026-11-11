@@ -3,6 +3,7 @@ import { adminRequest } from "../api/adminApi";
 import { money, shortDate } from "../utils/format";
 import EditIcon from "./EditIcon";
 import StatusToggle from "./StatusToggle";
+import DeleteConfirmDialog from "./DeleteConfirmDialog";
 
 /* eslint-disable react/prop-types */
 const emptyCoupon = () => ({
@@ -32,6 +33,7 @@ export default function CouponsPage({ query = "" }) {
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [pendingStatusIds, setPendingStatusIds] = useState([]);
+  const [deleting, setDeleting] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -114,13 +116,12 @@ export default function CouponsPage({ query = "" }) {
   }
 
   async function remove(c) {
-    if (!window.confirm(`Delete coupon ${c.code}? Past orders keep their discount.`)) return;
-    try {
-      await adminRequest(`/admin/coupons/${c.id}`, { method: "DELETE" });
-      await load();
-    } catch (requestError) {
-      setLoadError(requestError.message);
-    }
+    setDeleting(c);
+  }
+
+  async function confirmDelete() {
+    await adminRequest(`/admin/coupons/${deleting.id}`, { method: "DELETE" });
+    await load();
   }
 
   return (
@@ -218,6 +219,7 @@ export default function CouponsPage({ query = "" }) {
           </section>
         </div>
       )}
+      {deleting && <DeleteConfirmDialog title="Delete coupon?" message={`Coupon ${deleting.code} will be deleted. Past orders keep their discount.`} onCancel={() => setDeleting(null)} onConfirm={confirmDelete} />}
     </>
   );
 }

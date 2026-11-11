@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { adminRequest, uploadImage } from "../api/adminApi";
 import { API_BASE } from "../api/config";
+import DeleteConfirmDialog from "./DeleteConfirmDialog";
 import "./SeoSettings.css";
 
 /* eslint-disable react/prop-types */
@@ -76,6 +77,7 @@ export default function SeoSettings() {
   const [message, setMessage] = useState("");
   const [pageEdits, setPageEdits] = useState({});
   const [pendingLog, setPendingLog] = useState("");
+  const [deletingLog, setDeletingLog] = useState(null);
 
   const loadLogs = useCallback(async () => {
     const result = await adminRequest(`/admin/seo/404-logs?page=${page}&limit=10${query ? `&q=${encodeURIComponent(query)}` : ""}`);
@@ -281,15 +283,21 @@ export default function SeoSettings() {
   }
 
   async function deleteLog(log) {
-    if (!window.confirm(`Delete the 404 log for ${log.path}?`)) return;
+    setDeletingLog(log);
+  }
+
+  async function confirmDeleteLog() {
+    const log = deletingLog;
     setPendingLog(log.id);
     setError("");
     try {
       await adminRequest(`/admin/seo/404-logs/${log.id}`, { method: "DELETE" });
       await loadLogs();
       setMessage("404 log deleted.");
+      setDeletingLog(null);
     } catch (deleteError) {
       setError(deleteError.message);
+      throw deleteError;
     } finally {
       setPendingLog("");
     }
@@ -435,6 +443,7 @@ export default function SeoSettings() {
         </tbody></table></div>
         <div className="seo-pagination"><span>{pagination.total} logged URLs</span><div><button type="button" onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={page <= 1}>Previous</button><span>Page {page} of {Math.max(1, pagination.pages)}</span><button type="button" onClick={() => setPage((value) => Math.min(pagination.pages, value + 1))} disabled={page >= pagination.pages}>Next</button></div></div>
       </SeoCard>}
+      {deletingLog && <DeleteConfirmDialog title="Delete 404 log?" message={`The log for “${deletingLog.path}” will be permanently deleted.`} onCancel={() => setDeletingLog(null)} onConfirm={confirmDeleteLog} />}
     </div>
   );
 }

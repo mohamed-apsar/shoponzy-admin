@@ -4,6 +4,7 @@ import { adminRequest, uploadImage } from "../api/adminApi";
 import { shortDate } from "../utils/format";
 import EditIcon from "./EditIcon";
 import StatusToggle from "./StatusToggle";
+import DeleteConfirmDialog from "./DeleteConfirmDialog";
 
 /* eslint-disable react/prop-types */
 const sections = [
@@ -391,6 +392,7 @@ export default function ManageSite({ activeSection = "General Settings", onSecti
   const [modal, setModal] = useState(null);
   const [urlFeedback, setUrlFeedback] = useState("");
   const [pendingToggleIds, setPendingToggleIds] = useState([]);
+  const [deletingRecord, setDeletingRecord] = useState(null);
 
   const setters = { banner: setBanners, popup: setPopups, page: setPages, section: setHomepageSections };
 
@@ -442,13 +444,17 @@ export default function ManageSite({ activeSection = "General Settings", onSecti
     notify(`${kind === "page" ? "Page" : kind === "section" ? "Section" : kind === "popup" ? "Popup" : "Banner"} saved.`);
   }
   async function removeRecord(kind, record) {
-    if (!window.confirm(`Delete "${record.title}"? This action cannot be undone.`)) return;
+    setDeletingRecord({ kind, record });
+  }
+  async function confirmRemoveRecord() {
+    const { kind, record } = deletingRecord;
     try {
       await adminRequest(`${RECORDS[kind].path}/${record.id}`, { method: "DELETE" });
       await loadRecords(kind);
       notify("Item deleted.");
     } catch (error) {
       notify(`Not deleted: ${error.message}`);
+      throw error;
     }
   }
   async function toggleRecord(kind, record) {
@@ -700,6 +706,7 @@ export default function ManageSite({ activeSection = "General Settings", onSecti
       {/* Keyed by section so each settings form starts from its own values. */}
       <div className="ms-content" key={activeSection}>{settings ? content() : !loadError && <p className="muted" role="status">Loading…</p>}</div>
       {modal && <RecordModal key={`${modal.kind}-${modal.record?.id || "new"}`} kind={modal.kind} record={modal.record} categories={categories} onClose={() => setModal(null)} onSave={(value) => saveRecord(modal.kind, value)} />}
+      {deletingRecord && <DeleteConfirmDialog title={`Delete ${deletingRecord.kind}?`} message={`“${deletingRecord.record.title}” will be permanently deleted.`} onCancel={() => setDeletingRecord(null)} onConfirm={confirmRemoveRecord} />}
       {toast && <div className="ms-toast" role="status"><span>✓</span>{toast}</div>}
     </div>
   );

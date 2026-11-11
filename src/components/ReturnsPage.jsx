@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { adminRequest } from "../api/adminApi";
 import { dateTime, money, shortDate, titleCase } from "../utils/format";
+import DeleteConfirmDialog from "./DeleteConfirmDialog";
 import {
   Badge, ConfirmDialog, ErrorBanner, ExportButton, Field, KeyValues, Modal, PageHeading, Pagination, StatCards, TableBody, Thumb,
   dayEnd, dayStart, qs, useAdminData, useToast,
@@ -337,10 +338,11 @@ function ReasonsManager({ reasons, loading, error, onReload, onSaved }) {
   const [newLabel, setNewLabel] = useState("");
   const [newNeedsComment, setNewNeedsComment] = useState(false);
   const [confirm, setConfirm] = useState(false);
+  const [deleteReason, setDeleteReason] = useState(null);
   const list = draft || reasons || [];
   const edit = (code, patch) => setDraft(list.map((r) => (r.code === code ? { ...r, ...patch } : r)));
   const move = (index, dir) => { const next = [...list]; [next[index], next[index + dir]] = [next[index + dir], next[index]]; setDraft(next); };
-  const remove = (code) => setDraft(list.filter((r) => r.code !== code));
+  const remove = (code) => setDeleteReason(list.find((r) => r.code === code) || null);
   const dupe = (label, code) => list.some((r) => r.code !== code && r.label.trim().toLowerCase() === label.trim().toLowerCase());
   const problems = [
     list.some((r) => r.label.trim().length < 2) && "Every reason needs a name.",
@@ -404,6 +406,7 @@ function ReasonsManager({ reasons, loading, error, onReload, onSaved }) {
       </div>
       {confirm && <ConfirmDialog title="Save return reasons?" confirmLabel="Save reasons" onClose={() => setConfirm(false)} onConfirm={save}
         message={<>Customers will choose from <b>{list.filter((r) => r.active).length}</b> active reason(s). Existing return requests keep the reason name they were submitted with.</>} />}
+      {deleteReason && <DeleteConfirmDialog title="Delete return reason?" message={`“${deleteReason.label}” will be removed from the pending changes. Save the updated reasons list to apply this deletion.`} onCancel={() => setDeleteReason(null)} onConfirm={() => { setDraft(list.filter((r) => r.code !== deleteReason.code)); setDeleteReason(null); }} />}
     </section>
   );
 }
