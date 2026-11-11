@@ -19,7 +19,7 @@ const STATUS_TRANSITIONS = {
   confirmed: ["packed", "shipped", "cancelled"],
   packed: ["shipped", "cancelled"],
   shipped: ["delivered"],
-  delivered: [], cancelled: [], returned: [],
+  delivered: ["confirmed", "packed", "shipped", "cancelled"], cancelled: [], returned: [],
 };
 const PAGE_SIZE = 20;
 
@@ -309,7 +309,7 @@ export default function OrdersPage({ query = "", onCountsChange }) {
       if (nextStatus === "cancelled") {
         await adminRequest(`/admin/orders/${order.id}/cancel`, { method: "POST", body: JSON.stringify({ reason: "Cancelled from the order status dropdown" }) });
       } else {
-        await adminRequest(`/admin/orders/${order.id}/status`, { method: "PATCH", body: JSON.stringify({ status: nextStatus }) });
+        await adminRequest(`/admin/orders/${order.id}/status`, { method: "PATCH", body: JSON.stringify({ status: nextStatus, note: "Updated from the order status dropdown" }) });
       }
       await load();
     } catch (requestError) {
