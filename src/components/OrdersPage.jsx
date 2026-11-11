@@ -47,7 +47,7 @@ export function OrdersTable({ items, onOpen, onStatusChange, busyOrderId }) {
               <td>{money(order.total)}</td>
               <td>{paymentLabel(order)}</td>
               <td onClick={(event) => event.stopPropagation()}>
-                {onStatusChange ? (
+                {onStatusChange && (STATUS_TRANSITIONS[order.status] || []).length > 0 ? (
                   <select
                     className={`order-status-dropdown status-${STATUS_CLASS[order.status] || "pending"}`}
                     value={order.status}
@@ -56,8 +56,8 @@ export function OrdersTable({ items, onOpen, onStatusChange, busyOrderId }) {
                     onChange={(event) => onStatusChange(order, event.target.value)}
                   >
                     {!STATUS_DROPDOWN_OPTIONS.some(([value]) => value === order.status) && <option value={order.status} disabled>{titleCase(order.status)}</option>}
-                    {STATUS_DROPDOWN_OPTIONS.map(([value, label]) => (
-                      <option key={value} value={value} disabled={value !== order.status && !(STATUS_TRANSITIONS[order.status] || []).includes(value)}>{label}</option>
+                    {STATUS_DROPDOWN_OPTIONS.filter(([value]) => value === order.status || (STATUS_TRANSITIONS[order.status] || []).includes(value)).map(([value, label]) => (
+                      <option key={value} value={value}>{label}</option>
                     ))}
                   </select>
                 ) : <OrderStatus status={order.status} />}
