@@ -40,8 +40,8 @@ export function OrdersTable({ items, onOpen, onStatusChange, busyOrderId }) {
         </thead>
         <tbody>
           {items.map((order) => (
-            <tr key={order.id} onClick={onOpen ? () => onOpen(order) : undefined} style={onOpen ? { cursor: "pointer" } : undefined}>
-              <td className="order-id">#{order.orderNumber}</td>
+            <tr key={order.id}>
+              <td className="order-id">{onOpen ? <button type="button" className="order-open-button" onClick={() => onOpen(order)}>#{order.orderNumber}</button> : `#${order.orderNumber}`}</td>
               <td>{order.contact?.name || order.customer}</td>
               <td>{shortDate(order.placedAt || order.createdAt)}</td>
               <td>{money(order.total)}</td>
@@ -53,6 +53,7 @@ export function OrdersTable({ items, onOpen, onStatusChange, busyOrderId }) {
                     value={order.status}
                     disabled={busyOrderId === order.id}
                     aria-label={`Status for order ${order.orderNumber}`}
+                    onClick={(event) => event.stopPropagation()}
                     onChange={(event) => onStatusChange(order, event.target.value)}
                   >
                     {!STATUS_DROPDOWN_OPTIONS.some(([value]) => value === order.status) && <option value={order.status} disabled>{titleCase(order.status)}</option>}
