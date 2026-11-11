@@ -247,10 +247,14 @@ export default function ProductsPage({ query = "", categories = [] }) {
     const simple = list.length === 1 && list[0].color === null && list[0].size === null;
     if (simple) {
       const existing = form.rows[list[0].key] || {};
-      return [{ ...(existing.id ? { id: existing.id } : {}), color: null, size: null, price: form.price, mrp: form.mrp, stock: form.stock, minStock: existing.minStock ?? 0, status: "active" }];
+      return [{
+        ...(existing.id ? { id: existing.id } : {}), color: null, size: null,
+        price: existing.price ?? form.price, mrp: existing.mrp ?? form.mrp,
+        stock: existing.stock ?? form.stock, minStock: Number(existing.minStock ?? 0), status: "active",
+      }];
     }
     return list.map(({ color, size, key }) => {
-      const row = form.rows[key] || {};
+      const row = form.rows[key] || form.rows[comboKey(null, null)] || {};
       return {
         ...(row.id ? { id: row.id } : {}), color, size,
         price: row.price ?? form.price, mrp: row.mrp ?? form.mrp, stock: row.stock ?? form.stock,
@@ -558,24 +562,27 @@ export default function ProductsPage({ query = "", categories = [] }) {
                 <label className="products-form-field">{hasOptions ? "Default Current Price" : "Current Price *"}
                   <div className="products-price-input"><span>₹</span><input required={!hasOptions} type="number" min="0" step="0.01" value={form.price} onChange={(e) => updateField("price", e.target.value)} placeholder="Enter current price" /></div>
                 </label>
-                {hasOptions && (
-                  <div className="products-form-field products-form-full">
-                    <span>Variant pricing and stock ({variantList.length})</span>
-                    <p className="products-variant-hint">Enter a price and stock for each variant, or leave them blank to use the defaults above.</p>
-                    <div className="products-variant-grid">
-                      {variantList.map(({ color, size, key }) => {
-                        const row = form.rows[key] || {};
-                        const label = [color, size].filter(Boolean).join(" / ") || "Default variant";
-                        return (
-                          <section className="products-variant-card" key={key} aria-label={`${label} pricing and stock`}>
-                            <h3>{label}</h3>
-                            <div className="products-variant-fields">
+                <div className="products-form-field products-form-full">
+                  <span>{hasOptions ? `Variant pricing and stock (${variantList.length})` : "Default variant stock"}</span>
+                  <p className="products-variant-hint">Set stock and minimum stock for each variant.</p>
+                  <div className="products-variant-grid">
+                    {variantList.map(({ color, size, key }) => {
+                      const row = form.rows[key] || form.rows[comboKey(null, null)] || {};
+                      const label = [color, size].filter(Boolean).join(" / ") || "Default variant";
+                      return (
+                        <section className="products-variant-card" key={key} aria-label={`${label} pricing and stock`}>
+                          <h3>{label}</h3>
+                          <div className="products-variant-fields">
+                            {hasOptions && <>
                               <label>Price *
                                 <input type="number" min="0" step="0.01" value={row.price ?? ""} placeholder={form.price || "Enter price"} onChange={(e) => updateRow(key, "price", e.target.value === "" ? undefined : e.target.value)} aria-label={`Price ${key}`} />
                               </label>
+                            </>}
+                            {hasOptions && <>
                               <label>Previous price
                                 <input type="number" min="0" step="0.01" value={row.mrp ?? ""} placeholder={form.mrp || "Optional"} onChange={(e) => updateRow(key, "mrp", e.target.value === "" ? undefined : e.target.value)} aria-label={`Previous price ${key}`} />
                               </label>
+                            </>}
                               <label>Stock quantity *
                                 <input type="number" min="0" step="1" value={row.stock ?? ""} placeholder={form.stock || "0"} onChange={(e) => updateRow(key, "stock", e.target.value === "" ? undefined : e.target.value)} aria-label={`Stock ${key}`} />
                               </label>
@@ -585,13 +592,12 @@ export default function ProductsPage({ query = "", categories = [] }) {
                               <label>SKU
                                 <input value={row.sku ?? ""} placeholder="Optional" onChange={(e) => updateRow(key, "sku", e.target.value)} aria-label={`SKU ${key}`} />
                               </label>
-                            </div>
-                          </section>
-                        );
-                      })}
-                    </div>
+                          </div>
+                        </section>
+                      );
+                    })}
                   </div>
-                )}
+                </div>
 
                 <div className="products-form-field products-form-full">
                   <span>Quick Listing</span>
