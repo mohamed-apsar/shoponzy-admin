@@ -21,7 +21,7 @@ const emptyForm = () => ({
   categoryIds: ["", "", "", "", ""],
   images: [],
   seo: { title: "", description: "", image: null, imageTitle: "", robots: "index, follow" },
-  colors: [], contentBlocks: [], sizesText: "",
+  colors: [{ name: "", hex: "#111111", featuredImage: null, images: [] }], contentBlocks: [], sizesText: "",
   price: "", mrp: "", stock: "0",
   rows: {},
   isNewArrival: false, isBestseller: false, isTrending: false, isFeatured: false, badge: "",
@@ -205,7 +205,7 @@ export default function ProductsPage({ query = "", categories = [] }) {
     const categoryIds = ["", "", "", "", ""].map((_, i) => path[i] || "");
     const rows = {};
     for (const v of full.variants || []) {
-      rows[comboKey(v.color, v.size)] = { id: v.id, price: String(v.price ?? ""), mrp: v.mrp ? String(v.mrp) : "", stock: String(v.stock ?? 0), sku: v.sku || "", status: v.status };
+      rows[comboKey(v.color, v.size)] = { id: v.id, price: String(v.price ?? ""), mrp: v.mrp ? String(v.mrp) : "", stock: String(v.stock ?? 0), minStock: String(v.minStock ?? 0), sku: v.sku || "", status: v.status };
     }
     const single = (full.variants || []).length === 1 && !full.colors?.length && !full.sizes?.length ? full.variants[0] : null;
     setEditingId(full.id);
@@ -247,13 +247,14 @@ export default function ProductsPage({ query = "", categories = [] }) {
     const simple = list.length === 1 && list[0].color === null && list[0].size === null;
     if (simple) {
       const existing = form.rows[list[0].key] || {};
-      return [{ ...(existing.id ? { id: existing.id } : {}), color: null, size: null, price: form.price, mrp: form.mrp, stock: form.stock, status: "active" }];
+      return [{ ...(existing.id ? { id: existing.id } : {}), color: null, size: null, price: form.price, mrp: form.mrp, stock: form.stock, minStock: existing.minStock ?? 0, status: "active" }];
     }
     return list.map(({ color, size, key }) => {
       const row = form.rows[key] || {};
       return {
         ...(row.id ? { id: row.id } : {}), color, size,
         price: row.price ?? form.price, mrp: row.mrp ?? form.mrp, stock: row.stock ?? form.stock,
+        minStock: row.minStock === undefined || row.minStock === "" ? 0 : Number(row.minStock),
         ...(row.sku ? { sku: row.sku } : {}), status: row.status || "active",
       };
     });
@@ -281,6 +282,7 @@ export default function ProductsPage({ query = "", categories = [] }) {
       if (v.price === "" || !Number.isFinite(price) || price < 0) return setError(`Please enter a valid current price for ${label}.`);
       if (!Number.isFinite(mrp) || (mrp && mrp < price)) return setError(`Previous price for ${label} must be greater than or equal to the current price.`);
       if (!Number.isInteger(stock) || stock < 0) return setError(`Stock for ${label} must be a non-negative whole number.`);
+      if (!Number.isInteger(v.minStock) || v.minStock < 0) return setError(`Minimum stock for ${label} must be a non-negative whole number.`);
       Object.assign(v, { price, mrp, stock });
     }
 
@@ -475,7 +477,6 @@ export default function ProductsPage({ query = "", categories = [] }) {
                       <div className="product-color-variant-heading">
                         <input type="color" value={color.hex} onChange={(e) => updateField("colors", form.colors.map((c, i) => i === index ? { ...c, hex: e.target.value.toUpperCase() } : c))} aria-label={`Colour ${index + 1} swatch`} />
                         <input value={color.name} onChange={(e) => updateField("colors", form.colors.map((c, i) => i === index ? { ...c, name: e.target.value } : c))} placeholder="Colour name, e.g. Black" aria-label={`Colour ${index + 1} name`} />
-                        <button type="button" className="table-action danger" onClick={() => updateField("colors", form.colors.filter((_, i) => i !== index))}>Remove colour</button>
                       </div>
                       <div className="product-color-variant-images">
                         <ImageUpload
@@ -577,6 +578,9 @@ export default function ProductsPage({ query = "", categories = [] }) {
                               </label>
                               <label>Stock quantity *
                                 <input type="number" min="0" step="1" value={row.stock ?? ""} placeholder={form.stock || "0"} onChange={(e) => updateRow(key, "stock", e.target.value === "" ? undefined : e.target.value)} aria-label={`Stock ${key}`} />
+                              </label>
+                              <label>Minimum stock
+                                <input type="number" min="0" step="1" value={row.minStock ?? "0"} placeholder="0" onChange={(e) => updateRow(key, "minStock", e.target.value)} aria-label={`Minimum stock ${key}`} />
                               </label>
                               <label>SKU
                                 <input value={row.sku ?? ""} placeholder="Optional" onChange={(e) => updateRow(key, "sku", e.target.value)} aria-label={`SKU ${key}`} />
