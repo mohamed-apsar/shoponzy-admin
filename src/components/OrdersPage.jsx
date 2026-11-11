@@ -9,6 +9,17 @@ const STATUS_CLASS = {
   shipped: "shipped", delivered: "delivered", cancelled: "cancelled", returned: "cancelled",
 };
 const STATUSES = ["placed", "confirmed", "packed", "shipped", "delivered", "cancelled", "returned", "pending_payment"];
+const STATUS_DROPDOWN_OPTIONS = [
+  ["confirmed", "Confirm"], ["packed", "Packed"], ["shipped", "Shipped"], ["cancelled", "Cancelled"], ["delivered", "Delivered"],
+];
+const STATUS_TRANSITIONS = {
+  pending_payment: ["cancelled"],
+  placed: ["confirmed", "packed", "shipped", "cancelled"],
+  confirmed: ["packed", "shipped", "cancelled"],
+  packed: ["shipped", "cancelled"],
+  shipped: ["delivered"],
+  delivered: [], cancelled: [], returned: [],
+};
 const PAGE_SIZE = 20;
 
 export function OrderStatus({ status }) {
@@ -17,7 +28,7 @@ export function OrderStatus({ status }) {
 
 const paymentLabel = (order) => `${order.paymentMethod === "cod" ? "COD" : "Prepaid"} · ${titleCase(order.paymentStatus || "pending")}`;
 
-export function OrdersTable({ items, onOpen }) {
+export function OrdersTable({ items, onOpen, onStatusChange, busyOrderId }) {
   return (
     <div className="table-scroll">
       <table>
@@ -35,7 +46,22 @@ export function OrdersTable({ items, onOpen }) {
               <td>{shortDate(order.placedAt || order.createdAt)}</td>
               <td>{money(order.total)}</td>
               <td>{paymentLabel(order)}</td>
-              <td><OrderStatus status={order.status} /></td>
+              <td onClick={(event) => event.stopPropagation()}>
+                {onStatusChange ? (
+                  <select
+                    className={`order-status-dropdown status-${STATUS_CLASS[order.status] || "pending"}`}
+                    value={order.status}
+                    disabled={busyOrderId === order.id || !(STATUS_TRANSITIONS[order.status] || []).length}
+                    aria-label={`Status for order ${order.orderNumber}`}
+                    onChange={(event) => onStatusChange(order, event.target.value)}
+                  >
+                    {!STATUS_DROPDOWN_OPTIONS.some(([value]) => value === order.status) && <option value={order.status} disabled>{titleCase(order.status)}</option>}
+                    {STATUS_DROPDOWN_OPTIONS.map(([value, label]) => (
+                      <option key={value} value={value} disabled={value !== order.status && !(STATUS_TRANSITIONS[order.status] || []).includes(value)}>{label}</option>
+                    ))}
+                  </select>
+                ) : <OrderStatus status={order.status} />}
+              </td>
             </tr>
           ))}
           {items.length === 0 && (
@@ -181,6 +207,7 @@ export default function OrdersPage({ query = "", onCountsChange }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [openId, setOpenId] = useState(null);
+  const [busyOrderId, setBusyOrderId] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -206,6 +233,29 @@ export default function OrdersPage({ query = "", onCountsChange }) {
   }, [load]);
   useEffect(() => { setPage(1); }, [query, status]);
 
+  async function changeTableStatus(order, nextStatus) {
+    if (nextStatus === order.status) return;
+    if (nextStatus === "cancelled" && !window.confirm(`Cancel order #${order.orderNumber}?`)) {
+      await load();
+      return;
+    }
+    setBusyOrderId(order.id);
+    setError("");
+    try {
+      if (nextStatus === "cancelled") {
+        await adminRequest(`/admin/orders/${order.id}/cancel`, { method: "POST", body: JSON.stringify({ reason: "Cancelled from the order status dropdown" }) });
+      } else {
+        await adminRequest(`/admin/orders/${order.id}/status`, { method: "PATCH", body: JSON.stringify({ status: nextStatus }) });
+      }
+      await load();
+    } catch (requestError) {
+      await load();
+      setError(requestError.message);
+    } finally {
+      setBusyOrderId(null);
+    }
+  }
+
   const counts = meta.statusCounts || {};
   return (
     <>
@@ -223,7 +273,7 @@ export default function OrdersPage({ query = "", onCountsChange }) {
           </div>
         </div>
         {error && <div className="products-form-error" role="alert">{error}</div>}
-        <OrdersTable items={items} onOpen={(order) => setOpenId(order.id)} />
+        <OrdersTable items={items} onOpen={(order) => setOpenId(order.id)} onStatusChange={changeTableStatus} busyOrderId={busyOrderId} />
         {(meta.pages || 1) > 1 && (
           <div className="action-buttons" style={{ justifyContent: "flex-end", padding: "12px 0" }}>
             <button className="table-action" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>‹ Prev</button>

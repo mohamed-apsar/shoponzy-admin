@@ -168,6 +168,13 @@ tbody tr:last-child td { border-bottom: 0; }
 .status.delivered { color: #20865d; background: #e2f8ed; }
 .status.pending { color: #a86d14; background: #fff4d9; }
 .status.cancelled { color: #c44350; background: #ffeaed; }
+.order-status-dropdown { max-width: 160px; border: 1px solid transparent; border-radius: 20px; padding: 7px 26px 7px 10px; font: inherit; font-size: 12px; font-weight: 650; cursor: pointer; }
+.order-status-dropdown:disabled { cursor: default; opacity: 1; }
+.order-status-dropdown.status-processing { color: #a86d14; background: #fff4d9; }
+.order-status-dropdown.status-shipped { color: #466fd3; background: #eaf0ff; }
+.order-status-dropdown.status-delivered { color: #20865d; background: #e2f8ed; }
+.order-status-dropdown.status-pending { color: #a86d14; background: #fff4d9; }
+.order-status-dropdown.status-cancelled { color: #c44350; background: #ffeaed; }
 .product-emoji { display: inline-grid; place-items: center; width: 30px; height: 30px; margin-right: 9px; border-radius: 8px; background: #f4f5f9; font-size: 17px; vertical-align: middle; }
 .empty-state { padding: 28px; text-align: center; color: #9298a8; }
 
