@@ -51,7 +51,7 @@ export function OrdersTable({ items, onOpen, onStatusChange, busyOrderId }) {
                   <select
                     className={`order-status-dropdown status-${STATUS_CLASS[order.status] || "pending"}`}
                     value={order.status}
-                    disabled={busyOrderId === order.id || !(STATUS_TRANSITIONS[order.status] || []).length}
+                    disabled={busyOrderId === order.id}
                     aria-label={`Status for order ${order.orderNumber}`}
                     onChange={(event) => onStatusChange(order, event.target.value)}
                   >
@@ -241,6 +241,7 @@ export default function OrdersPage({ query = "", onCountsChange }) {
     }
     setBusyOrderId(order.id);
     setError("");
+    setItems((current) => current.map((item) => item.id === order.id ? { ...item, status: nextStatus } : item));
     try {
       if (nextStatus === "cancelled") {
         await adminRequest(`/admin/orders/${order.id}/cancel`, { method: "POST", body: JSON.stringify({ reason: "Cancelled from the order status dropdown" }) });
@@ -249,6 +250,7 @@ export default function OrdersPage({ query = "", onCountsChange }) {
       }
       await load();
     } catch (requestError) {
+      setItems((current) => current.map((item) => item.id === order.id ? { ...item, status: order.status } : item));
       await load();
       setError(requestError.message);
     } finally {
