@@ -13,14 +13,6 @@ const STATUSES = ["placed", "confirmed", "packed", "shipped", "delivered", "canc
 const STATUS_DROPDOWN_OPTIONS = [
   ["confirmed", "Confirm"], ["packed", "Packed"], ["shipped", "Shipped"], ["cancelled", "Cancelled"], ["delivered", "Delivered"],
 ];
-const STATUS_TRANSITIONS = {
-  pending_payment: ["cancelled"],
-  placed: ["confirmed", "packed", "shipped", "cancelled"],
-  confirmed: ["packed", "shipped", "cancelled"],
-  packed: ["shipped", "cancelled"],
-  shipped: ["delivered"],
-  delivered: ["confirmed", "packed", "shipped", "cancelled"], cancelled: [], returned: [],
-};
 const PAGE_SIZE = 20;
 
 export function OrderStatus({ status }) {
@@ -32,7 +24,6 @@ function OrderStatusDropdown({ order, onChange, busy }) {
   const [position, setPosition] = useState(null);
   const buttonRef = useRef(null);
   const menuRef = useRef(null);
-  const allowedTransitions = STATUS_TRANSITIONS[order.status] || [];
   const options = STATUS_DROPDOWN_OPTIONS;
 
   useEffect(() => {
@@ -85,7 +76,6 @@ function OrderStatusDropdown({ order, onChange, busy }) {
               type="button"
               role="menuitem"
               className={`order-status-option status-${STATUS_CLASS[value] || "pending"}`}
-              disabled={value !== order.status && !allowedTransitions.includes(value)}
               onClick={(event) => {
                 event.stopPropagation();
                 setOpen(false);
@@ -123,7 +113,7 @@ export function OrdersTable({ items, onOpen, onStatusChange, busyOrderId }) {
               <td>{money(order.total)}</td>
               <td>{paymentLabel(order)}</td>
               <td onClick={(event) => event.stopPropagation()}>
-                {onStatusChange && (STATUS_TRANSITIONS[order.status] || []).length > 0
+                {onStatusChange && order.status !== "returned"
                   ? <OrderStatusDropdown order={order} onChange={onStatusChange} busy={busyOrderId === order.id} />
                   : <OrderStatus status={order.status} />}
               </td>
@@ -309,9 +299,9 @@ export default function OrdersPage({ query = "", onCountsChange }) {
     setItems((current) => current.map((item) => item.id === order.id ? { ...item, status: nextStatus } : item));
     try {
       if (nextStatus === "cancelled") {
-        await adminRequest(`/admin/orders/${order.id}/cancel`, { method: "POST", body: JSON.stringify({ reason: "Cancelled from the order status dropdown" }) });
+        await adminRequest(`/admin/orders/${order.id}/cancel`, { method: "POST", body: JSON.stringify({ reason: "Cancelled from the order status dropdown", force: true }) });
       } else {
-        await adminRequest(`/admin/orders/${order.id}/status`, { method: "PATCH", body: JSON.stringify({ status: nextStatus, note: "Updated from the order status dropdown" }) });
+        await adminRequest(`/admin/orders/${order.id}/status`, { method: "PATCH", body: JSON.stringify({ status: nextStatus, note: "Updated from the order status dropdown", force: true }) });
       }
       await load();
     } catch (requestError) {
