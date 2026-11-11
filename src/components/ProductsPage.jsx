@@ -676,7 +676,7 @@ export default function ProductsPage({ query = "", categories = [] }) {
               <p className="form-hint">Products are saved to the database and appear on the storefront when enabled.</p>
               <div className="modal-actions">
                 <button type="button" className="secondary-button" onClick={() => setShowForm(false)} disabled={saving}>Cancel</button>
-                <button type="submit" className="primary-button" disabled={saving}>{saving ? "Saving…" : editingId ? "Save Changes" : "Add Product"}</button>
+                <button type="submit" className="primary-button" disabled={saving}>{saving ? "Saving…" : editingId ? "Save Changes" : "Submit"}</button>
               </div>
             </form>
           </section>
