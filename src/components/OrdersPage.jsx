@@ -32,7 +32,8 @@ function OrderStatusDropdown({ order, onChange, busy }) {
   const [position, setPosition] = useState(null);
   const buttonRef = useRef(null);
   const menuRef = useRef(null);
-  const options = STATUS_DROPDOWN_OPTIONS.filter(([value]) => (STATUS_TRANSITIONS[order.status] || []).includes(value));
+  const allowedTransitions = STATUS_TRANSITIONS[order.status] || [];
+  const options = STATUS_DROPDOWN_OPTIONS;
 
   useEffect(() => {
     if (!open) return undefined;
@@ -84,6 +85,7 @@ function OrderStatusDropdown({ order, onChange, busy }) {
               type="button"
               role="menuitem"
               className={`order-status-option status-${STATUS_CLASS[value] || "pending"}`}
+              disabled={value !== order.status && !allowedTransitions.includes(value)}
               onClick={(event) => {
                 event.stopPropagation();
                 setOpen(false);

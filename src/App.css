@@ -175,7 +175,8 @@ tbody tr:last-child td { border-bottom: 0; }
 .order-status-dropdown:disabled { cursor: default; opacity: 1; }
 .order-status-menu { position: fixed; z-index: 10000; display: grid; gap: 4px; padding: 5px; border: 1px solid #e6eaf2; border-radius: 10px; background: #fff; box-shadow: 0 12px 32px rgba(27, 39, 68, .2); }
 .order-status-option { width: 100%; border: 0; border-radius: 7px; padding: 9px 11px; background: transparent; font: inherit; font-size: 12px; font-weight: 650; text-align: left; cursor: pointer; }
-.order-status-option:hover { filter: brightness(.96); }
+.order-status-option:disabled { cursor: not-allowed; opacity: .45; }
+.order-status-option:hover:not(:disabled) { filter: brightness(.96); }
 .order-status-dropdown.status-processing, .order-status-option.status-processing { color: #a86d14; background: #fff4d9; }
 .order-status-dropdown.status-shipped, .order-status-option.status-shipped { color: #466fd3; background: #eaf0ff; }
 .order-status-dropdown.status-delivered, .order-status-option.status-delivered { color: #20865d; background: #e2f8ed; }
