@@ -21,7 +21,7 @@ const emptyForm = () => ({
   categoryIds: ["", "", "", "", ""],
   images: [],
   seo: { title: "", description: "", image: null, imageTitle: "", robots: "index, follow" },
-  colors: [{ name: "", hex: "#111111", featuredImage: null, images: [], stock: "0", minStock: "0" }], contentBlocks: [], sizesText: "",
+  colors: [{ name: "", hex: "#111111", featuredImage: null, images: [], price: "", stock: "0", minStock: "0" }], contentBlocks: [], sizesText: "",
   price: "", mrp: "", stock: "0",
   rows: {},
   isNewArrival: false, isBestseller: false, isTrending: false, isFeatured: false, badge: "",
@@ -218,7 +218,7 @@ export default function ProductsPage({ query = "", categories = [] }) {
       colors: (full.colors || []).map(({ name, hex, featuredImage, images }) => {
         const inventory = (full.variants || []).find((variant) => variant.color === name);
         return {
-          name, hex, stock: String(inventory?.stock ?? 0), minStock: String(inventory?.minStock ?? 0),
+          name, hex, price: String(inventory?.price ?? ""), stock: String(inventory?.stock ?? 0), minStock: String(inventory?.minStock ?? 0),
           featuredImage: featuredImage ? { url: featuredImage.url, publicId: featuredImage.publicId, alt: featuredImage.alt || "" } : null,
           images: (images || []).map(({ url, publicId, alt }) => ({ url, publicId, alt: alt || "" })),
         };
@@ -264,7 +264,8 @@ export default function ProductsPage({ query = "", categories = [] }) {
       const defaultMinStock = Number(colorDefaults?.minStock ?? 0);
       return {
         ...(row.id ? { id: row.id } : {}), color, size,
-        price: row.price ?? form.price, mrp: row.mrp ?? form.mrp,
+        price: hasSizeVariants ? row.price ?? colorDefaults?.price ?? form.price : colorDefaults?.price ?? row.price ?? form.price,
+        mrp: row.mrp ?? form.mrp,
         stock: hasSizeVariants ? row.stock ?? defaultStock : defaultStock,
         minStock: hasSizeVariants && row.minStock !== undefined && row.minStock !== "" ? Number(row.minStock) : defaultMinStock,
         ...(row.sku ? { sku: row.sku } : {}), status: row.status || "active",
@@ -508,6 +509,9 @@ export default function ProductsPage({ query = "", categories = [] }) {
                         />
                       </div>
                       <div className="products-variant-fields product-color-inventory-fields">
+                        <label>Current amount *
+                          <input type="number" min="0" step="0.01" value={color.price ?? ""} placeholder={form.price || "Enter current amount"} onChange={(e) => updateField("colors", form.colors.map((c, i) => i === index ? { ...c, price: e.target.value } : c))} aria-label={`Current amount for colour ${index + 1}`} />
+                        </label>
                               <label>Stock quantity *
                                 <input type="number" min="0" step="1" value={color.stock ?? "0"} onChange={(e) => {
                                   const stock = e.target.value;
@@ -520,7 +524,7 @@ export default function ProductsPage({ query = "", categories = [] }) {
                       </div>
                     </section>
                   ))}
-                  <button type="button" className="table-action" style={{ marginTop: 8, width: "fit-content" }} onClick={() => updateField("colors", [...form.colors, { name: "", hex: "#111111", featuredImage: null, images: [], stock: "0", minStock: "0" }])}>+ Add colour / variant</button>
+                  <button type="button" className="table-action" style={{ marginTop: 8, width: "fit-content" }} onClick={() => updateField("colors", [...form.colors, { name: "", hex: "#111111", featuredImage: null, images: [], price: "", stock: "0", minStock: "0" }])}>+ Add colour / variant</button>
                 </div>
                 <div className="products-form-field products-form-full">
                   <span>Product page banners and image rows</span>
@@ -583,7 +587,7 @@ export default function ProductsPage({ query = "", categories = [] }) {
                 <label className="products-form-field">{hasOptions ? "Default Current Price" : "Current Price *"}
                   <div className="products-price-input"><span>₹</span><input required={!hasOptions} type="number" min="0" step="0.01" value={form.price} onChange={(e) => updateField("price", e.target.value)} placeholder="Enter current price" /></div>
                 </label>
-                {hasOptions && <div className="products-form-field products-form-full">
+                {hasOptions && hasSizeOptions && <div className="products-form-field products-form-full">
                   <span>Variant pricing and stock ({variantList.length})</span>
                   <p className="products-variant-hint">Set individual values for each variant. Colour stock values are used as defaults.</p>
                   <div className="products-variant-grid">
@@ -595,8 +599,8 @@ export default function ProductsPage({ query = "", categories = [] }) {
                           <h3>{label}</h3>
                           <div className="products-variant-fields">
                             {hasOptions && <>
-                              <label>Price *
-                                <input type="number" min="0" step="0.01" value={row.price ?? ""} placeholder={form.price || "Enter price"} onChange={(e) => updateRow(key, "price", e.target.value === "" ? undefined : e.target.value)} aria-label={`Price ${key}`} />
+                              <label>Current amount *
+                                <input type="number" min="0" step="0.01" value={row.price ?? ""} placeholder={form.colors.find((item) => item.name.trim() === color)?.price || form.price || "Enter amount"} onChange={(e) => updateRow(key, "price", e.target.value === "" ? undefined : e.target.value)} aria-label={`Current amount ${key}`} />
                               </label>
                             </>}
                             {hasOptions && <>
