@@ -210,8 +210,6 @@ export default function App() {
       "Categories",
       "Sub categories",
       "Child categories",
-      "Child Second categories",
-      "Child Third categories",
     ];
 
     setCategoriesOpen(categoryPages.includes(name));
@@ -264,7 +262,7 @@ export default function App() {
                 aria-expanded={item.name === "Manage Categories" ? categoriesOpen : siteOpen}
                 className={`nav-item ${[
                   ...(item.name === "Manage Categories"
-                    ? ["Categories", "Sub categories", "Child categories", "Child Second categories", "Child Third categories"]
+                    ? ["Categories", "Sub categories", "Child categories"]
                     : manageSitePages),
                 ].includes(page) ? "active" : ""}`}
                 onClick={() => {
@@ -287,8 +285,6 @@ export default function App() {
                     "Categories",
                     "Sub categories",
                     "Child categories",
-                    "Child Second categories",
-                    "Child Third categories",
                   ] : manageSitePages).map((label) => (
                     <button
                       type="button"

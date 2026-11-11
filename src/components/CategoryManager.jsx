@@ -43,7 +43,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
   const visible = categories.filter((item) => item.level === level).map((item) => ({
     ...item,
     status: statusOverrides[item.id] ?? item.status,
-    tableImage: level === 2 ? item.productImage || item.image : item.image,
+    tableImage: level === 2 || level === 3 ? item.productImage || item.image : item.image,
   }));
   const filtered = visible.filter((item) => {
     const parent = categories.find((p) => p.id === item.parentId);
@@ -242,11 +242,11 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
 
         <div className="cm-table-wrap">
           <table className="cm-table">
-            <thead><tr>{level <= 2 && <th>Image</th>}<th>Name</th><th>Slug</th>{level > 1 && <th>Parent path</th>}<th>Status</th><th>Actions</th></tr></thead>
+            <thead><tr>{level <= 3 && <th>Image</th>}<th>Name</th><th>Slug</th>{level > 1 && <th>Parent path</th>}<th>Status</th><th>Actions</th></tr></thead>
             <tbody>
               {shown.map((item) => (
                 <tr key={item.id}>
-                  {level <= 2 && <td>{item.tableImage?.url ? <img className="cm-thumb" src={item.tableImage.url} alt={item.name} loading="lazy" /> : <div className="cm-thumb cm-thumb-empty">No image</div>}</td>}
+                  {level <= 3 && <td>{item.tableImage?.url ? <img className="cm-thumb" src={item.tableImage.url} alt={item.name} loading="lazy" /> : <div className="cm-thumb cm-thumb-empty">No image</div>}</td>}
                   <td>{item.name}</td><td>{item.slug}</td>{level > 1 && <td>{pathFor(item) || "—"}</td>}
                   <td>
                     <button
@@ -266,7 +266,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
                   <td><div className="cm-actions"><button type="button" className="cm-edit-icon-button" aria-label={`Edit ${item.name}`} title={`Edit ${item.name}`} onClick={() => openEdit(item)}><EditIcon /></button><button className="danger" onClick={() => remove(item)}>Delete</button></div></td>
                 </tr>
               ))}
-              {!loading && !shown.length && <tr><td colSpan={level === 2 ? 6 : 5} className="cm-empty">No {config.title.toLowerCase()} found.</td></tr>}
+              {!loading && !shown.length && <tr><td colSpan={level === 2 || level === 3 ? 6 : 5} className="cm-empty">No {config.title.toLowerCase()} found.</td></tr>}
             </tbody>
           </table>
         </div>
