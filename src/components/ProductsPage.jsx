@@ -21,7 +21,7 @@ const emptyForm = () => ({
   categoryIds: ["", "", "", "", ""],
   images: [],
   seo: { title: "", description: "", image: null, imageTitle: "", robots: "index, follow" },
-  colors: [{ name: "", hex: "#111111", featuredImage: null, images: [] }], contentBlocks: [], sizesText: "",
+  colors: [{ name: "", hex: "#111111", featuredImage: null, images: [], stock: "0", minStock: "0" }], contentBlocks: [], sizesText: "",
   price: "", mrp: "", stock: "0",
   rows: {},
   isNewArrival: false, isBestseller: false, isTrending: false, isFeatured: false, badge: "",
@@ -215,11 +215,14 @@ export default function ProductsPage({ query = "", categories = [] }) {
       status: full.status === "archived" ? "disabled" : full.status || "active",
       categoryIds,
       images: (full.images || []).map(({ url, publicId, alt }) => ({ url, publicId, alt: alt || "" })),
-      colors: (full.colors || []).map(({ name, hex, featuredImage, images }) => ({
-        name, hex,
-        featuredImage: featuredImage ? { url: featuredImage.url, publicId: featuredImage.publicId, alt: featuredImage.alt || "" } : null,
-        images: (images || []).map(({ url, publicId, alt }) => ({ url, publicId, alt: alt || "" })),
-      })),
+      colors: (full.colors || []).map(({ name, hex, featuredImage, images }) => {
+        const inventory = (full.variants || []).find((variant) => variant.color === name);
+        return {
+          name, hex, stock: String(inventory?.stock ?? 0), minStock: String(inventory?.minStock ?? 0),
+          featuredImage: featuredImage ? { url: featuredImage.url, publicId: featuredImage.publicId, alt: featuredImage.alt || "" } : null,
+          images: (images || []).map(({ url, publicId, alt }) => ({ url, publicId, alt: alt || "" })),
+        };
+      }),
       contentBlocks: (full.contentBlocks || []).map((block) => block.type === "banner"
         ? { type: block.type, image: block.image ? { url: block.image.url, publicId: block.image.publicId, alt: block.image.alt || "" } : null }
         : { type: block.type, images: Array.from({ length: 3 }, (_, index) => {
@@ -253,12 +256,17 @@ export default function ProductsPage({ query = "", categories = [] }) {
         stock: existing.stock ?? form.stock, minStock: Number(existing.minStock ?? 0), status: "active",
       }];
     }
+    const hasSizeVariants = parseSizes(form.sizesText).length > 0;
     return list.map(({ color, size, key }) => {
       const row = form.rows[key] || form.rows[comboKey(null, null)] || {};
+      const colorDefaults = form.colors.find((item) => item.name.trim() === color);
+      const defaultStock = colorDefaults?.stock ?? form.stock;
+      const defaultMinStock = Number(colorDefaults?.minStock ?? 0);
       return {
         ...(row.id ? { id: row.id } : {}), color, size,
-        price: row.price ?? form.price, mrp: row.mrp ?? form.mrp, stock: row.stock ?? form.stock,
-        minStock: row.minStock === undefined || row.minStock === "" ? 0 : Number(row.minStock),
+        price: row.price ?? form.price, mrp: row.mrp ?? form.mrp,
+        stock: hasSizeVariants ? row.stock ?? defaultStock : defaultStock,
+        minStock: hasSizeVariants && row.minStock !== undefined && row.minStock !== "" ? Number(row.minStock) : defaultMinStock,
         ...(row.sku ? { sku: row.sku } : {}), status: row.status || "active",
       };
     });
@@ -365,6 +373,7 @@ export default function ProductsPage({ query = "", categories = [] }) {
   const summary = meta.summary || {};
   const variantList = combos(form);
   const hasOptions = !(variantList.length === 1 && variantList[0].color === null && variantList[0].size === null);
+  const hasSizeOptions = parseSizes(form.sizesText).length > 0;
   const brandOptions = form.brand && !productBrands.includes(form.brand) ? [form.brand, ...productBrands] : productBrands;
 
   return (
@@ -481,6 +490,7 @@ export default function ProductsPage({ query = "", categories = [] }) {
                       <div className="product-color-variant-heading">
                         <input type="color" value={color.hex} onChange={(e) => updateField("colors", form.colors.map((c, i) => i === index ? { ...c, hex: e.target.value.toUpperCase() } : c))} aria-label={`Colour ${index + 1} swatch`} />
                         <input value={color.name} onChange={(e) => updateField("colors", form.colors.map((c, i) => i === index ? { ...c, name: e.target.value } : c))} placeholder="Colour name, e.g. Black" aria-label={`Colour ${index + 1} name`} />
+                        {index > 0 && <button type="button" className="table-action danger" onClick={() => updateField("colors", form.colors.filter((_, i) => i !== index))}>Remove variant</button>}
                       </div>
                       <div className="product-color-variant-images">
                         <ImageUpload
@@ -497,9 +507,20 @@ export default function ProductsPage({ query = "", categories = [] }) {
                           onChange={(images) => updateField("colors", form.colors.map((c, i) => i === index ? { ...c, images } : c))}
                         />
                       </div>
+                      <div className="products-variant-fields product-color-inventory-fields">
+                              <label>Stock quantity *
+                                <input type="number" min="0" step="1" value={color.stock ?? "0"} onChange={(e) => {
+                                  const stock = e.target.value;
+                                  updateField("colors", form.colors.map((c, i) => i === index ? { ...c, stock } : c));
+                                }} aria-label={`Stock quantity for colour ${index + 1}`} />
+                        </label>
+                        <label>Minimum stock
+                          <input type="number" min="0" step="1" value={color.minStock ?? "0"} onChange={(e) => updateField("colors", form.colors.map((c, i) => i === index ? { ...c, minStock: e.target.value } : c))} aria-label={`Minimum stock for colour ${index + 1}`} />
+                        </label>
+                      </div>
                     </section>
                   ))}
-                  <button type="button" className="table-action" style={{ marginTop: 8, width: "fit-content" }} onClick={() => updateField("colors", [...form.colors, { name: "", hex: "#111111", featuredImage: null, images: [] }])}>+ Add colour / variant</button>
+                  <button type="button" className="table-action" style={{ marginTop: 8, width: "fit-content" }} onClick={() => updateField("colors", [...form.colors, { name: "", hex: "#111111", featuredImage: null, images: [], stock: "0", minStock: "0" }])}>+ Add colour / variant</button>
                 </div>
                 <div className="products-form-field products-form-full">
                   <span>Product page banners and image rows</span>
@@ -562,9 +583,9 @@ export default function ProductsPage({ query = "", categories = [] }) {
                 <label className="products-form-field">{hasOptions ? "Default Current Price" : "Current Price *"}
                   <div className="products-price-input"><span>₹</span><input required={!hasOptions} type="number" min="0" step="0.01" value={form.price} onChange={(e) => updateField("price", e.target.value)} placeholder="Enter current price" /></div>
                 </label>
-                <div className="products-form-field products-form-full">
-                  <span>{hasOptions ? `Variant pricing and stock (${variantList.length})` : "Default variant stock"}</span>
-                  <p className="products-variant-hint">Set stock and minimum stock for each variant.</p>
+                {hasOptions && <div className="products-form-field products-form-full">
+                  <span>Variant pricing and stock ({variantList.length})</span>
+                  <p className="products-variant-hint">Set individual values for each variant. Colour stock values are used as defaults.</p>
                   <div className="products-variant-grid">
                     {variantList.map(({ color, size, key }) => {
                       const row = form.rows[key] || form.rows[comboKey(null, null)] || {};
@@ -583,12 +604,12 @@ export default function ProductsPage({ query = "", categories = [] }) {
                                 <input type="number" min="0" step="0.01" value={row.mrp ?? ""} placeholder={form.mrp || "Optional"} onChange={(e) => updateRow(key, "mrp", e.target.value === "" ? undefined : e.target.value)} aria-label={`Previous price ${key}`} />
                               </label>
                             </>}
-                              <label>Stock quantity *
+                              {hasSizeOptions && <label>Stock quantity *
                                 <input type="number" min="0" step="1" value={row.stock ?? ""} placeholder={form.stock || "0"} onChange={(e) => updateRow(key, "stock", e.target.value === "" ? undefined : e.target.value)} aria-label={`Stock ${key}`} />
-                              </label>
-                              <label>Minimum stock
+                              </label>}
+                              {hasSizeOptions && <label>Minimum stock
                                 <input type="number" min="0" step="1" value={row.minStock ?? "0"} placeholder="0" onChange={(e) => updateRow(key, "minStock", e.target.value)} aria-label={`Minimum stock ${key}`} />
-                              </label>
+                              </label>}
                               <label>SKU
                                 <input value={row.sku ?? ""} placeholder="Optional" onChange={(e) => updateRow(key, "sku", e.target.value)} aria-label={`SKU ${key}`} />
                               </label>
@@ -597,7 +618,7 @@ export default function ProductsPage({ query = "", categories = [] }) {
                       );
                     })}
                   </div>
-                </div>
+                </div>}
 
                 <div className="products-form-field products-form-full">
                   <span>Quick Listing</span>
