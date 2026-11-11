@@ -541,7 +541,7 @@ export default function ManageSite({ activeSection = "General Settings", onSecti
   }
 
   function renderGeneral() {
-    return <><SettingsForm initial={settings.general} onSave={(value) => saveSettings("general", value)} onReset={() => resetSettings("general")}>
+    return <><AdminPasswordForm /><SettingsForm initial={settings.general} onSave={(value) => saveSettings("general", value)} onReset={() => resetSettings("general")}>
       {(values, update) => <SettingsCard title="Store information" description="Set the details and storefront defaults customers will see.">
         <div className="ms-form-grid">
           <Field label="Website name"><input required value={values.websiteName} onChange={(e) => update("websiteName", e.target.value)} /></Field>
@@ -559,7 +559,7 @@ export default function ManageSite({ activeSection = "General Settings", onSecti
           <Toggle label="Show product comparison" checked={values.comparison} onChange={(value) => update("comparison", value)} />
         </div>
       </SettingsCard>}
-    </SettingsForm><AdminPasswordForm /></>;
+    </SettingsForm></>;
   }
 
   function renderBanners() {
