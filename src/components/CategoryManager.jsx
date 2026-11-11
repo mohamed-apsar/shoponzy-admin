@@ -43,6 +43,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
   const visible = categories.filter((item) => item.level === level).map((item) => ({
     ...item,
     status: statusOverrides[item.id] ?? item.status,
+    tableImage: level === 2 ? item.productImage || item.image : item.image,
   }));
   const filtered = visible.filter((item) => {
     const parent = categories.find((p) => p.id === item.parentId);
@@ -245,7 +246,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
             <tbody>
               {shown.map((item) => (
                 <tr key={item.id}>
-                  {level <= 2 && <td>{item.image?.url ? <img className="cm-thumb" src={item.image.url} alt={item.name} loading="lazy" /> : <div className="cm-thumb cm-thumb-empty">No image</div>}</td>}
+                  {level <= 2 && <td>{item.tableImage?.url ? <img className="cm-thumb" src={item.tableImage.url} alt={item.name} loading="lazy" /> : <div className="cm-thumb cm-thumb-empty">No image</div>}</td>}
                   <td>{item.name}</td><td>{item.slug}</td>{level > 1 && <td>{pathFor(item) || "—"}</td>}
                   <td>
                     <button
