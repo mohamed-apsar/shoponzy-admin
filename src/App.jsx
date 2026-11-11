@@ -10,6 +10,7 @@ import CustomersPage from "./components/CustomersPage";
 import CouponsPage from "./components/CouponsPage";
 import SeoSettings from "./components/SeoSettings";
 import InventoryPage from "./components/InventoryPage";
+import ShippingPage from "./components/ShippingPage";
 import TransactionsPage from "./components/TransactionsPage";
 import ReturnsPage from "./components/ReturnsPage";
 import FaqPage from "./components/FaqPage";
@@ -28,6 +29,7 @@ const menuItems = [
   { name: "Coupons", icon: "%" },
   { name: "Manage Site", icon: "⚙" },
   { name: "Inventory Management", icon: "▥" },
+  { name: "Shipping", icon: "S" },
   { name: "Transactions & Payments", icon: "₹" },
   { name: "Returns & Refunds", icon: "↺" },
   { name: "FAQ Management", icon: "?" },
@@ -331,6 +333,7 @@ export default function App() {
           {page === "Manage Products" && <ProductsPage query={query} categories={categories} />}
           {page === "Manage Orders" && <OrdersPage query={query} onCountsChange={updateOrderCounts} />}
           {opsGroupOf(page) === "Inventory Management" && <InventoryPage categories={categories} view={opsGroups["Inventory Management"][page]} onNavigate={navigate} />}
+          {page === "Shipping" && <ShippingPage />}
           {opsGroupOf(page) === "Transactions & Payments" && <TransactionsPage view={opsGroups["Transactions & Payments"][page]} />}
           {opsGroupOf(page) === "Returns & Refunds" && <ReturnsPage view={opsGroups["Returns & Refunds"][page]} />}
           {page === "FAQ Management" && <FaqPage />}
