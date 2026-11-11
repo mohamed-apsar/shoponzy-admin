@@ -241,11 +241,11 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
 
         <div className="cm-table-wrap">
           <table className="cm-table">
-            <thead><tr>{level === 1 && <th>Image</th>}<th>Name</th><th>Slug</th>{level > 1 && <th>Parent path</th>}<th>Status</th><th>Actions</th></tr></thead>
+            <thead><tr>{level <= 2 && <th>Image</th>}<th>Name</th><th>Slug</th>{level > 1 && <th>Parent path</th>}<th>Status</th><th>Actions</th></tr></thead>
             <tbody>
               {shown.map((item) => (
                 <tr key={item.id}>
-                  {level === 1 && <td>{item.image?.url ? <img className="cm-thumb" src={item.image.url} alt={item.name} /> : <div className="cm-thumb cm-thumb-empty">No image</div>}</td>}
+                  {level <= 2 && <td>{item.image?.url ? <img className="cm-thumb" src={item.image.url} alt={item.name} loading="lazy" /> : <div className="cm-thumb cm-thumb-empty">No image</div>}</td>}
                   <td>{item.name}</td><td>{item.slug}</td>{level > 1 && <td>{pathFor(item) || "—"}</td>}
                   <td>
                     <button
@@ -265,7 +265,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
                   <td><div className="cm-actions"><button type="button" className="cm-edit-icon-button" aria-label={`Edit ${item.name}`} title={`Edit ${item.name}`} onClick={() => openEdit(item)}><EditIcon /></button><button className="danger" onClick={() => remove(item)}>Delete</button></div></td>
                 </tr>
               ))}
-              {!loading && !shown.length && <tr><td colSpan={level === 1 ? 5 : 5} className="cm-empty">No {config.title.toLowerCase()} found.</td></tr>}
+              {!loading && !shown.length && <tr><td colSpan={level === 2 ? 6 : 5} className="cm-empty">No {config.title.toLowerCase()} found.</td></tr>}
             </tbody>
           </table>
         </div>
