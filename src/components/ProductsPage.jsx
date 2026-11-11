@@ -30,37 +30,6 @@ const emptyForm = () => ({
 const comboKey = (color, size) => `${color ?? ""}|${size ?? ""}`;
 const parseSizes = (text) => [...new Set(text.split(",").map((s) => s.trim()).filter(Boolean))];
 
-function parseRobotsMeta(value = "index, follow") {
-  const directives = value.split(",").map((directive) => directive.trim().toLowerCase());
-  const directiveValue = (name, fallback) => directives.find((item) => item.startsWith(`${name}:`))?.slice(name.length + 1) ?? fallback;
-  return {
-    index: !directives.includes("noindex"),
-    noFollow: directives.includes("nofollow"),
-    noArchive: directives.includes("noarchive"),
-    noImageIndex: directives.includes("noimageindex"),
-    noSnippet: directives.includes("nosnippet"),
-    maxSnippetEnabled: directives.some((item) => item.startsWith("max-snippet:")),
-    maxSnippet: directiveValue("max-snippet", "-1"),
-    maxVideoPreviewEnabled: directives.some((item) => item.startsWith("max-video-preview:")),
-    maxVideoPreview: directiveValue("max-video-preview", "-1"),
-    maxImagePreviewEnabled: directives.some((item) => item.startsWith("max-image-preview:")),
-    maxImagePreview: directiveValue("max-image-preview", "large"),
-  };
-}
-
-function formatRobotsMeta(options) {
-  return [
-    options.index ? "index" : "noindex",
-    options.noFollow ? "nofollow" : "follow",
-    options.noArchive && "noarchive",
-    options.noImageIndex && "noimageindex",
-    options.noSnippet && "nosnippet",
-    options.maxSnippetEnabled && `max-snippet:${options.maxSnippet}`,
-    options.maxVideoPreviewEnabled && `max-video-preview:${options.maxVideoPreview}`,
-    options.maxImagePreviewEnabled && `max-image-preview:${options.maxImagePreview}`,
-  ].filter(Boolean).join(", ");
-}
-
 function combos(form) {
   const colors = form.colors.map((c) => c.name.trim()).filter(Boolean);
   const sizes = parseSizes(form.sizesText);
@@ -195,11 +164,6 @@ export default function ProductsPage({ query = "", categories = [] }) {
 
   function updateSeoField(field, value) {
     setForm((previous) => ({ ...previous, seo: { ...previous.seo, [field]: value } }));
-  }
-
-  function updateRobotsOption(key, value) {
-    const options = { ...parseRobotsMeta(form.seo.robots), [key]: value };
-    updateSeoField("robots", formatRobotsMeta(options));
   }
 
   function generateProductSeo() {
@@ -669,33 +633,17 @@ export default function ProductsPage({ query = "", categories = [] }) {
                         hint="Recommended 1200 × 600 px. JPG, PNG, WebP or GIF, max 5 MB."
                         onChange={(images) => updateSeoField("image", images[0] || null)}
                       />
+                      <label className="products-form-field product-seo-image-title">Meta Image Title
+                        <input
+                          maxLength={200}
+                          value={form.seo.image?.alt || ""}
+                          disabled={!form.seo.image}
+                          onChange={(event) => updateSeoField("image", { ...form.seo.image, alt: event.target.value })}
+                          placeholder="Enter a title for the meta image"
+                        />
+                      </label>
                     </div>
                   </div>
-                  {(() => {
-                    const robots = parseRobotsMeta(form.seo.robots);
-                    return <div className="product-seo-robots">
-                      <fieldset className="product-seo-robots-card">
-                        <legend>Robots directives</legend>
-                        <label><input type="radio" name="product-robots-index" checked={robots.index} onChange={() => updateRobotsOption("index", true)} /> Index</label>
-                        <label><input type="radio" name="product-robots-index" checked={!robots.index} onChange={() => updateRobotsOption("index", false)} /> No index</label>
-                        <label><input type="checkbox" checked={robots.noFollow} onChange={(event) => updateRobotsOption("noFollow", event.target.checked)} /> No Follow</label>
-                        <label><input type="checkbox" checked={robots.noArchive} onChange={(event) => updateRobotsOption("noArchive", event.target.checked)} /> No Archive</label>
-                        <label><input type="checkbox" checked={robots.noImageIndex} onChange={(event) => updateRobotsOption("noImageIndex", event.target.checked)} /> No Image Index</label>
-                        <label><input type="checkbox" checked={robots.noSnippet} onChange={(event) => updateRobotsOption("noSnippet", event.target.checked)} /> No Snippet</label>
-                      </fieldset>
-                      <fieldset className="product-seo-robots-card product-seo-preview-card">
-                        <legend>Search preview limits</legend>
-                        <label><input type="checkbox" checked={robots.maxSnippetEnabled} onChange={(event) => updateRobotsOption("maxSnippetEnabled", event.target.checked)} /> Max Snippet</label>
-                        <input type="number" min="-1" aria-label="Maximum snippet length" value={robots.maxSnippet} onChange={(event) => updateRobotsOption("maxSnippet", event.target.value)} />
-                        <label><input type="checkbox" checked={robots.maxVideoPreviewEnabled} onChange={(event) => updateRobotsOption("maxVideoPreviewEnabled", event.target.checked)} /> Max Video Preview</label>
-                        <input type="number" min="-1" aria-label="Maximum video preview seconds" value={robots.maxVideoPreview} onChange={(event) => updateRobotsOption("maxVideoPreview", event.target.value)} />
-                        <label><input type="checkbox" checked={robots.maxImagePreviewEnabled} onChange={(event) => updateRobotsOption("maxImagePreviewEnabled", event.target.checked)} /> Max Image Preview</label>
-                        <select aria-label="Maximum image preview size" value={robots.maxImagePreview} onChange={(event) => updateRobotsOption("maxImagePreview", event.target.value)}>
-                          <option value="large">Large</option><option value="standard">Standard</option><option value="none">None</option>
-                        </select>
-                      </fieldset>
-                    </div>;
-                  })()}
                 </section>
                 <label className="products-form-field products-form-full">Description
                   <textarea rows={4} value={form.description} onChange={(e) => updateField("description", e.target.value)} placeholder="Enter product description" />
