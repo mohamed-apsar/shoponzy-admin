@@ -266,7 +266,6 @@ export default function ProductsPage({ query = "", categories = [] }) {
     if (form.name.trim().length < 2) return setError("Please enter a product name (at least 2 characters).");
     const category = [...form.categoryIds].reverse().find(Boolean);
     if (!category) return setError("Please select a category.");
-    if (!form.colors.length && !form.images.length) return setError("Please upload at least one product image.");
     if (form.colors.some((color) => !color.featuredImage)) return setError("Upload a featured image for every colour variant.");
     const colorNames = form.colors.map((c) => c.name.trim());
     if (colorNames.some((n) => !n)) return setError("Every colour needs a name.");
@@ -449,10 +448,6 @@ export default function ProductsPage({ query = "", categories = [] }) {
                   <input value={form.sku} onChange={(e) => updateField("sku", e.target.value)} placeholder="e.g. CLO-001" />
                 </label>
 
-                <div className="products-form-field products-form-full">
-                  <ImageUpload kind="productGallery" title="Shared Product Gallery (optional when every colour has a featured image)" images={form.images} onChange={(value) => updateField("images", value)} />
-                </div>
-
                 {LEVEL_LABELS.map((label, index) => (
                   <label className="products-form-field" key={label}>{label}
                     <select required={index === 0} value={form.categoryIds[index]} disabled={index > 0 && !form.categoryIds[index - 1]} onChange={(e) => selectCategory(index, e.target.value)}>
@@ -562,13 +557,6 @@ export default function ProductsPage({ query = "", categories = [] }) {
                 <label className="products-form-field">{hasOptions ? "Default Current Price" : "Current Price *"}
                   <div className="products-price-input"><span>₹</span><input required={!hasOptions} type="number" min="0" step="0.01" value={form.price} onChange={(e) => updateField("price", e.target.value)} placeholder="Enter current price" /></div>
                 </label>
-                <label className="products-form-field">{hasOptions ? "Default Previous Price" : "Previous Price"}
-                  <div className="products-price-input"><span>₹</span><input type="number" min="0" step="0.01" value={form.mrp} onChange={(e) => updateField("mrp", e.target.value)} placeholder="Enter previous price" /></div>
-                </label>
-                <label className="products-form-field">{hasOptions ? "Default Stock Quantity" : "Stock Quantity"}
-                  <input type="number" min="0" step="1" value={form.stock} onChange={(e) => updateField("stock", e.target.value)} placeholder="Enter stock quantity" />
-                </label>
-
                 {hasOptions && (
                   <div className="products-form-field products-form-full">
                     <span>Variant pricing and stock ({variantList.length})</span>
