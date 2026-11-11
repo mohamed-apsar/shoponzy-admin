@@ -37,60 +37,40 @@ function CategorySelect({ categories, value, onChange }) {
 /* ---------- Adjust stock: add / remove / set exact, with a reason and a confirmation step ---------- */
 function AdjustStockModal({ row, onClose, onSaved }) {
   const toast = useToast();
-  const [mode, setMode] = useState("add");
   const [qty, setQty] = useState("");
-  const [reason, setReason] = useState("restock");
-  const [note, setNote] = useState("");
-  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
   const n = Number(qty);
-  const valid = qty !== "" && Number.isInteger(n) && n >= 0 && (mode === "set" || n > 0);
-  const next = !valid ? null : mode === "add" ? row.stock + n : mode === "remove" ? row.stock - n : n;
-  const problem = !valid ? "" : next < 0 ? `You can remove at most ${row.stock}.` : next === row.stock ? "That's the current stock — nothing would change." : note.trim().length < 3 ? "Enter a reason (at least 3 characters)." : "";
+  const valid = qty !== "" && Number.isInteger(n) && n >= 0;
 
   async function save() {
-    const body = { variantId: row.variantId, reason, note: note.trim(), expectedStock: row.stock, ...(mode === "set" ? { set: n } : { delta: mode === "add" ? n : -n }) };
-    await adminRequest(`/admin/products/${row.productId}/stock`, { method: "POST", body: JSON.stringify(body) });
-    toast(`Stock for ${row.name}${variantText(row) ? ` (${variantText(row)})` : ""} updated to ${next}.`);
-    onSaved();
+    setBusy(true);
+    setError("");
+    try {
+      await adminRequest(`/admin/products/${row.productId}/stock`, {
+        method: "POST",
+        body: JSON.stringify({ variantId: row.variantId, set: n, expectedStock: row.stock, note: `Stock quantity set to ${n} from the inventory page.` }),
+      });
+      toast(`Stock for ${row.name}${variantText(row) ? ` (${variantText(row)})` : ""} updated to ${n}.`);
+      onSaved();
+      onClose();
+    } catch (saveError) {
+      setError(saveError.message);
+      setBusy(false);
+    }
   }
 
-  if (confirming) {
-    return (
-      <ConfirmDialog title="Confirm stock change" confirmLabel="Confirm & save" onClose={() => setConfirming(false)} onConfirm={async () => { await save(); onClose(); }}
-        message={<>Change <b>{row.name}</b>{variantText(row) && <> ({variantText(row)})</>} from <b>{row.stock}</b> to <b>{next}</b> ({next - row.stock > 0 ? "+" : ""}{next - row.stock})?</>}>
-        <div className="ops-note"><b>{reasonLabel(reason)}</b> — {note.trim()}</div>
-        <p className="ops-hint">This is recorded in the stock adjustment history under your name.</p>
-      </ConfirmDialog>
-    );
-  }
   return (
-    <Modal title="Update stock" eyebrow="INVENTORY" onClose={onClose} footer={<>
-      <button type="button" className="secondary-button" onClick={onClose}>Cancel</button>
-      <button type="button" className="primary-button" disabled={!valid || Boolean(problem)} onClick={() => setConfirming(true)}>Review change</button>
+    <Modal title="Update stock" eyebrow="INVENTORY" onClose={onClose} busy={busy} footer={<>
+      <button type="button" className="secondary-button" onClick={onClose} disabled={busy}>Cancel</button>
+      <button type="button" className="primary-button" disabled={!valid || n === row.stock || busy} onClick={save}>Update stock</button>
     </>}>
       <div className="ops-product" style={{ marginBottom: 14 }}><Thumb src={row.image} /><div><strong>{row.name}</strong><small>{[variantText(row), row.sku].filter(Boolean).join(" · ") || "Single variant"}</small></div></div>
       <div className="ops-form">
-        <Field label="Adjustment type" full>
-          <div className="ops-segment" role="radiogroup" aria-label="Adjustment type">
-            {[["add", "Add stock"], ["remove", "Remove stock"], ["set", "Set exact quantity"]].map(([id, label]) => (
-              <button key={id} type="button" role="radio" aria-checked={mode === id} className={mode === id ? "active" : ""} onClick={() => setMode(id)}>{label}</button>
-            ))}
-          </div>
-        </Field>
-        <Field label={mode === "set" ? "New quantity" : "Quantity"}>
-          <input type="number" min={mode === "set" ? 0 : 1} step={1} inputMode="numeric" value={qty} onChange={(e) => setQty(e.target.value)} autoFocus />
-        </Field>
-        <Field label="Reason">
-          <select value={reason} onChange={(e) => setReason(e.target.value)}>{REASONS.map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select>
-        </Field>
-        <Field label="Reason details (required)" full>
-          <textarea value={note} maxLength={300} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Received 24 units from supplier, invoice #1234" />
-        </Field>
+        <Field label="Current stock"><div className="ops-preview">{fmt(row.stock)}</div></Field>
+        <Field label="New stock quantity"><input type="number" min="0" step={1} inputMode="numeric" value={qty} onChange={(e) => setQty(e.target.value)} autoFocus /></Field>
       </div>
-      <div className={`ops-preview ${problem ? "warn" : ""}`}>
-        {valid && !problem ? <>Current {row.stock} → New {next}</> : problem || `Current stock: ${row.stock}`}
-      </div>
-      {row.reserved > 0 && <p className="ops-hint">{row.reserved} unit(s) are held by unshipped orders; they&apos;re already excluded from the available stock above.</p>}
+      {error && <div className="products-form-error" role="alert">{error}</div>}
     </Modal>
   );
 }
