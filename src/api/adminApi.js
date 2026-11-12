@@ -1,5 +1,6 @@
 import { API_BASE } from "./config";
 let csrfToken = "";
+let refreshInFlight = null;
 
 async function decode(response) {
   const body = await response.json().catch(() => null);
@@ -32,10 +33,19 @@ async function send(path, options = {}) {
   return fetch(`${API_BASE}${path}`, { ...options, method, headers, credentials: "include" });
 }
 
+function refreshAdminSession() {
+  if (!refreshInFlight) {
+    refreshInFlight = send("/admin/auth/refresh", { method: "POST" })
+      .then(decode)
+      .finally(() => { refreshInFlight = null; });
+  }
+  return refreshInFlight;
+}
+
 export async function adminRequest(path, options = {}) {
   let response = await send(path, options);
   if (response.status === 401 && options.retryAuth !== false && !path.includes("/auth/")) {
-    await send("/admin/auth/refresh", { method: "POST" });
+    await refreshAdminSession();
     response = await send(path, options);
   }
   return decode(response);
@@ -45,7 +55,7 @@ export async function adminRequest(path, options = {}) {
 export async function adminDownload(path, filename) {
   let response = await send(path);
   if (response.status === 401) {
-    await send("/admin/auth/refresh", { method: "POST" });
+    await refreshAdminSession();
     response = await send(path);
   }
   if (!response.ok) await decode(response); // throws the API's error message
