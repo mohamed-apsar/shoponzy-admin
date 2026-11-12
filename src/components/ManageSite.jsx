@@ -349,8 +349,8 @@ function SettingsForm({ initial, children, onSave, onReset }) {
   return <form onSubmit={submit}>{children(values, update)}<FormActions onReset={reset} saving={saving} /></form>;
 }
 
-function AdminEmailForm({ user, onUserChange }) {
-  const [values, setValues] = useState({ newEmail: user?.email || "", currentPassword: "" });
+function AdminCredentialsForm({ user, onUserChange }) {
+  const [values, setValues] = useState({ newEmail: user?.email || "", currentPassword: "", newPassword: "", confirmPassword: "" });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -358,55 +358,28 @@ function AdminEmailForm({ user, onUserChange }) {
   async function submit(event) {
     event.preventDefault(); setError(""); setSuccess("");
     if (values.newEmail.trim().toLowerCase() === user?.email?.toLowerCase()) return setError("Enter a different email address.");
+    if (values.newPassword !== values.confirmPassword) return setError("New password and confirmation do not match.");
     setSaving(true);
     try {
-      const result = await adminRequest("/admin/auth/email", { method: "POST", body: JSON.stringify({ currentPassword: values.currentPassword, newEmail: values.newEmail.trim() }) });
+      const result = await adminRequest("/admin/auth/credentials", { method: "POST", body: JSON.stringify({ currentPassword: values.currentPassword, newEmail: values.newEmail.trim(), newPassword: values.newPassword }) });
       onUserChange?.(result.data.user);
-      setValues({ newEmail: result.data.user.email, currentPassword: "" });
-      setSuccess("Admin sign-in email changed. Other signed-in sessions have been signed out.");
+      setValues({ newEmail: result.data.user.email, currentPassword: "", newPassword: "", confirmPassword: "" });
+      setSuccess("Admin email and password changed. Other signed-in sessions have been signed out.");
     } catch (e) { setError(e.message); }
     finally { setSaving(false); }
   }
-  return <SettingsCard title="Change admin email" description="This email is used to sign in to the admin panel. Verify your current password to change it.">
+  return <SettingsCard title="Admin sign-in details" description="Update the email address and password used to sign in. Both changes are saved together after verifying your current password.">
     <form onSubmit={submit}>
       <div className="ms-form-grid">
-        <Field label="Current admin email"><input type="email" value={user?.email || ""} readOnly /></Field>
-        <Field label="New admin email"><input type="email" autoComplete="email" required maxLength={254} value={values.newEmail} onChange={(e) => setValues({ ...values, newEmail: e.target.value })} /></Field>
-        <Field label="Current password"><input type="password" autoComplete="current-password" required maxLength={128} value={values.currentPassword} onChange={(e) => setValues({ ...values, currentPassword: e.target.value })} /></Field>
-      </div>
-      {error && <p className="ms-error" role="alert">{error}</p>}
-      {success && <p className="ms-valid" role="status">{success}</p>}
-      <div className="ms-form-actions"><button className="ms-button ms-button-primary" type="submit" disabled={saving}>{saving ? "Changing email…" : "Change admin email"}</button></div>
-    </form>
-  </SettingsCard>;
-}
-
-function AdminPasswordForm() {
-  const [values, setValues] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-  async function submit(event) {
-    event.preventDefault(); setError(""); setSuccess("");
-    if (values.newPassword !== values.confirmPassword) return setError("The new passwords do not match.");
-    setSaving(true);
-    try {
-      await adminRequest("/admin/auth/password", { method: "POST", body: JSON.stringify({ currentPassword: values.currentPassword, newPassword: values.newPassword }) });
-      setValues({ currentPassword: "", newPassword: "", confirmPassword: "" });
-      setSuccess("Admin password changed. Other signed-in sessions have been signed out.");
-    } catch (e) { setError(e.message); }
-    finally { setSaving(false); }
-  }
-  return <SettingsCard title="Change admin password" description="Verify your current password, then choose a new password for this admin account.">
-    <form onSubmit={submit}>
-      <div className="ms-form-grid">
+        <Field label="Current email"><input type="email" value={user?.email || ""} readOnly /></Field>
+        <Field label="New email"><input type="email" autoComplete="email" required maxLength={254} value={values.newEmail} onChange={(e) => setValues({ ...values, newEmail: e.target.value })} /></Field>
         <Field label="Current password"><input type="password" autoComplete="current-password" required maxLength={128} value={values.currentPassword} onChange={(e) => setValues({ ...values, currentPassword: e.target.value })} /></Field>
         <Field label="New password"><input type="password" autoComplete="new-password" required minLength={8} maxLength={128} value={values.newPassword} onChange={(e) => setValues({ ...values, newPassword: e.target.value })} /><small>Use at least 8 characters.</small></Field>
-        <Field label="Confirm new password"><input type="password" autoComplete="new-password" required minLength={8} maxLength={128} value={values.confirmPassword} onChange={(e) => setValues({ ...values, confirmPassword: e.target.value })} /></Field>
+        <Field label="Confirm password"><input type="password" autoComplete="new-password" required minLength={8} maxLength={128} value={values.confirmPassword} onChange={(e) => setValues({ ...values, confirmPassword: e.target.value })} /></Field>
       </div>
       {error && <p className="ms-error" role="alert">{error}</p>}
       {success && <p className="ms-valid" role="status">{success}</p>}
-      <div className="ms-form-actions"><button className="ms-button ms-button-primary" type="submit" disabled={saving}>{saving ? "Changing password…" : "Change password"}</button></div>
+      <div className="ms-form-actions"><button className="ms-button ms-button-primary" type="submit" disabled={saving}>{saving ? "Saving sign-in details?" : "Save sign-in details"}</button></div>
     </form>
   </SettingsCard>;
 }
@@ -579,7 +552,7 @@ export default function ManageSite({ activeSection = "General Settings", onSecti
   }
 
   function renderGeneral() {
-    return <><AdminEmailForm user={adminUser} onUserChange={onAdminUserChange} /><AdminPasswordForm /><SettingsForm initial={settings.general} onSave={(value) => saveSettings("general", value)} onReset={() => resetSettings("general")}>
+    return <><AdminCredentialsForm user={adminUser} onUserChange={onAdminUserChange} /><SettingsForm initial={settings.general} onSave={(value) => saveSettings("general", value)} onReset={() => resetSettings("general")}>
       {(values, update) => <SettingsCard title="Store information" description="Set the details and storefront defaults customers will see.">
         <div className="ms-form-grid">
           <Field label="Website name"><input required value={values.websiteName} onChange={(e) => update("websiteName", e.target.value)} /></Field>
