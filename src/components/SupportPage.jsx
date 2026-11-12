@@ -10,7 +10,10 @@ import {
 const PAGE_SIZE = 20;
 // Stored "read" is shown as "Open" (kept for existing data).
 const STATUS = { new: ["New", "requested"], read: ["Open", "pickup_scheduled"], replied: ["Replied", "approved"], closed: ["Closed", "inactive"] };
-const TOPICS = ["Order question", "Return / exchange", "Product question", "Something else"];
+const TOPICS = [
+  "Order question", "Return / exchange", "Product question", "Something else",
+  "Website problem", "Order issue", "Payment issue", "Delivery issue", "Other",
+];
 const StatusBadge = ({ status }) => <Badge value={STATUS[status]?.[1] || "inactive"} label={STATUS[status]?.[0] || status} />;
 const waLink = (phone) => `https://wa.me/91${String(phone).replace(/\D/g, "").slice(-10)}`;
 
@@ -35,7 +38,7 @@ function SupportDetail({ id, onClose, onChanged }) {
 
   const thread = m ? [...(m.replies || []).map((r) => ({ ...r, kind: "reply" })), ...(m.notes || []).map((n) => ({ ...n, kind: "note" }))].sort((a, b) => new Date(a.at) - new Date(b.at)) : [];
   return (
-    <Modal wide title={m ? `${m.name} — ${m.topic || "Message"}` : "Support request"} eyebrow="HELP & SUPPORT" onClose={onClose} busy={Boolean(busy)}
+    <Modal wide title={m ? `${m.name} — ${m.kind === "ticket" ? m.subject || "Support ticket" : m.topic || "Message"}` : "Support request"} eyebrow="HELP & SUPPORT" onClose={onClose} busy={Boolean(busy)}
       footer={m && <>
         <select className="ops-inline-select" value={m.status} disabled={Boolean(busy)} onChange={(e) => setStatus(e.target.value)} aria-label="Status">
           {Object.entries(STATUS).map(([k, [l]]) => <option key={k} value={k}>{l}</option>)}
@@ -48,10 +51,13 @@ function SupportDetail({ id, onClose, onChanged }) {
         <KeyValues rows={[
           ["Status", <StatusBadge key="s" status={m.status} />],
           ["Received", dateTime(m.createdAt)],
+          ["Request type", m.kind === "ticket" ? "Support ticket" : "Contact message"],
           ["Customer", <span key="c">{m.name}{m.user ? <small> · has an account</small> : null}</span>],
+          ...(m.kind === "ticket" ? [["Ticket type", m.type || m.topic || "—"], ["Priority", m.priority || "Normal"]] : []),
           ["Phone", <span key="p"><a href={`tel:${m.phone}`}>{m.phone}</a> · <a href={waLink(m.phone)} target="_blank" rel="noopener noreferrer">WhatsApp</a></span>],
           ["Email", m.email ? <a key="e" href={`mailto:${m.email}`}>{m.email}</a> : "Not given"],
           ["Order", m.orderNumber ? `#${m.orderNumber}` : "—"],
+          ...(m.attachment?.url ? [["Attachment", <a key="attachment" href={m.attachment.url} target="_blank" rel="noopener noreferrer">{m.attachment.filename || "View attachment"}</a>]] : []),
         ]} />
         <h3 className="ops-section-title">Message</h3>
         <div className="ops-note" style={{ whiteSpace: "pre-wrap" }}>{m.message}</div>
@@ -106,7 +112,7 @@ function SupportRequests() {
       ]} />
       <section className="panel table-panel">
         <div className="ops-toolbar">
-          <div><h2>Support requests</h2><p className="muted">Messages from the storefront contact form. Open one to reply, add notes or close it.</p></div>
+          <div><h2>Support requests</h2><p className="muted">Customer tickets and contact-form messages from the storefront. Open one to review, reply, add notes or close it.</p></div>
           <div className="ops-filters">
             <input type="search" value={q} onChange={reset(setQ)} placeholder="Search name, phone, email, order or message…" aria-label="Search support requests" />
             <select value={status} onChange={reset(setStatus)} aria-label="Filter by status"><option value="">All statuses</option>{Object.entries(STATUS).map(([k, [l]]) => <option key={k} value={k}>{l}</option>)}</select>
@@ -124,7 +130,7 @@ function SupportRequests() {
                 <tr key={m.id} className={m.status === "new" ? "ops-row-new" : ""}>
                   <td className="ops-nowrap">{dateTime(m.createdAt)}</td>
                   <td><strong>{m.name}</strong><small>{[m.phone, m.email].filter(Boolean).join(" · ")}</small></td>
-                  <td>{m.topic || "—"}{m.orderNumber && <small>Order #{m.orderNumber}</small>}</td>
+                  <td>{m.kind === "ticket" ? <><strong>Support ticket</strong><small>{m.subject || m.type || m.topic || "—"}</small>{m.priority && <small>Priority: {m.priority}</small>}</> : <>{m.topic || "—"}{m.orderNumber && <small>Order #{m.orderNumber}</small>}</>}</td>
                   <td style={{ maxWidth: 360 }}><span className="ops-clamp">{m.message}</span></td>
                   <td><StatusBadge status={m.status} /></td>
                   <td className="num">{m.replies?.length || 0}</td>
@@ -194,7 +200,7 @@ function SupportSettings() {
 export default function SupportPage({ view = "requests" }) {
   const copy = view === "settings"
     ? ["Support Settings", "How customers reach you, and the automatic reply they get."]
-    : ["Support Requests", "Answer customer questions sent from the storefront’s Contact us form."];
+    : ["Support Requests", "Review and answer customer support tickets and contact-form messages from the storefront."];
   return (
     <>
       <PageHeading eyebrow="HELP & SUPPORT" title={copy[0]} description={copy[1]} />
