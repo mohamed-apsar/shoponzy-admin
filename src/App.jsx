@@ -219,7 +219,7 @@ export default function App() {
 
     setCategoriesOpen(categoryPages.includes(name));
     setSiteOpen(manageSitePages.includes(name));
-    setOpsOpen(name === "Available Stock" ? null : opsGroupOf(name));
+    setOpsOpen(["Available Stock", "Razorpay Transactions"].includes(name) ? null : opsGroupOf(name));
   }
 
   return (
@@ -235,12 +235,12 @@ export default function App() {
         </div>
         <div className="menu-label">WORKSPACE</div>
         <nav>
-          {menuItems.map((item) => item.name === "Inventory Management" ? (
+          {menuItems.map((item) => ["Inventory Management", "Transactions & Payments"].includes(item.name) ? (
             <button
               type="button"
               key={item.name}
               className={`nav-item ${opsGroupOf(page) === item.name ? "active" : ""}`}
-              onClick={() => navigate("Available Stock")}
+              onClick={() => navigate(item.name === "Inventory Management" ? "Available Stock" : "Razorpay Transactions")}
             >
               <span className="nav-icon">{item.icon}</span>
               <span>{item.name}</span>
