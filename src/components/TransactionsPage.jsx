@@ -129,13 +129,12 @@ function TransactionsTable({ status: fixedStatus, provider, method: fixedMethod,
   const toast = useToast();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("");
-  const [method, setMethod] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [sort, setSort] = useState("newest");
   const [page, setPage] = useState(1);
   const [exporting, setExporting] = useState(false);
-  const filters = { q: q.trim(), status: fixedStatus || status, provider, method: fixedMethod || method, from: dayStart(from), to: dayEnd(to), sort };
+  const filters = { q: q.trim(), status: fixedStatus || status, provider, method: fixedMethod, from: dayStart(from), to: dayEnd(to), sort };
   const { data, meta, loading, error, reload } = useAdminData(`/admin/transactions?${qs({ ...filters, page, limit: compact ? 8 : PAGE_SIZE, r: refreshKey })}`, { debounce: q ? 300 : 0 });
   const rows = data || [];
   const reset = (fn) => (v) => { fn(v); setPage(1); };
@@ -165,11 +164,6 @@ function TransactionsTable({ status: fixedStatus, provider, method: fixedMethod,
                 <option value="">All statuses</option><option value="success">Success</option><option value="failed">Failed</option><option value="pending">Pending</option><option value="refunded">Refunded</option><option value="partially_refunded">Partially refunded</option>
               </select>
             )}
-            {!fixedMethod && (
-              <select value={method} onChange={(e) => reset(setMethod)(e.target.value)} aria-label="Filter by payment method">
-                <option value="">All methods</option>{METHODS.filter(([id]) => provider !== "razorpay" || id !== "cod").map(([id, label]) => <option key={id} value={id}>{label}</option>)}
-              </select>
-            )}
             <div className="ops-daterange" role="group" aria-label="Date range"><span>From</span><input type="date" aria-label="From date" value={from} max={to || undefined} onChange={(e) => reset(setFrom)(e.target.value)} /><span>To</span><input type="date" aria-label="To date" value={to} min={from || undefined} onChange={(e) => reset(setTo)(e.target.value)} /></div>
             <select value={sort} onChange={(e) => reset(setSort)(e.target.value)} aria-label="Sort">
               <option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="amount_high">Amount: high to low</option><option value="amount_low">Amount: low to high</option>
@@ -182,7 +176,7 @@ function TransactionsTable({ status: fixedStatus, provider, method: fixedMethod,
       <div className="table-scroll">
         <table className="ops-table">
           <thead><tr><th>Transaction</th><th>Order / date</th><th>Customer</th><th className="num">Amount</th><th>Method</th><th>Status</th><th>Actions</th></tr></thead>
-          <TableBody loading={loading} items={rows} columns={7} empty="No transactions found" emptyHint={q || status || method || from || to ? "Try clearing the search or filters." : "Payments appear here as customers check out."}>
+          <TableBody loading={loading} items={rows} columns={7} empty="No transactions found" emptyHint={q || status || from || to ? "Try clearing the search or filters." : "Payments appear here as customers check out."}>
             {rows.map((t) => (
               <tr key={t.id}>
                 <td><div className="ops-ids">
