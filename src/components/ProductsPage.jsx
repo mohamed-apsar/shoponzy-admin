@@ -14,7 +14,6 @@ const FLAGS = [
   ["isTrending", "Trending"],
   ["isFeatured", "Featured"],
 ];
-const BADGES = ["", "Bestseller", "Trending", "New Drop"];
 const PAGE_SIZE = 20;
 
 const emptyForm = () => ({
@@ -116,6 +115,8 @@ export default function ProductsPage({ query = "", categories = [] }) {
   const [saving, setSaving] = useState(false);
   const [pendingStatusIds, setPendingStatusIds] = useState([]);
   const [deleting, setDeleting] = useState(null);
+  const [badges, setBadges] = useState([]);
+  const [badgesError, setBadgesError] = useState("");
 
   const term = `${search} ${query}`.trim();
 
@@ -141,6 +142,14 @@ export default function ProductsPage({ query = "", categories = [] }) {
     const timer = setTimeout(load, 250);
     return () => clearTimeout(timer);
   }, [load]);
+
+  useEffect(() => {
+    let active = true;
+    adminRequest("/admin/product-badges")
+      .then((result) => { if (active) setBadges(result.data.badges || []); })
+      .catch((requestError) => { if (active) setBadgesError(requestError.message); });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => { setPage(1); }, [term, categoryFilter, statusFilter]);
 
@@ -383,6 +392,7 @@ export default function ProductsPage({ query = "", categories = [] }) {
   const hasOptions = !(variantList.length === 1 && variantList[0].color === null && variantList[0].size === null);
   const hasSizeOptions = parseSizes(form.sizesText).length > 0;
   const brandOptions = form.brand && !productBrands.includes(form.brand) ? [form.brand, ...productBrands] : productBrands;
+  const badgeOptions = form.badge && !badges.includes(form.badge) ? [...badges, form.badge] : badges;
 
   return (
     <>
@@ -648,8 +658,10 @@ export default function ProductsPage({ query = "", categories = [] }) {
                 </div>
                 <label className="products-form-field">Badge
                   <select value={form.badge} onChange={(e) => updateField("badge", e.target.value)}>
-                    {BADGES.map((item) => <option key={item || "none"} value={item}>{item || "No badge"}</option>)}
+                    <option value="">No badge</option>
+                    {badgeOptions.map((item) => <option key={item} value={item}>{item}</option>)}
                   </select>
+                  {badgesError && <small role="alert">Could not load badges: {badgesError}</small>}
                 </label>
                 <section className="product-seo-panel products-form-full" aria-labelledby="product-seo-title">
                   <header className="product-seo-heading">

@@ -4,6 +4,7 @@ import "./modern-theme.css";
 import CategoryManager from "./components/CategoryManager";
 import ManageSite from "./components/ManageSite";
 import ProductsPage from "./components/ProductsPage";
+import MasterPage from "./components/MasterPage";
 import OrdersPage from "./components/OrdersPage";
 import DashboardHome from "./components/DashboardHome";
 import CustomersPage from "./components/CustomersPage";
@@ -25,6 +26,7 @@ const menuItems = [
   { name: "Manage Categories", icon: "▤" },
   { name: "Manage Products", icon: "□" },
   { name: "Manage Orders", icon: "▣" },
+  { name: "Master", icon: "◇" },
   { name: "Customer List", icon: "♙" },
   { name: "Coupons", icon: "%" },
   { name: "Manage Site", icon: "⚙" },
@@ -334,6 +336,7 @@ export default function App() {
           {page === "Dashboard" && <DashboardHome setPage={navigate} />}
           {page === "Manage Products" && <ProductsPage query={query} categories={categories} />}
           {page === "Manage Orders" && <OrdersPage query={query} onCountsChange={updateOrderCounts} />}
+          {page === "Master" && <MasterPage />}
           {opsGroupOf(page) === "Inventory Management" && <InventoryPage categories={categories} view={opsGroups["Inventory Management"][page]} onNavigate={navigate} />}
           {page === "Shipping" && <ShippingPage />}
           {opsGroupOf(page) === "Transactions & Payments" && <TransactionsPage view={opsGroups["Transactions & Payments"][page]} />}
