@@ -37,8 +37,8 @@ const reverse = (map) => Object.fromEntries(Object.entries(map).map(([k, v]) => 
 
 const SETTINGS = {
   homeCategories: {
-    toUi: (v) => ({ categories: v.categories || [], showAllCategories: v.showAllCategories ?? true, showNewIn: v.showNewIn ?? true, showDeals: v.showDeals ?? true, newInImage: v.newInImage || null }),
-    toApi: (v) => ({ categories: v.categories, showAllCategories: v.showAllCategories, showNewIn: v.showNewIn, showDeals: v.showDeals, newInImage: imageOut(v.newInImage) }),
+    toUi: (v) => ({ categories: v.categories || [], showAllCategories: v.showAllCategories ?? true, showNewIn: v.showNewIn ?? true, newInImage: v.newInImage || null }),
+    toApi: (v) => ({ categories: v.categories, showAllCategories: v.showAllCategories, showNewIn: v.showNewIn, newInImage: imageOut(v.newInImage) }),
   },
   general: {
     toUi: (v) => ({ ...v, productsPerPage: String(v.productsPerPage), gridColumns: String(v.gridColumns) }),
@@ -544,7 +544,6 @@ export default function ManageSite({ activeSection = "General Settings", onSecti
           </div>}
           <div className="ms-toggle-list">
             <Toggle label="Show New in shortcut" checked={values.showNewIn} onChange={(value) => update("showNewIn", value)} />
-            <Toggle label="Show Deals shortcut" checked={values.showDeals} onChange={(value) => update("showDeals", value)} />
           </div>
         </SettingsCard>
       </>}

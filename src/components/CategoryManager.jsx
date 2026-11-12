@@ -1,4 +1,4 @@
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import "./CategoryManager.css";
 import { adminRequest, uploadImage } from "../api/adminApi";
 import EditIcon from "./EditIcon";
@@ -39,10 +39,57 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
   const [deleting, setDeleting] = useState(null);
   const [expandedProducts, setExpandedProducts] = useState(null);
   const [productsByCategory, setProductsByCategory] = useState({});
+  const [newInImage, setNewInImage] = useState(null);
+  const [newInImageBusy, setNewInImageBusy] = useState(false);
+  const [newInImageError, setNewInImageError] = useState("");
   const [imageChanged, setImageChanged] = useState(false);
   const [exploreImageChanged, setExploreImageChanged] = useState(false);
   const [bannerImageChanged, setBannerImageChanged] = useState(false);
   const [form, setForm] = useState({ name: "", slug: "", brand: "", parentIds: ["","","",""], image: null, bannerImage: null, status: "enabled" });
+
+  useEffect(() => {
+    if (level !== 1) return undefined;
+    let active = true;
+    adminRequest("/admin/site-settings")
+      .then((result) => { if (active) setNewInImage(result.data.homeCategories?.newInImage || null); })
+      .catch((requestError) => { if (active) setNewInImageError(requestError.message); });
+    return () => { active = false; };
+  }, [level]);
+
+  async function uploadNewInImage(event) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/") || file.type === "image/svg+xml") {
+      setNewInImageError("Choose a PNG, JPG, WebP or GIF image.");
+      return;
+    }
+    setNewInImageBusy(true);
+    setNewInImageError("");
+    try {
+      const upload = await uploadImage(file, "category");
+      const image = { url: upload.url, publicId: upload.publicId, alt: "New In" };
+      const result = await adminRequest("/admin/site-settings/homeCategories", { method: "PATCH", body: JSON.stringify({ newInImage: image }) });
+      setNewInImage(result.data.newInImage || image);
+    } catch (requestError) {
+      setNewInImageError(requestError.message);
+    } finally {
+      setNewInImageBusy(false);
+    }
+  }
+
+  async function removeNewInImage() {
+    setNewInImageBusy(true);
+    setNewInImageError("");
+    try {
+      await adminRequest("/admin/site-settings/homeCategories", { method: "PATCH", body: JSON.stringify({ newInImage: null }) });
+      setNewInImage(null);
+    } catch (requestError) {
+      setNewInImageError(requestError.message);
+    } finally {
+      setNewInImageBusy(false);
+    }
+  }
 
   const visible = categories.filter((item) => item.level === level).map((item) => ({
     ...item,
@@ -245,6 +292,20 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
         <div><h1>{config.title}</h1><p>Manage category names, artwork, parent relationships and status.</p></div>
         <button className="cm-primary-btn" onClick={openAdd} disabled={loading}>＋ Add</button>
       </div>
+
+      {level === 1 && <section className="cm-panel" style={{ display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap" }}>
+        <div style={{ minWidth: 220, flex: 1 }}>
+          <h2 style={{ margin: "0 0 6px" }}>New In circle image</h2>
+          <p style={{ margin: 0, color: "#68738b" }}>Upload the image shown in the New In shortcut on the storefront.</p>
+          {newInImageError && <p className="cm-error" role="alert">{newInImageError}</p>}
+        </div>
+        {newInImage?.url && <img src={newInImage.url} alt="New In shortcut preview" style={{ width: 76, height: 76, borderRadius: "50%", objectFit: "cover", border: "1px solid #e3e7ef" }} />}
+        <label className="cm-primary-btn" style={{ display: "inline-flex", alignItems: "center", cursor: newInImageBusy ? "wait" : "pointer", opacity: newInImageBusy ? .65 : 1 }}>
+          {newInImageBusy ? "Uploading…" : newInImage ? "Replace image" : "Upload image"}
+          <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={uploadNewInImage} disabled={newInImageBusy} style={{ display: "none" }} />
+        </label>
+        {newInImage?.url && <button type="button" className="cm-primary-btn" onClick={removeNewInImage} disabled={newInImageBusy}>Remove image</button>}
+      </section>}
 
       <section className="cm-panel">
         {error && <p className="cm-error" role="alert">{error}</p>}
