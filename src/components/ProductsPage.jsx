@@ -6,7 +6,7 @@ import StatusToggle from "./StatusToggle";
 import DeleteConfirmDialog from "./DeleteConfirmDialog";
 
 /* eslint-disable react/prop-types */
-const LEVEL_LABELS = ["Select Category *", "Select Sub Category", "Select Child Category", "Select Second Child Category", "Select Third Child Category"];
+const LEVEL_LABELS = ["Select Category *", "Select Sub Category", "Select Child Category"];
 const productBrands = ["Unbranded", "Nike", "Adidas", "Puma", "Levi's", "Ray-Ban", "Calvin Klein", "Other"];
 const FLAGS = [
   ["isNewArrival", "New Arrivals"],
@@ -470,14 +470,19 @@ export default function ProductsPage({ query = "", categories = [] }) {
                   <input value={form.sku} onChange={(e) => updateField("sku", e.target.value)} placeholder="e.g. CLO-001" />
                 </label>
 
-                {LEVEL_LABELS.map((label, index) => (
-                  <label className="products-form-field" key={label}>{label}
-                    <select required={index === 0} value={form.categoryIds[index]} disabled={index > 0 && !form.categoryIds[index - 1]} onChange={(e) => selectCategory(index, e.target.value)}>
-                      <option value="">Select One</option>
-                      {optionsForLevel(index).map((item) => <option key={item.id} value={item.id}>{item.name}{item.status === "disabled" ? " (disabled)" : ""}</option>)}
-                    </select>
-                  </label>
-                ))}
+                {LEVEL_LABELS.map((label, index) => {
+                  const options = optionsForLevel(index);
+                  const shouldShow = index === 0 || (form.categoryIds[index - 1] && options.length > 0);
+                  if (!shouldShow) return null;
+                  return (
+                    <label className="products-form-field" key={label}>{label}
+                      <select required={index === 0} value={form.categoryIds[index]} onChange={(e) => selectCategory(index, e.target.value)}>
+                        <option value="">Select One</option>
+                        {options.map((item) => <option key={item.id} value={item.id}>{item.name}{item.status === "disabled" ? " (disabled)" : ""}</option>)}
+                      </select>
+                    </label>
+                  );
+                })}
 
                 <label className="products-form-field">Select Brand
                   <select value={form.brand} onChange={(e) => updateField("brand", e.target.value)}>
