@@ -219,7 +219,7 @@ export default function App() {
 
     setCategoriesOpen(categoryPages.includes(name));
     setSiteOpen(manageSitePages.includes(name));
-    setOpsOpen(opsGroupOf(name));
+    setOpsOpen(name === "Available Stock" ? null : opsGroupOf(name));
   }
 
   return (
@@ -235,7 +235,17 @@ export default function App() {
         </div>
         <div className="menu-label">WORKSPACE</div>
         <nav>
-          {menuItems.map((item) => opsGroups[item.name] ? (
+          {menuItems.map((item) => item.name === "Inventory Management" ? (
+            <button
+              type="button"
+              key={item.name}
+              className={`nav-item ${opsGroupOf(page) === item.name ? "active" : ""}`}
+              onClick={() => navigate("Available Stock")}
+            >
+              <span className="nav-icon">{item.icon}</span>
+              <span>{item.name}</span>
+            </button>
+          ) : opsGroups[item.name] ? (
             <div key={item.name} className="nav-group">
               <button
                 type="button"
@@ -251,9 +261,7 @@ export default function App() {
               </button>
               {opsOpen === item.name && (
                 <div className="nav-submenu">
-                  {Object.keys(opsGroups[item.name])
-                    .filter((label) => item.name !== "Inventory Management" || label === "Available Stock")
-                    .map((label) => (
+                  {Object.keys(opsGroups[item.name]).map((label) => (
                     <button type="button" key={label} className={`nav-subitem ${page === label ? "active" : ""}`} onClick={() => navigate(label)}>
                       <span>•</span>
                       {label}
