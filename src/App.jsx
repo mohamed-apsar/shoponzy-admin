@@ -50,10 +50,7 @@ const opsGroups = {
     "Razorpay Transactions": "razorpay", "Payment Success & Failure": "status", "Refund Tracking": "refunds",
     "Payment Methods": "methods", "Transaction Reports": "reports",
   },
-  "Returns & Refunds": {
-    "Return Requests": "requests", "Approve or Reject": "decide", "Refund Status": "refunds",
-    "Return Reasons": "reasons", "Returned Products": "items",
-  },
+  "Returns & Refunds": { "Return Requests": "requests" },
   "Notifications": {
     "New Arrivals": "arrivals", "Offers & Discounts": "offers", "Sales & Promotions": "sales",
     "Email Notifications": "email", "Notification History": "history",
@@ -219,7 +216,7 @@ export default function App() {
 
     setCategoriesOpen(categoryPages.includes(name));
     setSiteOpen(manageSitePages.includes(name));
-    setOpsOpen(["Available Stock", "Razorpay Transactions"].includes(name) ? null : opsGroupOf(name));
+    setOpsOpen(["Available Stock", "Razorpay Transactions", "Return Requests"].includes(name) ? null : opsGroupOf(name));
   }
 
   return (
@@ -235,15 +232,16 @@ export default function App() {
         </div>
         <div className="menu-label">WORKSPACE</div>
         <nav>
-          {menuItems.map((item) => ["Inventory Management", "Transactions & Payments"].includes(item.name) ? (
+          {menuItems.map((item) => ["Inventory Management", "Transactions & Payments", "Returns & Refunds"].includes(item.name) ? (
             <button
               type="button"
               key={item.name}
               className={`nav-item ${opsGroupOf(page) === item.name ? "active" : ""}`}
-              onClick={() => navigate(item.name === "Inventory Management" ? "Available Stock" : "Razorpay Transactions")}
+              onClick={() => navigate(item.name === "Inventory Management" ? "Available Stock" : item.name === "Returns & Refunds" ? "Return Requests" : "Razorpay Transactions")}
             >
               <span className="nav-icon">{item.icon}</span>
               <span>{item.name}</span>
+              {item.name === "Returns & Refunds" && pendingReturns > 0 && <span className="nav-count" title="Return requests awaiting review">{pendingReturns}</span>}
             </button>
           ) : opsGroups[item.name] ? (
             <div key={item.name} className="nav-group">

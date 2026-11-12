@@ -234,7 +234,7 @@ function ReturnsTable({ view, status: fixedStatus, title, description, onOpen, r
   const rows = data || [];
   const reset = (fn) => (v) => { fn(v); setPage(1); };
   return (
-    <section className="panel table-panel">
+    <section className={`panel table-panel ${title === "All return requests" ? "returns-requests-panel" : ""}`}>
       <div className="ops-toolbar">
         <div><h2>{title}</h2>{description && <p className="muted">{description}</p>}</div>
         {!compact && (
