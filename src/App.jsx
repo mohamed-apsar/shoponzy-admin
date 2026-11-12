@@ -41,7 +41,8 @@ const menuItems = [
 /* Inventory, Transactions and Returns: one sidebar entry per task; each maps to a view of its page. */
 const opsGroups = {
   "Inventory Management": {
-    "Available Stock": "stock",
+    "Available Stock": "stock", "Update Stock": "update", "Low-Stock Alerts": "alerts",
+    "Out-of-Stock Products": "out", "Stock Adjustments": "history",
   },
   "Transactions & Payments": {
     "Razorpay Transactions": "razorpay", "Payment Success & Failure": "status", "Refund Tracking": "refunds",
@@ -247,7 +248,9 @@ export default function App() {
               </button>
               {opsOpen === item.name && (
                 <div className="nav-submenu">
-                  {Object.keys(opsGroups[item.name]).map((label) => (
+                  {Object.keys(opsGroups[item.name])
+                    .filter((label) => item.name !== "Inventory Management" || label === "Available Stock")
+                    .map((label) => (
                     <button type="button" key={label} className={`nav-subitem ${page === label ? "active" : ""}`} onClick={() => navigate(label)}>
                       <span>•</span>
                       {label}

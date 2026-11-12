@@ -133,12 +133,14 @@ function StockTable({ stockStatus, categories, onAdjusted, onHistory, onNavigate
           {!stockStatus && (
             <select value={status} onChange={(e) => {
               const value = e.target.value;
-              if (value === "update") { onNavigate?.("Update Stock"); return; }
-              if (value === "history") { onNavigate?.("Stock Adjustments"); return; }
+              const destinations = {
+                update: "Update Stock", alerts: "Low-Stock Alerts", outPage: "Out-of-Stock Products", history: "Stock Adjustments",
+              };
+              if (destinations[value]) { onNavigate?.(destinations[value]); return; }
               reset(setStatus)(value);
             }} aria-label="Filter by stock status">
               <option value="">All stock statuses</option><option value="in">In stock</option><option value="low">Low stock</option><option value="out">Out of stock</option><option value="inactive">Inactive variants</option>
-              <option value="update">Update stock</option><option value="history">Stock adjustments</option>
+              <option value="update">Update Stock</option><option value="alerts">Low-Stock Alerts</option><option value="outPage">Out-of-Stock Products</option><option value="history">Stock Adjustments</option>
             </select>
           )}
           <select value={sort} onChange={(e) => reset(setSort)(e.target.value)} aria-label="Sort">
