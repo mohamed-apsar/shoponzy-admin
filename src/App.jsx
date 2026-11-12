@@ -213,7 +213,6 @@ export default function App() {
     const categoryPages = [
       "Categories",
       "Sub categories",
-      "Child categories",
     ];
 
     setCategoriesOpen(categoryPages.includes(name));
@@ -268,7 +267,7 @@ export default function App() {
                 aria-expanded={item.name === "Manage Categories" ? categoriesOpen : siteOpen}
                 className={`nav-item ${[
                   ...(item.name === "Manage Categories"
-                    ? ["Categories", "Sub categories", "Child categories"]
+                    ? ["Categories", "Sub categories"]
                     : manageSitePages),
                 ].includes(page) ? "active" : ""}`}
                 onClick={() => {
@@ -290,7 +289,6 @@ export default function App() {
                   {(item.name === "Manage Categories" ? [
                     "Categories",
                     "Sub categories",
-                    "Child categories",
                   ] : manageSitePages).map((label) => (
                     <button
                       type="button"
@@ -348,9 +346,6 @@ export default function App() {
           {page === "SEO Settings" && <SeoSettings />}
           {page === "Categories" && <CategoryManager categories={categories} mode={1} loading={categoriesLoading} loadError={categoriesError} onSave={saveCategory} onDelete={deleteCategory} onToggleStatus={toggleCategoryStatus} />}
           {page === "Sub categories" && <CategoryManager categories={categories} mode={2} loading={categoriesLoading} loadError={categoriesError} onSave={saveCategory} onDelete={deleteCategory} onToggleStatus={toggleCategoryStatus} />}
-          {page === "Child categories" && <CategoryManager categories={categories} mode={3} loading={categoriesLoading} loadError={categoriesError} onSave={saveCategory} onDelete={deleteCategory} onToggleStatus={toggleCategoryStatus} />}
-          {page === "Child Second categories" && <CategoryManager categories={categories} mode={4} loading={categoriesLoading} loadError={categoriesError} onSave={saveCategory} onDelete={deleteCategory} onToggleStatus={toggleCategoryStatus} />}
-          {page === "Child Third categories" && <CategoryManager categories={categories} mode={5} loading={categoriesLoading} loadError={categoriesError} onSave={saveCategory} onDelete={deleteCategory} onToggleStatus={toggleCategoryStatus} />}
           {manageSitePages.includes(page) && <ManageSite activeSection={page} onSectionChange={navigate} categories={categories} />}
         </div>
         <footer className="footer">© 2026 Shoponzy · Admin dashboard <span>All changes are saved to the database</span></footer>
