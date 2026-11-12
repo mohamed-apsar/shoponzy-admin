@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import "./CategoryManager.css";
-import { uploadImage } from "../api/adminApi";
+import { adminRequest, uploadImage } from "../api/adminApi";
 import EditIcon from "./EditIcon";
 import DeleteConfirmDialog from "./DeleteConfirmDialog";
 
@@ -37,6 +37,8 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
   const [statusOverrides, setStatusOverrides] = useState({});
   const [pendingStatusIds, setPendingStatusIds] = useState([]);
   const [deleting, setDeleting] = useState(null);
+  const [expandedProducts, setExpandedProducts] = useState(null);
+  const [productsByCategory, setProductsByCategory] = useState({});
   const [imageChanged, setImageChanged] = useState(false);
   const [exploreImageChanged, setExploreImageChanged] = useState(false);
   const [bannerImageChanged, setBannerImageChanged] = useState(false);
@@ -201,6 +203,31 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
     return names.join(" / ");
   }
 
+  async function loadCategoryProducts(item) {
+    setProductsByCategory((current) => ({ ...current, [item.id]: { loading: true, data: [] } }));
+    try {
+      const params = new URLSearchParams({ category: item.id, page: "1", limit: "100" });
+      const result = await adminRequest(`/admin/products?${params}`);
+      setProductsByCategory((current) => ({ ...current, [item.id]: { loading: false, data: result.data || [], total: result.meta?.total || 0 } }));
+    } catch (requestError) {
+      setProductsByCategory((current) => ({ ...current, [item.id]: { loading: false, data: [], error: requestError.message } }));
+    }
+  }
+
+  async function toggleProducts(item) {
+    if (expandedProducts === item.id) {
+      setExpandedProducts(null);
+      return;
+    }
+    setExpandedProducts(item.id);
+    if (!productsByCategory[item.id]) await loadCategoryProducts(item);
+  }
+
+  async function retryProducts(item) {
+    setExpandedProducts(item.id);
+    await loadCategoryProducts(item);
+  }
+
   const parentFields = Array.from({ length: Math.max(0, level - 1) }, (_, index) => {
     const parentLevel = index + 1;
     const parentId = parentLevel === 1 ? null : form.parentIds[parentLevel - 2];
@@ -238,12 +265,16 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
 
         <div className="cm-table-wrap">
           <table className="cm-table">
-            <thead><tr>{level <= 3 && <th>Image</th>}<th>Name</th><th>Slug</th>{level > 1 && <th>Parent path</th>}<th>Status</th><th>Actions</th></tr></thead>
+            <thead><tr>{level <= 3 && <th>Image</th>}<th>Name</th><th>Slug</th>{level > 1 && <th>Parent path</th>}<th>Products</th><th>Status</th><th>Actions</th></tr></thead>
             <tbody>
               {shown.map((item) => (
-                <tr key={item.id}>
+                <Fragment key={item.id}>
+                <tr>
                   {level <= 3 && <td>{item.tableImage?.url ? <img className="cm-thumb" src={item.tableImage.url} alt={item.name} loading="lazy" /> : <div className="cm-thumb cm-thumb-empty">No image</div>}</td>}
                   <td>{item.name}</td><td>{item.slug}</td>{level > 1 && <td>{pathFor(item) || "—"}</td>}
+                  <td><button type="button" className="cm-products-toggle" aria-expanded={expandedProducts === item.id} onClick={() => toggleProducts(item)}>
+                    {expandedProducts === item.id ? "Hide" : "View"} products ({item.productCount || 0})
+                  </button></td>
                   <td>
                     <button
                       type="button"
@@ -261,8 +292,22 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
                   </td>
                   <td><div className="cm-actions"><button type="button" className="cm-edit-icon-button" aria-label={`Edit ${item.name}`} title={`Edit ${item.name}`} onClick={() => openEdit(item)}><EditIcon /></button><button className="danger" onClick={() => remove(item)}>Delete</button></div></td>
                 </tr>
+                {expandedProducts === item.id && <tr key={`${item.id}-products`} className="cm-products-row">
+                  <td colSpan={(level <= 3 ? 1 : 0) + 2 + (level > 1 ? 1 : 0) + 3}>
+                    {productsByCategory[item.id]?.loading ? <span role="status">Loading products…</span>
+                      : productsByCategory[item.id]?.error ? <span className="cm-products-error">{productsByCategory[item.id].error} <button type="button" onClick={() => retryProducts(item)}>Retry</button></span>
+                        : productsByCategory[item.id]?.data?.length ? <>
+                          <div className="cm-products-list">{productsByCategory[item.id].data.map((product) => <div className="cm-product-entry" key={product.id}>
+                            <strong>{product.name}</strong><span>{product.sku || product.variants?.[0]?.sku || "No product code"}</span><span>{product.status === "active" ? "Enabled" : product.status}</span>
+                          </div>)}</div>
+                          {productsByCategory[item.id].total > productsByCategory[item.id].data.length && <p className="cm-products-more">Showing {productsByCategory[item.id].data.length} of {productsByCategory[item.id].total} products.</p>}
+                        </>
+                          : <span>No products in this category or its subcategories.</span>}
+                  </td>
+                </tr>}
+                </Fragment>
               ))}
-              {!loading && !shown.length && <tr><td colSpan={level === 2 || level === 3 ? 6 : 5} className="cm-empty">No {config.title.toLowerCase()} found.</td></tr>}
+              {!loading && !shown.length && <tr><td colSpan={(level <= 3 ? 1 : 0) + 2 + (level > 1 ? 1 : 0) + 3} className="cm-empty">No {config.title.toLowerCase()} found.</td></tr>}
             </tbody>
           </table>
         </div>
