@@ -75,7 +75,7 @@ const manageSitePages = [
 ];
 
 export default function App() {
-  const { user, status: authStatus, error: authError, setError: setAuthError, signIn, signOut } = useAdminAuth();
+  const { user, status: authStatus, error: authError, setError: setAuthError, signIn, signOut, updateUser } = useAdminAuth();
   const [page, setPage] = useState("Dashboard");
   const [query, setQuery] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -346,7 +346,7 @@ export default function App() {
           {page === "SEO Settings" && <SeoSettings />}
           {page === "Categories" && <CategoryManager categories={categories} mode={1} loading={categoriesLoading} loadError={categoriesError} onSave={saveCategory} onDelete={deleteCategory} onToggleStatus={toggleCategoryStatus} />}
           {page === "Sub categories" && <CategoryManager categories={categories} mode={2} loading={categoriesLoading} loadError={categoriesError} onSave={saveCategory} onDelete={deleteCategory} onToggleStatus={toggleCategoryStatus} />}
-          {manageSitePages.includes(page) && <ManageSite activeSection={page} onSectionChange={navigate} categories={categories} />}
+          {manageSitePages.includes(page) && <ManageSite activeSection={page} onSectionChange={navigate} categories={categories} adminUser={user} onAdminUserChange={updateUser} />}
         </div>
         <footer className="footer">© 2026 Shoponzy · Admin dashboard <span>All changes are saved to the database</span></footer>
       </main>

@@ -23,6 +23,8 @@ export function AdminAuthProvider({ children }) {
     setStatus("unauthenticated");
   }, []);
 
+  const updateUser = useCallback((nextUser) => setUser(nextUser), []);
+
   useEffect(() => {
     let active = true;
     async function restoreSession() {
@@ -46,7 +48,7 @@ export function AdminAuthProvider({ children }) {
     return () => { active = false; };
   }, []);
 
-  const value = { user, status, error, setError, signIn, signOut };
+  const value = { user, status, error, setError, signIn, signOut, updateUser };
   return <AdminAuthContext.Provider value={value}>{children}</AdminAuthContext.Provider>;
 }
 
