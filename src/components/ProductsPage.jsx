@@ -6,7 +6,7 @@ import StatusToggle from "./StatusToggle";
 import DeleteConfirmDialog from "./DeleteConfirmDialog";
 
 /* eslint-disable react/prop-types */
-const LEVEL_LABELS = ["Select Category *", "Select Sub Category", "Select Child Category"];
+const LEVEL_LABELS = ["Select Category *", "Select Sub Category"];
 const productBrands = ["Unbranded", "Nike", "Adidas", "Puma", "Levi's", "Ray-Ban", "Calvin Klein", "Other"];
 const FLAGS = [
   ["isNewArrival", "New Arrivals"],
@@ -179,7 +179,8 @@ export default function ProductsPage({ query = "", categories = [] }) {
       const categoryIds = [...previous.categoryIds];
       categoryIds[levelIndex] = id;
       for (let i = levelIndex + 1; i < categoryIds.length; i++) categoryIds[i] = "";
-      return { ...previous, categoryIds };
+      const selected = categories.find((category) => category.id === id);
+      return { ...previous, categoryIds, ...(levelIndex <= 1 ? { brand: levelIndex === 1 ? selected?.brand || "" : "" } : {}) };
     });
   }
 

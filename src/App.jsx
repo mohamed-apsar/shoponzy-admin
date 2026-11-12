@@ -127,6 +127,7 @@ export default function App() {
         bannerImage: category.bannerImage || null,
         status: category.status,
         productCount: category.productCount || 0,
+        brand: category.brand || "",
       })));
     } catch (error) {
       setCategoriesError(error.message);

@@ -42,7 +42,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
   const [imageChanged, setImageChanged] = useState(false);
   const [exploreImageChanged, setExploreImageChanged] = useState(false);
   const [bannerImageChanged, setBannerImageChanged] = useState(false);
-  const [form, setForm] = useState({ name: "", slug: "", parentIds: ["","","",""], image: null, bannerImage: null, status: "enabled" });
+  const [form, setForm] = useState({ name: "", slug: "", brand: "", parentIds: ["","","",""], image: null, bannerImage: null, status: "enabled" });
 
   const visible = categories.filter((item) => item.level === level).map((item) => ({
     ...item,
@@ -71,7 +71,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
     setImageChanged(false);
     setExploreImageChanged(false);
     setBannerImageChanged(false);
-    setForm({ name: "", slug: "", parentIds: ["","","",""], image: null, bannerImage: null, exploreImage: null, status: "enabled" });
+    setForm({ name: "", slug: "", brand: "", parentIds: ["","","",""], image: null, bannerImage: null, exploreImage: null, status: "enabled" });
     setError("");
     setShowForm(true);
   }
@@ -88,7 +88,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
     setImageChanged(false);
     setExploreImageChanged(false);
     setBannerImageChanged(false);
-    setForm({ name: item.name, slug: item.slug, parentIds, image: item.image || null, bannerImage: item.bannerImage || null, exploreImage: item.exploreImage || null, status: item.status });
+    setForm({ name: item.name, slug: item.slug, brand: item.brand || "", parentIds, image: item.image || null, bannerImage: item.bannerImage || null, exploreImage: item.exploreImage || null, status: item.status });
     setError("");
     setShowForm(true);
   }
@@ -143,6 +143,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
       slug,
       parent: parentId,
       status: form.status,
+      ...(level === 2 ? { brand: form.brand.trim() } : {}),
       ...(level === 1 || imageChanged ? { image: form.image } : {}),
       ...(level === 1 && exploreImageChanged ? { exploreImage: form.exploreImage || null } : {}),
       ...(level === 1 && bannerImageChanged ? { bannerImage: form.bannerImage || null } : {}),
@@ -335,6 +336,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
               const name = e.target.value;
               setForm((previous) => ({ ...previous, name, slug: editingId ? previous.slug : slugify(name) }));
             }} /></div>
+            {level === 2 && <div className="cm-form-group"><label htmlFor="subcategory-brand">Brand for products (optional)</label><input id="subcategory-brand" value={form.brand} maxLength={80} placeholder="Enter brand name" onChange={(e) => setForm((previous) => ({ ...previous, brand: e.target.value }))} /></div>}
             <div className="cm-form-group"><label>Slug *</label><input required value={form.slug} placeholder="Enter Slug" onChange={(e) => setForm((previous) => ({ ...previous, slug: slugify(e.target.value) }))} /></div>
             {level <= 2 && <div className="cm-form-group">
               <label htmlFor="category-strip-image">{level === 1 ? "Category strip image" : `${config.singular} circular image`}</label>
