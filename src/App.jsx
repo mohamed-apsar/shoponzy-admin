@@ -41,8 +41,7 @@ const menuItems = [
 /* Inventory, Transactions and Returns: one sidebar entry per task; each maps to a view of its page. */
 const opsGroups = {
   "Inventory Management": {
-    "Available Stock": "stock", "Update Stock": "update", "Low-Stock Alerts": "alerts",
-    "Out-of-Stock Products": "out", "Stock Adjustments": "history",
+    "Available Stock": "stock",
   },
   "Transactions & Payments": {
     "Razorpay Transactions": "razorpay", "Payment Success & Failure": "status", "Refund Tracking": "refunds",

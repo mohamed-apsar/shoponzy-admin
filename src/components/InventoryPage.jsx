@@ -107,7 +107,7 @@ function ThresholdModal({ row, storeThreshold, onClose, onSaved }) {
 }
 
 /* ---------- Stock list (all / low / out) ---------- */
-function StockTable({ stockStatus, categories, onAdjusted, onHistory, storeThreshold, title, description, defaultSort = "stock_low" }) {
+function StockTable({ stockStatus, categories, onAdjusted, onHistory, onNavigate, storeThreshold, title, description, defaultSort = "stock_low" }) {
   const [q, setQ] = useState("");
   const [category, setCategory] = useState("");
   const [status, setStatus] = useState("");
@@ -131,8 +131,14 @@ function StockTable({ stockStatus, categories, onAdjusted, onHistory, storeThres
           <input type="search" value={q} onChange={(e) => reset(setQ)(e.target.value)} placeholder="Search product, brand or SKU…" aria-label="Search products" />
           <CategorySelect categories={categories} value={category} onChange={reset(setCategory)} />
           {!stockStatus && (
-            <select value={status} onChange={(e) => reset(setStatus)(e.target.value)} aria-label="Filter by stock status">
+            <select value={status} onChange={(e) => {
+              const value = e.target.value;
+              if (value === "update") { onNavigate?.("Update Stock"); return; }
+              if (value === "history") { onNavigate?.("Stock Adjustments"); return; }
+              reset(setStatus)(value);
+            }} aria-label="Filter by stock status">
               <option value="">All stock statuses</option><option value="in">In stock</option><option value="low">Low stock</option><option value="out">Out of stock</option><option value="inactive">Inactive variants</option>
+              <option value="update">Update stock</option><option value="history">Stock adjustments</option>
             </select>
           )}
           <select value={sort} onChange={(e) => reset(setSort)(e.target.value)} aria-label="Sort">
@@ -294,7 +300,7 @@ export default function InventoryPage({ categories = [], view = "stock", onNavig
   ];
   // "History" on a row opens Stock Adjustments filtered to that product.
   const openHistory = (row) => { setHistoryProduct({ productId: row.productId, name: row.name }); onNavigate?.("Stock Adjustments"); };
-  const props = { categories, onAdjusted: summary.reload, onHistory: openHistory, storeThreshold: threshold };
+  const props = { categories, onAdjusted: summary.reload, onHistory: openHistory, onNavigate, storeThreshold: threshold };
   const [title, description] = VIEW_COPY[view] || VIEW_COPY.stock;
 
   return (
