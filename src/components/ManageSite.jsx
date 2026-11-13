@@ -5,6 +5,8 @@ import { shortDate } from "../utils/format";
 import EditIcon from "./EditIcon";
 import StatusToggle from "./StatusToggle";
 import DeleteConfirmDialog from "./DeleteConfirmDialog";
+import ImageCropper from "./ImageCropper";
+import { IMAGE_SIZES, cropHint } from "../utils/imageSizes";
 
 /* eslint-disable react/prop-types */
 const sections = [
@@ -177,10 +179,21 @@ const IMAGE_UPLOAD_HINTS = {
   maintenance: "Recommended: 1200 x 800 px, landscape image. Maximum 5 MB.",
 };
 
+// Upload kinds that are cropped to an exact size first. Favicons stay a plain upload (they may be .ico).
+const CROP_SIZES = {
+  banner: IMAGE_SIZES.siteBanner,
+  bannerMobile: IMAGE_SIZES.siteBannerMobile,
+  popup: IMAGE_SIZES.popup,
+  logo: IMAGE_SIZES.logo,
+  maintenance: IMAGE_SIZES.maintenance,
+};
+
 function ImageUploader({ label, value, onChange, kind, compact = false }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  async function readImage(event) {
+  const [cropSource, setCropSource] = useState(null);
+  const cropSize = CROP_SIZES[kind];
+  function readImage(event) {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
@@ -188,6 +201,19 @@ function ImageUploader({ label, value, onChange, kind, compact = false }) {
       setError("Please select a PNG, JPG, WebP or GIF image.");
       return;
     }
+    if (cropSize) {
+      if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+        setError("Please select a JPG, JPEG, PNG or WebP image.");
+        return;
+      }
+      setError("");
+      setCropSource(file);
+      return;
+    }
+    upload(file);
+  }
+  async function upload(file) {
+    setCropSource(null);
     setBusy(true);
     setError("");
     try {
@@ -206,9 +232,18 @@ function ImageUploader({ label, value, onChange, kind, compact = false }) {
         {value?.url ? <img src={value.url} alt={`${label} preview`} /> : <span className="ms-upload-placeholder"><b>＋</b><span>{busy ? "Uploading…" : "Upload image"}</span><small>PNG, JPG or WebP</small></span>}
         <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" disabled={busy} onChange={readImage} aria-label={`Upload ${label}`} />
       </label>
-      <small className="ms-image-hint">{IMAGE_UPLOAD_HINTS[kind] || "Recommended: 800 x 800 px, square image. Maximum 5 MB."}</small>
+      <small className="ms-image-hint">{cropSize ? cropHint(cropSize) : IMAGE_UPLOAD_HINTS[kind] || "Recommended: 800 x 800 px, square image. Maximum 5 MB."}</small>
       {error && <small className="ms-error">{error}</small>}
+      {value?.url && cropSize && <button type="button" className="ms-link-button" disabled={busy} onClick={() => setCropSource(value.url)}>Crop image</button>}
       {value?.url && <button type="button" className="ms-link-button" onClick={() => onChange(null)}>Remove image</button>}
+      {cropSource && <ImageCropper
+        source={cropSource}
+        title={label}
+        aspect={cropSize.width / cropSize.height}
+        output={cropSize}
+        onCancel={() => setCropSource(null)}
+        onConfirm={upload}
+      />}
     </div>
   );
 }

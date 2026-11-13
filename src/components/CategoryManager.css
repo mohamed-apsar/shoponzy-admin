@@ -728,3 +728,6 @@
   .cm-sub-images { grid-template-columns: 1fr; }
   .cm-sub-images .cif-preview { max-width: 220px; }
 }
+.cif-round .cif-preview { width: 140px; border-radius: 50%; }
+.cm-single-image .cif { max-width: 520px; }
+.cif-wide .cif-preview { max-width: 520px; }

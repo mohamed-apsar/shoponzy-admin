@@ -6,7 +6,8 @@ import "./ImageCropper.css";
 
 /* Crop dialog with a locked aspect ratio. Drag to reposition, wheel / slider to zoom, slider or the
    90° buttons to rotate. The image always covers the frame, so the output never has empty corners.
-   onConfirm receives a JPEG File rendered at exactly output.width × output.height. */
+   onConfirm receives a File (JPEG, or WebP when the source may be transparent) rendered at exactly
+   output.width × output.height. */
 
 const MAX_ZOOM = 5;
 const rad = (deg) => (deg * Math.PI) / 180;
@@ -107,9 +108,14 @@ export default function ImageCropper({ source, title, aspect, output, onCancel, 
   }, [img]);
 
   useEffect(() => {
-    const onKey = (event) => { if (event.key === "Escape" && !busy) onCancel(); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    // Capture phase + stopPropagation: Escape closes only this crop window, not a dialog underneath.
+    const onKey = (event) => {
+      if (event.key !== "Escape") return;
+      event.stopPropagation();
+      if (!busy) onCancel();
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
   }, [busy, onCancel]);
 
   function onPointerDown(event) {
@@ -145,23 +151,34 @@ export default function ImageCropper({ source, title, aspect, output, onCancel, 
     if (!img) return;
     setBusy(true);
     try {
-      const canvas = document.createElement("canvas");
-      canvas.width = output.width;
-      canvas.height = output.height;
-      const ctx = canvas.getContext("2d");
-      const k = output.width / W;
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.imageSmoothingQuality = "high";
-      ctx.translate(output.width / 2 + offset.x * k, output.height / 2 + offset.y * k);
-      ctx.rotate(rad(rotation));
-      ctx.scale(scale * k, scale * k);
-      ctx.drawImage(img.el, -img.w / 2, -img.h / 2);
-      const blob = await new Promise((resolve, reject) => {
-        try { canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("empty"))), "image/jpeg", 0.9); } catch (err) { reject(err); }
+      const render = (fill) => {
+        const canvas = document.createElement("canvas");
+        canvas.width = output.width;
+        canvas.height = output.height;
+        const ctx = canvas.getContext("2d");
+        const k = output.width / W;
+        if (fill) {
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+        ctx.imageSmoothingQuality = "high";
+        ctx.translate(output.width / 2 + offset.x * k, output.height / 2 + offset.y * k);
+        ctx.rotate(rad(rotation));
+        ctx.scale(scale * k, scale * k);
+        ctx.drawImage(img.el, -img.w / 2, -img.h / 2);
+        return canvas;
+      };
+      const toBlob = (canvas, type, quality) => new Promise((resolve, reject) => {
+        try { canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("empty"))), type, quality); } catch (err) { reject(err); }
       });
+      // PNG/WebP sources may be transparent (logos, cut-out product shots): keep that as WebP.
+      // Browsers that can't encode WebP fall back to JPEG on white.
+      const mayBeTransparent = typeof source !== "string" && /png|webp|gif/.test(source.type);
+      let blob = mayBeTransparent ? await toBlob(render(false), "image/webp", 0.92) : null;
+      if (!blob || blob.type !== "image/webp") blob = await toBlob(render(true), "image/jpeg", 0.9);
+      const ext = blob.type === "image/webp" ? "webp" : "jpg";
       const base = (typeof source === "string" ? "image" : source.name.replace(/\.[^.]+$/, "")) || "image";
-      await onConfirm(new File([blob], `${base}-${output.width}x${output.height}.jpg`, { type: "image/jpeg" }));
+      await onConfirm(new File([blob], `${base}-${output.width}x${output.height}.${ext}`, { type: blob.type }));
     } catch {
       setLoadError("The cropped image couldn't be created. Upload the original file instead.");
     } finally {

@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { uploadImage } from "../api/adminApi";
 import ImageCropper from "./ImageCropper";
+import { cropHint } from "../utils/imageSizes";
 
 /* eslint-disable react/prop-types */
 
@@ -10,7 +11,7 @@ const MAX_SOURCE_BYTES = 25 * 1024 * 1024;
 /* One independent image slot: choose a file → crop to the fixed size → upload to Cloudinary.
    value is { url, publicId, alt } or null; onChange receives the new value (null on remove).
    onBusyChange lets the parent form block saving while an upload is in flight. */
-export default function CroppedImageField({ id, label, help, kind, output, value, alt, onChange, onBusyChange, wide = false }) {
+export default function CroppedImageField({ id, label, help, kind, output, value, alt, onChange, onBusyChange, wide = false, round = false }) {
   const [cropSource, setCropSource] = useState(null);
   const [error, setError] = useState("");
   const inputRef = useRef(null);
@@ -41,7 +42,7 @@ export default function CroppedImageField({ id, label, help, kind, output, value
   }
 
   return (
-    <div className={`cif${wide ? " cif-wide" : ""}`}>
+    <div className={`cif${wide ? " cif-wide" : ""}${round ? " cif-round" : ""}`}>
       <span className="cif-label" id={`${id}-label`}>{label}</span>
       <div className="cif-preview" style={{ aspectRatio: `${output.width} / ${output.height}` }}>
         {value?.url
@@ -54,7 +55,7 @@ export default function CroppedImageField({ id, label, help, kind, output, value
         {value?.url && <button type="button" className="cm-secondary-btn cif-btn" onClick={() => setCropSource(value.url)}>Crop</button>}
         {value?.url && <button type="button" className="cm-secondary-btn cif-btn cif-remove" onClick={() => { setError(""); onChange(null); }}>Remove</button>}
       </div>
-      {help && <p className="cm-image-help">{help}</p>}
+      <p className="cm-image-help">{help || cropHint(output)}</p>
       {error && <p className="cif-error" role="alert">{error}</p>}
       {cropSource && <ImageCropper
         source={cropSource}

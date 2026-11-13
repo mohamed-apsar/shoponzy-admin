@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { adminRequest, uploadImage } from "../api/adminApi";
+import ImageCropper from "./ImageCropper";
+import { IMAGE_SIZES, cropHint, sizeLabel } from "../utils/imageSizes";
 import { money } from "../utils/format";
 import EditIcon from "./EditIcon";
 import StatusToggle from "./StatusToggle";
@@ -18,12 +20,15 @@ const FLAGS = [
 const SHOP_BY_OCCASION = "shop-by-occasion";
 const PAGE_SIZE = 20;
 
+// One empty banner + one empty three-image row, so both upload slots are visible without clicking "Add".
+const defaultContentBlocks = () => [{ type: "banner", image: null }, { type: "imageRow", images: [null, null, null] }];
+
 const emptyForm = () => ({
   name: "", sku: "", brand: "", description: "", status: "active",
   categoryIds: ["", "", "", "", ""],
   images: [],
   seo: { title: "", description: "", image: null, imageTitle: "", robots: "index, follow" },
-  colors: [{ name: "", hex: "#111111", featuredImage: null, images: [], price: "", stock: "0", minStock: "0" }], contentBlocks: [], sizesText: "",
+  colors: [{ name: "", hex: "#111111", featuredImage: null, images: [], price: "", stock: "0", minStock: "0" }], contentBlocks: defaultContentBlocks(), sizesText: "",
   price: "", mrp: "", stock: "0",
   rows: {},
   isNewArrival: false, isBestseller: false, isTrending: false, isFeatured: false, isShopByOccasion: false, occasions: [], badge: "",
@@ -42,27 +47,41 @@ function combos(form) {
   return out;
 }
 
-function ImageUpload({ title, images, onChange, required = false, multiple = true, kind = "product", hint = "Recommended: 800 x 800 px (square). Maximum 5 MB." }) {
+const CROPPABLE = ["image/jpeg", "image/png", "image/webp"];
+
+/* Every chosen file is cropped to `size` before upload; several files are cropped one after another.
+   An uploaded image can be re-cropped (✂), which replaces it in place. */
+function ImageUpload({ title, images, onChange, required = false, multiple = true, kind = "product", size = IMAGE_SIZES.productImage }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [queue, setQueue] = useState([]); // [{ source: File | url, replace: index | null }]
+  const [cropKey, setCropKey] = useState(0);
 
-  async function handleFiles(event) {
+  function handleFiles(event) {
     const files = Array.from(event.target.files || []);
     event.target.value = "";
-    const valid = files.filter((file) => file.type.startsWith("image/"));
-    if (valid.length !== files.length) setError("Please select image files only.");
+    const valid = files.filter((file) => CROPPABLE.includes(file.type));
+    if (valid.length !== files.length) setError("Please select JPG, JPEG, PNG or WebP images.");
+    else setError("");
     if (!valid.length) return;
+    setQueue((multiple ? valid : valid.slice(0, 1)).map((source) => ({ source, replace: null })));
+    setCropKey((key) => key + 1);
+  }
+
+  async function uploadCropped(file) {
+    const job = queue[0];
     setBusy(true);
     setError("");
     try {
-      const uploaded = [];
-      for (const file of valid) {
-        const result = await uploadImage(file, kind);
-        uploaded.push({ url: result.url, publicId: result.publicId, alt: "" });
-      }
-      onChange(multiple ? [...images, ...uploaded] : uploaded.slice(-1));
+      const result = await uploadImage(file, kind);
+      const image = { url: result.url, publicId: result.publicId, alt: "" };
+      if (job.replace !== null) onChange(images.map((item, index) => (index === job.replace ? image : item)));
+      else onChange(multiple ? [...images, image] : [image]);
+      setQueue((current) => current.slice(1));
+      setCropKey((key) => key + 1);
     } catch (uploadError) {
       setError(uploadError.message);
+      setQueue([]);
     } finally {
       setBusy(false);
     }
@@ -80,23 +99,34 @@ function ImageUpload({ title, images, onChange, required = false, multiple = tru
         {title} {required && <span className="required-star">*</span>}
       </label>
       <label className="product-file-picker">
-        <span>{busy ? "Uploading…" : images.length ? `${images.length} image(s) uploaded` : "Upload Image..."}</span>
+        <span>{busy ? "Uploading…" : images.length ? `${images.length} image(s) uploaded${multiple ? "" : " — choose to replace"}` : "Upload Image..."}</span>
         <span className="product-browse">Browse</span>
-        <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple={multiple} disabled={busy} onChange={handleFiles} />
+        <input type="file" accept="image/png,image/jpeg,image/webp" multiple={multiple} disabled={busy || queue.length > 0} onChange={handleFiles} />
       </label>
-      <p className="product-image-hint">{hint}</p>
+      <p className="product-image-hint">{cropHint(size)}</p>
       {error && <p className="products-form-error">{error}</p>}
       {!!images.length && (
         <div className="product-image-previews">
           {images.map((image, index) => (
-            <div className="product-image-preview" key={image.publicId || image.url}>
+            <div className={`product-image-preview is-shaped${size.width >= size.height * 2 ? " is-wide" : ""}`} key={image.publicId || image.url} style={{ aspectRatio: `${size.width} / ${size.height}` }}>
               <img src={image.url} alt={`${title} ${index + 1}`} />
               <button type="button" aria-label={`Remove image ${index + 1}`} onClick={() => onChange(images.filter((_, i) => i !== index))}>×</button>
               {index > 0 && <button type="button" style={{ left: 4, right: "auto" }} aria-label={`Move image ${index + 1} left`} onClick={() => move(index, -1)}>‹</button>}
+              <button type="button" className="product-image-crop" title="Crop this image" aria-label={`Crop image ${index + 1}`} disabled={busy}
+                onClick={() => { setQueue([{ source: image.url, replace: index }]); setCropKey((key) => key + 1); }}>✂</button>
             </div>
           ))}
         </div>
       )}
+      {queue.length > 0 && <ImageCropper
+        key={cropKey}
+        source={queue[0].source}
+        title={queue.length > 1 ? `${title} (${queue.length} left)` : title}
+        aspect={size.width / size.height}
+        output={size}
+        onCancel={() => setQueue([])}
+        onConfirm={uploadCropped}
+      />}
     </div>
   );
 }
@@ -240,7 +270,7 @@ export default function ProductsPage({ query = "", categories = [] }) {
           images: (images || []).map(({ url, publicId, alt }) => ({ url, publicId, alt: alt || "" })),
         };
       }),
-      contentBlocks: (full.contentBlocks || []).map((block) => block.type === "banner"
+      contentBlocks: !full.contentBlocks?.length ? defaultContentBlocks() : full.contentBlocks.map((block) => block.type === "banner"
         ? { type: block.type, image: block.image ? { url: block.image.url, publicId: block.image.publicId, alt: block.image.alt || "" } : null }
         : { type: block.type, images: Array.from({ length: 3 }, (_, index) => {
           const image = block.images?.[index];
@@ -302,8 +332,10 @@ export default function ProductsPage({ query = "", categories = [] }) {
     const colorNames = form.colors.map((c) => c.name.trim());
     if (colorNames.some((n) => !n)) return setError("Every colour needs a name.");
     if (new Set(colorNames).size !== colorNames.length) return setError("Colour names must be unique.");
-    if (form.contentBlocks.some((block) => block.type === "banner" ? !block.image : block.images.some((image) => !image))) {
-      return setError("Upload an image for every product banner and image-row position.");
+    // Completely empty blocks are skipped; a row needs all three images (the storefront shows them side by side).
+    const contentBlocks = form.contentBlocks.filter((block) => (block.type === "banner" ? block.image : block.images.some(Boolean)));
+    if (contentBlocks.some((block) => block.type === "imageRow" && block.images.some((image) => !image))) {
+      return setError("Each three-image row needs all 3 images. Upload the missing ones or remove the row.");
     }
 
     const variants = buildVariants();
@@ -329,7 +361,7 @@ export default function ProductsPage({ query = "", categories = [] }) {
         featuredImage: color.featuredImage || null,
         images: color.images || [],
       })),
-      contentBlocks: form.contentBlocks.map((block, blockIndex) => block.type === "banner"
+      contentBlocks: contentBlocks.map((block, blockIndex) => block.type === "banner"
         ? { type: block.type, image: { ...block.image, alt: block.image.alt || `${form.name.trim()} banner ${blockIndex + 1}` } }
         : { type: block.type, images: block.images.map((image, imageIndex) => ({
           ...image, alt: image.alt || `${form.name.trim()} image ${imageIndex + 1}`,
@@ -556,8 +588,8 @@ export default function ProductsPage({ query = "", categories = [] }) {
                   <button type="button" className="table-action" style={{ marginTop: 8, width: "fit-content" }} onClick={() => updateField("colors", [...form.colors, { name: "", hex: "#111111", featuredImage: null, images: [], price: "", stock: "0", minStock: "0" }])}>+ Add colour / variant</button>
                 </div>
                 <div className="products-form-field products-form-full">
-                  <span>Product page banners and image rows</span>
-                  <p className="muted">These images appear below the product details on the storefront, in the order shown.</p>
+                  <span>Product Banner &amp; Three-Image Row</span>
+                  <p className="muted">Shown below the product details on the product page, in the order listed. Banner: {sizeLabel(IMAGE_SIZES.productBanner)}. Row images: {sizeLabel(IMAGE_SIZES.productRowImage)} each. Leave a block empty to skip it.</p>
                   {form.contentBlocks.map((block, index) => (
                     <section className="product-content-block" key={index}>
                       <div className="product-content-block-heading">
@@ -582,7 +614,7 @@ export default function ProductsPage({ query = "", categories = [] }) {
                           title={`Banner ${index + 1}`}
                           images={block.image ? [block.image] : []}
                           multiple={false}
-                          hint="Recommended: 1920 x 800 px (wide). Maximum 5 MB; the full image is shown without cropping."
+                          size={IMAGE_SIZES.productBanner}
                           onChange={(images) => updateField("contentBlocks", form.contentBlocks.map((item, blockIndex) => blockIndex === index ? { ...item, image: images[0] || null } : item))}
                         />
                       ) : (
@@ -594,7 +626,7 @@ export default function ProductsPage({ query = "", categories = [] }) {
                               title={`Row ${index + 1} image ${imageIndex + 1}`}
                               images={block.images[imageIndex] ? [block.images[imageIndex]] : []}
                               multiple={false}
-                              hint="Recommended: 800 x 800 px (square) or 800 x 1200 px (portrait). Maximum 5 MB."
+                              size={IMAGE_SIZES.productRowImage}
                               onChange={(images) => updateField("contentBlocks", form.contentBlocks.map((item, blockIndex) => blockIndex === index
                                 ? { ...item, images: item.images.map((image, itemIndex) => itemIndex === imageIndex ? images[0] || null : image) }
                                 : item))}
@@ -690,7 +722,7 @@ export default function ProductsPage({ query = "", categories = [] }) {
                         images={form.seo.image ? [form.seo.image] : []}
                         multiple={false}
                         kind="seo"
-                        hint="Recommended 1200 × 600 px. JPG, PNG, WebP or GIF, max 5 MB."
+                        size={IMAGE_SIZES.seoImage}
                         onChange={(images) => updateSeoField("image", images[0] || null)}
                       />
                       <label className="products-form-field product-seo-image-title">Meta Image Title

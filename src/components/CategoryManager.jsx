@@ -5,6 +5,8 @@ import EditIcon from "./EditIcon";
 import DeleteConfirmDialog from "./DeleteConfirmDialog";
 import StatusToggle from "./StatusToggle";
 import CroppedImageField from "./CroppedImageField";
+import ImageCropper from "./ImageCropper";
+import { IMAGE_SIZES, cropHint } from "../utils/imageSizes";
 
 /* eslint-disable react/prop-types */
 const LEVELS = [
@@ -16,20 +18,9 @@ const LEVELS = [
 ];
 
 const SUB_IMAGE_SLOTS = ["image1", "image2", "image3"];
-const SUB_IMAGE_OUTPUT = { width: 800, height: 1200 };
-const SUB_BANNER_OUTPUT = { width: 1920, height: 600 };
 const emptySubImages = () => ({ image1: null, image2: null, image3: null });
 
 const slugify = (value) => value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-
-function readImage(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
 
 export default function CategoryManager({ categories, mode = 1, loading = false, loadError = "", onSave, onDelete, onToggleStatus }) {
   const level = Number(mode);
@@ -52,6 +43,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
   const [newInImage, setNewInImage] = useState(null);
   const [newInEnabled, setNewInEnabled] = useState(true);
   const [newInImageBusy, setNewInImageBusy] = useState(false);
+  const [newInCropSource, setNewInCropSource] = useState(null);
   const [newInToggleBusy, setNewInToggleBusy] = useState(false);
   const [newInImageError, setNewInImageError] = useState("");
   const [imageChanged, setImageChanged] = useState(false);
@@ -92,14 +84,20 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
     }
   }
 
-  async function uploadNewInImage(event) {
+  function chooseNewInImage(event) {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
-    if (!file.type.startsWith("image/") || file.type === "image/svg+xml") {
-      setNewInImageError("Choose a PNG, JPG, WebP or GIF image.");
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      setNewInImageError("Choose a JPG, JPEG, PNG or WebP image.");
       return;
     }
+    setNewInImageError("");
+    setNewInCropSource(file);
+  }
+
+  async function uploadNewInImage(file) {
+    setNewInCropSource(null);
     setNewInImageBusy(true);
     setNewInImageError("");
     try {
@@ -180,40 +178,6 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
     setForm({ name: item.name, slug: item.slug, brand: item.brand || "", parentIds, image: item.image || null, bannerImage: item.bannerImage || null, exploreImage: item.exploreImage || null, images: { ...emptySubImages(), ...item.images }, status: item.status, comingSoon: Boolean(item.comingSoon) });
     setError("");
     setShowForm(true);
-  }
-
-  async function onImageChange(event, field) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      setError("Choose an image file.");
-      event.target.value = "";
-      return;
-    }
-
-    setSaving(true);
-    setError("");
-    try {
-      const preview = await readImage(file);
-      setForm((previous) => ({ ...previous, [`${field}Preview`]: preview }));
-      const result = await uploadImage(file, field === "bannerImage" ? "categoryBanner" : "category");
-      setForm((previous) => ({
-        ...previous,
-        [field]: {
-          url: result.url,
-          publicId: result.publicId,
-          alt: field === "exploreImage" ? `${previous.name} Shop all card background` : field === "bannerImage" ? `${previous.name} category banner` : previous.name,
-        },
-      }));
-      if (field === "image") setImageChanged(true);
-      if (field === "exploreImage") setExploreImageChanged(true);
-      if (field === "bannerImage") setBannerImageChanged(true);
-    } catch (uploadError) {
-      setError(uploadError.message);
-    } finally {
-      setSaving(false);
-      event.target.value = "";
-    }
   }
 
   async function save(event) {
@@ -381,7 +345,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
       {level === 1 && <section className="cm-panel" style={{ display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap" }}>
         <div style={{ minWidth: 220, flex: 1 }}>
           <h2 style={{ margin: "0 0 6px" }}>Shop all circle image</h2>
-          <p style={{ margin: 0, color: "#68738b" }}>Upload the image shown in the Shop all shortcut. Recommended: 600 x 600 px (square), maximum 5 MB.</p>
+          <p style={{ margin: 0, color: "#68738b" }}>Upload the image shown in the Shop all shortcut. {cropHint(IMAGE_SIZES.categoryCircle)}</p>
           {newInImageError && <p className="cm-error" role="alert">{newInImageError}</p>}
         </div>
         <div className="cm-new-in-toggle">
@@ -397,9 +361,18 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
         {newInImage?.url && <img src={newInImage.url} alt="Shop all shortcut preview" style={{ width: 76, height: 76, borderRadius: "50%", objectFit: "cover", border: "1px solid #e3e7ef" }} />}
         <label className="cm-primary-btn" style={{ display: "inline-flex", alignItems: "center", cursor: newInImageBusy ? "wait" : "pointer", opacity: newInImageBusy ? .65 : 1 }}>
           {newInImageBusy ? "Uploading…" : newInImage ? "Replace image" : "Upload image"}
-          <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={uploadNewInImage} disabled={newInImageBusy} style={{ display: "none" }} />
+          <input type="file" accept="image/png,image/jpeg,image/webp" onChange={chooseNewInImage} disabled={newInImageBusy} style={{ display: "none" }} />
         </label>
+        {newInImage?.url && <button type="button" className="cm-primary-btn" onClick={() => setNewInCropSource(newInImage.url)} disabled={newInImageBusy}>Crop image</button>}
         {newInImage?.url && <button type="button" className="cm-primary-btn" onClick={removeNewInImage} disabled={newInImageBusy}>Remove image</button>}
+        {newInCropSource && <ImageCropper
+          source={newInCropSource}
+          title="Shop all circle image"
+          aspect={1}
+          output={IMAGE_SIZES.categoryCircle}
+          onCancel={() => setNewInCropSource(null)}
+          onConfirm={uploadNewInImage}
+        />}
       </section>}
 
       <section className="cm-panel">
@@ -505,22 +478,27 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
             {level === 2 && <div className="cm-form-group"><label htmlFor="subcategory-brand">Brand for products (optional)</label><input id="subcategory-brand" value={form.brand} maxLength={80} placeholder="Enter brand name" onChange={(e) => setForm((previous) => ({ ...previous, brand: e.target.value }))} /></div>}
             <div className="cm-form-group"><label>Slug *</label><input required value={form.slug} placeholder="Enter Slug" onChange={(e) => setForm((previous) => ({ ...previous, slug: slugify(e.target.value) }))} /></div>
             {level === 1 && <div className="cm-form-group"><label className="cm-coming-soon cm-coming-soon-form"><input type="checkbox" checked={Boolean(form.comingSoon)} onChange={(event) => setForm((previous) => ({ ...previous, comingSoon: event.target.checked }))} /><span>Show a Coming soon page for this category</span></label></div>}
-            {level <= 2 && <div className="cm-form-group">
-              <label htmlFor="category-strip-image">{level === 1 ? "Category strip image" : `${config.singular} circular image`}</label>
-              <p className="cm-image-help">Shown in the circular {level === 1 ? "category" : "subcategory"} link. Recommended: 600 x 600 px (square), maximum 5 MB.</p>
-              <input id="category-strip-image" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" onChange={(event) => onImageChange(event, "image")} />
-              {(form.imagePreview || form.image?.url) && <div className="cm-category-image-preview">
-                <img className={`cm-image-preview${level > 1 ? " cm-circle-image-preview" : ""}`} src={form.imagePreview || form.image.url} alt={`${form.name || config.singular} circular image preview`} />
-                <button type="button" className="cm-secondary-btn" onClick={() => {
-                  setForm((previous) => ({ ...previous, image: null, imagePreview: "" }));
+            {level <= 2 && <div className="cm-form-group cm-single-image">
+              <CroppedImageField
+                id="category-strip-image"
+                label={level === 1 ? "Category strip image" : `${config.singular} circular image`}
+                kind="category"
+                output={IMAGE_SIZES.categoryCircle}
+                value={form.image}
+                alt={form.name || config.singular}
+                round
+                help={`Shown in the circular ${level === 1 ? "category" : "subcategory"} link. ${cropHint(IMAGE_SIZES.categoryCircle)}`}
+                onBusyChange={trackUpload}
+                onChange={(image) => {
+                  setForm((previous) => ({ ...previous, image }));
                   setImageChanged(true);
-                }}>Remove image</button>
-              </div>}
+                }}
+              />
             </div>}
             {level === 2 && <>
               <fieldset className="cm-media-section">
                 <legend>Subcategory Images</legend>
-                <p className="cm-image-help">Shown in a row on this subcategory’s storefront page. Each image is cropped to 800 × 1200 px (2:3). JPG, JPEG, PNG or WebP.</p>
+                <p className="cm-image-help">Shown in a row on this subcategory’s storefront page. {cropHint(IMAGE_SIZES.subcategoryImage)}</p>
                 <div className="cm-sub-images">
                   {SUB_IMAGE_SLOTS.map((slot, index) => (
                     <CroppedImageField
@@ -528,7 +506,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
                       id={`subcategory-${slot}`}
                       label={`Subcategory Image ${index + 1}`}
                       kind={`subcategoryImage${index + 1}`}
-                      output={SUB_IMAGE_OUTPUT}
+                      output={IMAGE_SIZES.subcategoryImage}
                       value={form.images?.[slot]}
                       alt={`${form.name || "Subcategory"} image ${index + 1}`}
                       onBusyChange={trackUpload}
@@ -547,10 +525,10 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
                   id="subcategory-banner"
                   label="Subcategory Banner"
                   kind="subcategoryBanner"
-                  output={SUB_BANNER_OUTPUT}
+                  output={IMAGE_SIZES.subcategoryBanner}
                   value={form.bannerImage}
                   alt={`${form.name || "Subcategory"} banner`}
-                  help="Shown at the top of this subcategory’s storefront page. Cropped to 1920 × 600 px (16:5). JPG, JPEG, PNG or WebP."
+                  help={`Shown at the top of this subcategory’s storefront page. ${cropHint(IMAGE_SIZES.subcategoryBanner)}`}
                   onBusyChange={trackUpload}
                   onChange={(image) => {
                     setForm((previous) => ({ ...previous, bannerImage: image }));
@@ -564,29 +542,38 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
             </p>}
             {level === 1 && <>
               <div className="cm-form-group">
-                <label htmlFor="category-banner-image">Category page banner</label>
-                <p className="cm-image-help">Shown behind the title on this category’s storefront page. Recommended: 1920 x 800 px (wide), maximum 8 MB.</p>
-                <input id="category-banner-image" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" onChange={(event) => onImageChange(event, "bannerImage")} />
-                {(form.bannerImagePreview || form.bannerImage?.url) && <div className="cm-explore-image-preview cm-banner-image-preview">
-                  <img src={form.bannerImagePreview || form.bannerImage.url} alt={`${form.name || "Category"} banner preview`} />
-                  <button type="button" className="cm-secondary-btn" onClick={() => {
-                    setForm((previous) => ({ ...previous, bannerImage: null, bannerImagePreview: "" }));
+                <CroppedImageField
+                  wide
+                  id="category-banner-image"
+                  label="Category page banner"
+                  kind="categoryBanner"
+                  output={IMAGE_SIZES.categoryBanner}
+                  value={form.bannerImage}
+                  alt={`${form.name || "Category"} category banner`}
+                  help={`Shown behind the title on this category’s storefront page. ${cropHint(IMAGE_SIZES.categoryBanner)}`}
+                  onBusyChange={trackUpload}
+                  onChange={(image) => {
+                    setForm((previous) => ({ ...previous, bannerImage: image }));
                     setBannerImageChanged(true);
-                  }}>Remove image</button>
-                </div>}
+                  }}
+                />
               </div>
               <div className="cm-form-group cm-explore-image-field">
-                <label htmlFor="category-explore-image">Shop all card background image</label>
-                <p className="cm-image-help">Shown behind “Shop all {form.name || "category"}” in the top navigation dropdown. Recommended: 1200 x 800 px (landscape), maximum 5 MB. The card text stays overlaid.</p>
-                <input id="category-explore-image" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" onChange={(event) => onImageChange(event, "exploreImage")} />
-                {(form.exploreImagePreview || form.exploreImage?.url) && <div className="cm-explore-image-preview">
-                  <img src={form.exploreImagePreview || form.exploreImage.url} alt={`${form.name || "Category"} Shop all card background preview`} />
-                  <span>Preview: Shop all {form.name || "category"}</span>
-                  <button type="button" className="cm-secondary-btn" onClick={() => {
-                    setForm((previous) => ({ ...previous, exploreImage: null, exploreImagePreview: "" }));
+                <CroppedImageField
+                  wide
+                  id="category-explore-image"
+                  label="Shop all card background image"
+                  kind="category"
+                  output={IMAGE_SIZES.categoryExplore}
+                  value={form.exploreImage}
+                  alt={`${form.name || "Category"} Shop all card background`}
+                  help={`Shown behind “Shop all ${form.name || "category"}” in the top navigation dropdown; the card text stays overlaid. ${cropHint(IMAGE_SIZES.categoryExplore)}`}
+                  onBusyChange={trackUpload}
+                  onChange={(image) => {
+                    setForm((previous) => ({ ...previous, exploreImage: image }));
                     setExploreImageChanged(true);
-                  }}>Remove image</button>
-                </div>}
+                  }}
+                />
               </div>
             </>}
             <div className="cm-form-group"><label>Status</label><select value={form.status} onChange={(e) => setForm((previous) => ({ ...previous, status: e.target.value }))}><option value="enabled">Enabled</option><option value="disabled">Disabled</option></select></div>

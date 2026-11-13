@@ -1936,3 +1936,9 @@ tbody tr:last-child td { border-bottom: 0; }
 @keyframes delete-confirm-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes delete-confirm-rise { from { transform: translateY(8px) scale(.98); } to { transform: translateY(0) scale(1); } }
 @media (max-width: 520px) { .delete-confirm-dialog { padding: 30px 20px 22px; } .delete-confirm-icon { width: 72px; height: 72px; margin-bottom: 23px; font-size: 52px; } }
+
+/* Cropped product uploads: preview in the crop's shape, plus a re-crop button. */
+.product-image-preview.is-shaped { height: auto; }
+.product-image-preview.is-wide { width: 240px; }
+.product-image-preview button.product-image-crop { top: auto; bottom: -8px; right: -8px; background: #4f46e5; font-size: 13px; }
+.product-image-preview button.product-image-crop:disabled { opacity: .5; cursor: wait; }
