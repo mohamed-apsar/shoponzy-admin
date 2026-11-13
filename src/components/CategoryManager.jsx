@@ -31,6 +31,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [pageSize, setPageSize] = useState("10");
+  const [page, setPage] = useState(1);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState("");
@@ -128,7 +129,10 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
     const term = `${item.name} ${item.slug} ${parent?.name || ""}`.toLowerCase();
     return term.includes(search.toLowerCase()) && (statusFilter === "all" || item.status === statusFilter);
   });
-  const shown = pageSize === "all" ? filtered : filtered.slice(0, Number(pageSize));
+  const pageCount = pageSize === "all" ? 1 : Math.max(1, Math.ceil(filtered.length / Number(pageSize)));
+  const shown = pageSize === "all" ? filtered : filtered.slice((page - 1) * Number(pageSize), page * Number(pageSize));
+  useEffect(() => { setPage(1); }, [search, statusFilter, pageSize, level]);
+  useEffect(() => { if (page > pageCount) setPage(pageCount); }, [page, pageCount]);
 
   function parentForLevel(childLevel) {
     if (childLevel === 1) return null;
@@ -441,7 +445,16 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
             </tbody>
           </table>
         </div>
-        <div className="cm-table-footer">Showing {shown.length} of {filtered.length} entries</div>
+        <div className="cm-table-footer">
+          <span>Showing {filtered.length ? (pageSize === "all" ? 1 : (page - 1) * Number(pageSize) + 1) : 0}–{pageSize === "all" ? filtered.length : Math.min(page * Number(pageSize), filtered.length)} of {filtered.length} entries</span>
+          {pageSize !== "all" && <div className="cm-pagination" aria-label="Category pages">
+            <button type="button" disabled={page <= 1} onClick={() => setPage(1)}>First</button>
+            <button type="button" disabled={page <= 1} onClick={() => setPage((current) => current - 1)}>Previous</button>
+            <span>Page {page} of {pageCount}</span>
+            <button type="button" disabled={page >= pageCount} onClick={() => setPage((current) => current + 1)}>Next</button>
+            <button type="button" disabled={page >= pageCount} onClick={() => setPage(pageCount)}>Last</button>
+          </div>}
+        </div>
       </section>
 
       {showForm && <div className="cm-modal-overlay" onClick={() => setShowForm(false)}>

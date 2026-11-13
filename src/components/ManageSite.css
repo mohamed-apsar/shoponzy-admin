@@ -237,3 +237,8 @@
 .manage-site .ms-search input,
 .manage-site .ms-table td { font-size: 15px; }
 .manage-site .ms-table th { font-size: 12px; }
+.ms-record-pagination { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 14px 0 2px; color: #68738b; font-size: 13px; }
+.ms-record-pagination label, .ms-record-pagination > div { display: flex; align-items: center; gap: 8px; }
+.ms-record-pagination select, .ms-record-pagination button { min-height: 34px; padding: 5px 9px; border: 1px solid #e3e7ef; border-radius: 8px; background: #fff; color: #334155; font: inherit; }
+.ms-record-pagination button { cursor: pointer; }
+.ms-record-pagination button:disabled { opacity: .45; cursor: not-allowed; }

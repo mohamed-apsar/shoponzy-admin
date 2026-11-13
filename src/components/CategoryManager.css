@@ -398,6 +398,10 @@
   font-size: 14px;
 }
 
+.cm-pagination { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
+.cm-pagination button { min-height: 36px; padding: 6px 10px; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; color: #334155; font: inherit; cursor: pointer; }
+.cm-pagination button:disabled { opacity: .45; cursor: not-allowed; }
+
 /* Modal overlay */
 .cm-modal-overlay {
   position: fixed;

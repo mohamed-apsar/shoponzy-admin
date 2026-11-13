@@ -727,6 +727,12 @@ export default function ManageSite({ activeSection = "General Settings", onSecti
 }
 
 function RecordList({ kind, title, description, records, search, setSearch, statusFilter, setStatusFilter, onAdd, onEdit, onDelete, onToggle, pendingToggleIds }) {
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const pageCount = Math.max(1, Math.ceil(records.length / pageSize));
+  const shown = records.slice((page - 1) * pageSize, page * pageSize);
+  useEffect(() => { setPage(1); }, [records, pageSize]);
+  useEffect(() => { if (page > pageCount) setPage(pageCount); }, [page, pageCount]);
   const pageMode = kind === "page";
   const popupMode = kind === "popup";
   const statusOptions = pageMode ? ["All", "Published", "Draft"] : ["All", "Active", "Inactive", ...(kind === "banner" ? ["Scheduled"] : [])];
@@ -735,7 +741,7 @@ function RecordList({ kind, title, description, records, search, setSearch, stat
     <div className="ms-record-heading"><div className="ms-card-heading"><h2>{title}</h2><p>{description}</p></div><button type="button" className="ms-button ms-button-primary" onClick={onAdd}>＋ Add {pageMode ? "Page" : popupMode ? "Popup" : "Banner"}</button></div>
     <div className="ms-record-controls"><label className="ms-search"><span>⌕</span><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={`Search ${pageMode ? "pages" : popupMode ? "popups" : "banners"}…`} aria-label="Search records" /></label><select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} aria-label="Filter by status">{statusOptions.map((option) => <option key={option}>{option}</option>)}</select></div>
     <div className="ms-table-wrap"><table className="ms-table"><thead><tr>{kind === "banner" ? <><th>Banner</th><th>Placement</th><th>Order</th><th>Start date</th><th>End date</th><th>Status</th><th>Actions</th></> : pageMode ? <><th>Page title</th><th>Page slug</th><th>Last updated</th><th>Status</th><th>Actions</th></> : <><th>Popup</th><th>Trigger</th><th>Frequency</th><th>Start date</th><th>End date</th><th>Status</th><th>Actions</th></>}</tr></thead>
-      <tbody>{records.map((item) => <tr key={item.id}>
+      <tbody>{shown.map((item) => <tr key={item.id}>
         {kind === "banner" ? <><td><div className="ms-record-title">{item.image?.url ? <img src={item.image.url} alt="" /> : <div className="ms-thumb-placeholder">▧</div>}<div><strong>{item.title}</strong><small>{item.subtitle}</small></div></div></td><td>{item.placement}</td><td>{item.order}</td><td>{item.start || "—"}</td><td>{item.end || "—"}</td><td><EntityStatus status={item.status || "Inactive"} /></td></>
           : pageMode ? <><td><strong>{item.title}</strong></td><td className="ms-slug">/{item.slug}</td><td>{item.updated}</td><td><EntityStatus status={item.status} /></td></>
             : <><td><div className="ms-record-title">{item.image?.url ? <img src={item.image.url} alt="" /> : <div className="ms-thumb-placeholder">▣</div>}<div><strong>{item.title}</strong><small>{item.description}</small></div></div></td><td>{item.trigger}</td><td>{item.frequency}</td><td>{item.start || "—"}</td><td>{item.end || "—"}</td><td><EntityStatus status={item.status} /></td></>}
@@ -743,5 +749,6 @@ function RecordList({ kind, title, description, records, search, setSearch, stat
       </tr>)}
       {!records.length && <tr><td colSpan={kind === "banner" ? 7 : pageMode ? 5 : 7}><div className="ms-empty"><span>⌕</span><strong>{emptyLabel}</strong><small>Try changing your search or filters, or add a new item.</small></div></td></tr>}
       </tbody></table></div>
+    <div className="ms-record-pagination"><label>Show <select value={pageSize} onChange={(event) => setPageSize(Number(event.target.value))}><option value={10}>10</option><option value={25}>25</option><option value={50}>50</option></select> entries</label><span>{records.length ? `Showing ${(page - 1) * pageSize + 1}–${Math.min(page * pageSize, records.length)} of ${records.length}` : "Showing 0 of 0"}</span><div><button type="button" disabled={page <= 1} onClick={() => setPage(1)}>First</button><button type="button" disabled={page <= 1} onClick={() => setPage((current) => current - 1)}>Previous</button><span>Page {page} of {pageCount}</span><button type="button" disabled={page >= pageCount} onClick={() => setPage((current) => current + 1)}>Next</button><button type="button" disabled={page >= pageCount} onClick={() => setPage(pageCount)}>Last</button></div></div>
   </section>;
 }

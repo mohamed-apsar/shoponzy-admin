@@ -4,6 +4,7 @@ import { money, shortDate } from "../utils/format";
 import EditIcon from "./EditIcon";
 import StatusToggle from "./StatusToggle";
 import DeleteConfirmDialog from "./DeleteConfirmDialog";
+import { Pagination } from "./ops/OpsKit";
 
 /* eslint-disable react/prop-types */
 const emptyCoupon = () => ({
@@ -25,6 +26,8 @@ function couponState(c) {
 
 export default function CouponsPage({ query = "" }) {
   const [items, setItems] = useState([]);
+  const [meta, setMeta] = useState({ total: 0, pages: 1 });
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState("");
   const [form, setForm] = useState(emptyCoupon);
@@ -39,15 +42,19 @@ export default function CouponsPage({ query = "" }) {
     setLoading(true);
     setLoadError("");
     try {
-      const params = new URLSearchParams({ limit: "100" });
+      const params = new URLSearchParams({ page: String(page), limit: "20" });
       if (query.trim()) params.set("q", query.trim());
-      setItems((await adminRequest(`/admin/coupons?${params}`)).data);
+      const result = await adminRequest(`/admin/coupons?${params}`);
+      setItems(result.data);
+      setMeta(result.meta || { total: result.data.length, pages: 1 });
     } catch (requestError) {
       setLoadError(requestError.message);
     } finally {
       setLoading(false);
     }
-  }, [query]);
+  }, [page, query]);
+
+  useEffect(() => { setPage(1); }, [query]);
 
   useEffect(() => {
     const timer = setTimeout(load, 250);
@@ -131,7 +138,7 @@ export default function CouponsPage({ query = "" }) {
         <button className="primary-button" onClick={openAdd}>+ Add Coupon</button>
       </div>
       <section className="panel table-panel">
-        <div className="product-toolbar"><div><h2>All Coupons</h2><p className="muted">{loading ? "Loading…" : `${items.length} coupons`}</p></div></div>
+        <div className="product-toolbar"><div><h2>All Coupons</h2><p className="muted">{loading ? "Loading…" : `${meta.total ?? items.length} coupons`}</p></div></div>
         {loadError && <div className="products-form-error" role="alert">{loadError}</div>}
         <div className="table-scroll">
           <table>
@@ -158,6 +165,7 @@ export default function CouponsPage({ query = "" }) {
             </tbody>
           </table>
         </div>
+        <Pagination meta={meta} page={page} onPage={setPage} />
       </section>
 
       {showForm && (
