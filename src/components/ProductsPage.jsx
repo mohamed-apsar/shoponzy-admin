@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { adminRequest, uploadImage } from "../api/adminApi";
 import { money } from "../utils/format";
 import EditIcon from "./EditIcon";
@@ -117,10 +117,12 @@ export default function ProductsPage({ query = "", categories = [] }) {
   const [deleting, setDeleting] = useState(null);
   const [badges, setBadges] = useState([]);
   const [badgesError, setBadgesError] = useState("");
+  const loadSequence = useRef(0);
 
   const term = `${search} ${query}`.trim();
 
   const load = useCallback(async () => {
+    const sequence = ++loadSequence.current;
     setLoading(true);
     setLoadError("");
     try {
@@ -129,12 +131,13 @@ export default function ProductsPage({ query = "", categories = [] }) {
       if (categoryFilter) params.set("category", categoryFilter);
       if (statusFilter) params.set("status", statusFilter);
       const result = await adminRequest(`/admin/products?${params}`);
+      if (sequence !== loadSequence.current) return;
       setItems(result.data);
       setMeta(result.meta || {});
     } catch (requestError) {
-      setLoadError(requestError.message);
+      if (sequence === loadSequence.current) setLoadError(requestError.message);
     } finally {
-      setLoading(false);
+      if (sequence === loadSequence.current) setLoading(false);
     }
   }, [page, term, categoryFilter, statusFilter]);
 
