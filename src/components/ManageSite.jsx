@@ -408,6 +408,7 @@ export default function ManageSite({ activeSection = "General Settings", onSecti
   const [urlFeedback, setUrlFeedback] = useState("");
   const [pendingToggleIds, setPendingToggleIds] = useState([]);
   const [deletingRecord, setDeletingRecord] = useState(null);
+  const [sectionPage, setSectionPage] = useState(1);
 
   const setters = { banner: setBanners, popup: setPopups, page: setPages, section: setHomepageSections };
 
@@ -427,6 +428,7 @@ export default function ManageSite({ activeSection = "General Settings", onSecti
     ]).catch((error) => { if (active) setLoadError(error.message); });
     return () => { active = false; };
   }, [loadRecords]);
+  useEffect(() => { setSectionPage(1); }, [homepageSections.length]);
 
   function notify(message = "Changes saved successfully.") {
     setToast(message);
@@ -595,13 +597,21 @@ export default function ManageSite({ activeSection = "General Settings", onSecti
     : item.source === "category" ? `Category: ${categories.find((c) => c.id === item.category)?.name || "not selected"}`
       : PRODUCT_SOURCES[item.source] || cap(item.source);
   function renderSections() {
+    const orderedSections = homepageSections.slice().sort((a, b) => Number(a.order) - Number(b.order));
+    const pageSize = 10;
+    const pageCount = Math.max(1, Math.ceil(orderedSections.length / pageSize));
+    const pageSections = orderedSections.slice((sectionPage - 1) * pageSize, sectionPage * pageSize);
     return <SettingsCard title="Homepage sections" description="Choose what appears on the homepage and arrange the storefront experience.">
-      <div className="ms-sections-list">{homepageSections.slice().sort((a, b) => Number(a.order) - Number(b.order)).map((item, index, list) => <article className="ms-section-row" key={item.id}>
-        <div className="ms-reorder"><button type="button" aria-label={`Move ${item.title} up`} disabled={index === 0} onClick={() => moveSection(item, -1, list)}>↑</button><button type="button" aria-label={`Move ${item.title} down`} disabled={index === list.length - 1} onClick={() => moveSection(item, 1, list)}>↓</button></div>
+      <div className="ms-sections-list">{pageSections.map((item) => {
+        const index = orderedSections.findIndex((entry) => entry.id === item.id);
+        return <article className="ms-section-row" key={item.id}>
+        <div className="ms-reorder"><button type="button" aria-label={`Move ${item.title} up`} disabled={index === 0} onClick={() => moveSection(item, -1, orderedSections)}>↑</button><button type="button" aria-label={`Move ${item.title} down`} disabled={index === orderedSections.length - 1} onClick={() => moveSection(item, 1, orderedSections)}>↓</button></div>
         <div className="ms-section-main"><div className="ms-section-title"><strong>{item.title}</strong><EntityStatus status={item.active ? "Active" : "Inactive"} /></div><p>{item.subtitle || "No subtitle"} · {item.type} · {item.count} items</p><small>Shows: {sourceLabel(item)} · Order {item.order}</small></div>
         <div className="ms-row-actions"><button type="button" className="ms-edit-icon-button" aria-label={`Edit ${item.title}`} title={`Edit ${item.title}`} onClick={() => setModal({ kind: "section", record: item })}><EditIcon /></button><StatusToggle checked={item.active} label={`${item.active ? "Disable" : "Enable"} ${item.title}`} onChange={() => toggleRecord("section", item)} disabled={pendingToggleIds.includes(`section:${item.id}`)} /><button type="button" className="danger" onClick={() => removeRecord("section", item)}>Delete</button></div>
-      </article>)}
+      </article>;
+      })}
       {!homepageSections.length && <div className="ms-empty"><strong>No homepage sections yet</strong></div>}</div>
+      <div className="ms-record-pagination"><span>{orderedSections.length ? `Showing ${(sectionPage - 1) * pageSize + 1}–${Math.min(sectionPage * pageSize, orderedSections.length)} of ${orderedSections.length}` : "Showing 0 of 0"}</span><div><button type="button" disabled={sectionPage <= 1} onClick={() => setSectionPage(1)}>First</button><button type="button" disabled={sectionPage <= 1} onClick={() => setSectionPage((current) => current - 1)}>Previous</button><span>Page {sectionPage} of {pageCount}</span><button type="button" disabled={sectionPage >= pageCount} onClick={() => setSectionPage((current) => current + 1)}>Next</button><button type="button" disabled={sectionPage >= pageCount} onClick={() => setSectionPage(pageCount)}>Last</button></div></div>
       <button type="button" className="ms-button ms-button-secondary ms-add-section" onClick={() => setModal({ kind: "section", record: { order: homepageSections.length + 1 } })}>＋ Add homepage section</button>
     </SettingsCard>;
   }

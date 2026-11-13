@@ -3,7 +3,7 @@ import { adminRequest } from "../api/adminApi";
 import DeleteConfirmDialog from "./DeleteConfirmDialog";
 import { dateTime } from "../utils/format";
 import {
-  Badge, ErrorBanner, ExportButton, Field, Modal, MoreMenu, PageHeading, StatCards, TableBody,
+  Badge, ErrorBanner, ExportButton, Field, Modal, MoreMenu, PageHeading, Pagination, StatCards, TableBody,
   qs, useAdminData, useToast,
 } from "./ops/OpsKit";
 
@@ -52,17 +52,24 @@ function FaqEditor({ faq, categories, onClose, onSaved }) {
 }
 
 export default function FaqPage() {
+  const PAGE_SIZE = 20;
   const toast = useToast();
   const [q, setQ] = useState("");
   const [category, setCategory] = useState("");
   const [status, setStatus] = useState("");
+  const [page, setPage] = useState(1);
   const [editing, setEditing] = useState(null); // {} = new, faq = edit
   const [deleting, setDeleting] = useState(null);
   const [busy, setBusy] = useState(false);
   const { data, meta, loading, error, reload } = useAdminData(`/admin/faqs?${qs({ q: q.trim(), category, status })}`, { debounce: q ? 300 : 0 });
   const rows = data || [];
+  const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  const firstIndex = (page - 1) * PAGE_SIZE;
+  const visibleRows = rows.slice(firstIndex, firstIndex + PAGE_SIZE);
   const filtered = Boolean(q.trim() || category || status);
   const counts = meta?.counts || {};
+  useEffect(() => { setPage(1); }, [q, category, status]);
+  useEffect(() => { if (page > pageCount) setPage(pageCount); }, [page, pageCount]);
 
   async function run(fn, message) {
     setBusy(true);
@@ -106,11 +113,12 @@ export default function FaqPage() {
             <thead><tr><th>Order</th><th>Question &amp; answer</th><th>Category</th><th>Visibility</th><th>Updated</th><th>Actions</th></tr></thead>
             <TableBody loading={loading} items={rows} columns={6} empty={filtered ? "No FAQs match" : "No FAQs yet"}
               emptyHint={filtered ? "Try clearing the search or filters." : "Add your first FAQ, or start from the three FAQs the storefront shows today."}>
-              {rows.map((f, i) => (
-                <tr key={f.id}>
+              {visibleRows.map((f, i) => {
+                const index = firstIndex + i;
+                return <tr key={f.id}>
                   <td className="ops-nowrap"><div className="ops-actions">
-                    <button type="button" className="table-action" aria-label="Move up" disabled={filtered || busy || i === 0} onClick={() => move(i, -1)}>↑</button>
-                    <button type="button" className="table-action" aria-label="Move down" disabled={filtered || busy || i === rows.length - 1} onClick={() => move(i, 1)}>↓</button>
+                    <button type="button" className="table-action" aria-label="Move up" disabled={filtered || busy || index === 0} onClick={() => move(index, -1)}>↑</button>
+                    <button type="button" className="table-action" aria-label="Move down" disabled={filtered || busy || index === rows.length - 1} onClick={() => move(index, 1)}>↓</button>
                   </div></td>
                   <td style={{ maxWidth: 560 }}><strong>{f.question}</strong><small className="ops-clamp">{f.answer}</small></td>
                   <td>{f.category}</td>
@@ -123,11 +131,12 @@ export default function FaqPage() {
                       { label: "Delete", onClick: () => setDeleting(f) },
                     ]} />
                   </div></td>
-                </tr>
-              ))}
+                </tr>;
+              })}
             </TableBody>
           </table>
         </div>
+        <Pagination meta={{ total: rows.length, pages: pageCount }} page={page} onPage={setPage} />
         {!loading && !rows.length && !filtered && (
           <div className="ops-empty-actions">
             <button type="button" className="secondary-button" disabled={busy} onClick={() => run(() => adminRequest("/admin/faqs/import-defaults", { method: "POST" }), "Imported the storefront’s current FAQs.")}>Start from the current storefront FAQs</button>
