@@ -18,6 +18,7 @@ import FaqPage from "./components/FaqPage";
 import NotificationsPage from "./components/NotificationsPage";
 import SupportPage from "./components/SupportPage";
 import { ToastProvider } from "./components/ops/OpsKit";
+import DeleteConfirmDialog from "./components/DeleteConfirmDialog";
 import { adminRequest } from "./api/adminApi";
 import { useAdminAuth } from "./context/AdminAuthContext";
 
@@ -91,6 +92,7 @@ export default function App() {
   const [openOrders, setOpenOrders] = useState(null);
   const [pendingReturns, setPendingReturns] = useState(null);
   const [newSupport, setNewSupport] = useState(null);
+  const [signOutDialogOpen, setSignOutDialogOpen] = useState(false);
 
   // Keep the open page visible in the (scrollable) sidebar menu after its group expands.
   useEffect(() => {
@@ -169,14 +171,6 @@ export default function App() {
       setAuthError(error.message);
     } finally {
       setLoginLoading(false);
-    }
-  }
-
-  async function submitSignOut() {
-    try {
-      await signOut();
-    } catch (error) {
-      setAuthError(error.message);
     }
   }
 
@@ -325,7 +319,7 @@ export default function App() {
             </button>
           ))}
         </nav>
-        <div className="sidebar-footer"><div className="avatar">{(user?.name || "A").slice(0, 1).toUpperCase()}</div><div className="sidebar-user"><strong>{user?.name || "Administrator"}</strong><span title={user?.email}>{user?.email}</span></div><button type="button" className="sign-out" onClick={submitSignOut}>Sign out</button></div>
+        <div className="sidebar-footer"><div className="avatar">{(user?.name || "A").slice(0, 1).toUpperCase()}</div><div className="sidebar-user"><strong>{user?.name || "Administrator"}</strong><span title={user?.email}>{user?.email}</span></div><button type="button" className="sign-out" onClick={() => setSignOutDialogOpen(true)}>Sign out</button></div>
       </aside>
 
       <main className="main-area">
@@ -360,6 +354,15 @@ export default function App() {
         </div>
         <footer className="footer">© 2026 Shoponzy · Admin dashboard <span>All changes are saved to the database</span></footer>
       </main>
+      {signOutDialogOpen && <DeleteConfirmDialog
+        title="Sign out?"
+        message="You will be signed out of the Shoponzy admin panel."
+        confirmLabel="Yes, Sign out"
+        busyLabel="Signing out…"
+        errorFallback="Could not sign out. Please try again."
+        onCancel={() => setSignOutDialogOpen(false)}
+        onConfirm={signOut}
+      />}
     </div>
     </ToastProvider>
   );
