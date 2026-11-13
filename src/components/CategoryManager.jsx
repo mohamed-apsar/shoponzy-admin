@@ -219,7 +219,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
       status: form.status,
       ...(level === 1 ? { comingSoon: Boolean(form.comingSoon) } : {}),
       ...(level === 2 ? { brand: form.brand.trim() } : {}),
-      ...(level === 1 || imageChanged ? { image: form.image } : {}),
+      ...(level === 1 || level === 2 || imageChanged ? { image: form.image } : {}),
       ...(level === 1 && exploreImageChanged ? { exploreImage: form.exploreImage || null } : {}),
       ...(level === 1 && bannerImageChanged ? { bannerImage: form.bannerImage || null } : {}),
     };

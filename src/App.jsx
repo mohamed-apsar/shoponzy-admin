@@ -60,6 +60,24 @@ const opsGroups = {
 };
 const opsGroupOf = (page) => Object.keys(opsGroups).find((group) => page in opsGroups[group]) || null;
 
+function mapAdminCategory(category) {
+  return {
+    id: category.id,
+    level: category.level,
+    parentId: category.parent || null,
+    name: category.name,
+    slug: category.slug,
+    image: category.image || null,
+    productImage: category.productImage || null,
+    exploreImage: category.exploreImage || null,
+    bannerImage: category.bannerImage || null,
+    status: category.status,
+    comingSoon: Boolean(category.comingSoon),
+    productCount: category.productCount || 0,
+    brand: category.brand || "",
+  };
+}
+
 const manageSitePages = [
   "General Settings",
   "Homepage Categories",
@@ -109,22 +127,8 @@ export default function App() {
     setCategoriesLoading(true);
     setCategoriesError("");
     try {
-      const result = await adminRequest("/admin/categories?limit=500&page=1");
-      setCategories(result.data.map((category) => ({
-        id: category.id,
-        level: category.level,
-        parentId: category.parent || null,
-        name: category.name,
-        slug: category.slug,
-        image: category.image || null,
-        productImage: category.productImage || null,
-        exploreImage: category.exploreImage || null,
-        bannerImage: category.bannerImage || null,
-        status: category.status,
-        comingSoon: Boolean(category.comingSoon),
-        productCount: category.productCount || 0,
-        brand: category.brand || "",
-      })));
+      const result = await adminRequest("/admin/categories?limit=500&page=1", { cache: "no-store" });
+      setCategories(result.data.map(mapAdminCategory));
     } catch (error) {
       setCategoriesError(error.message);
     } finally {
@@ -137,8 +141,13 @@ export default function App() {
   }, [authStatus, loadCategories]);
 
   async function saveCategory(id, payload) {
-    if (id) await adminRequest(`/admin/categories/${id}`, { method: "PATCH", body: JSON.stringify(payload) });
-    else await adminRequest("/admin/categories", { method: "POST", body: JSON.stringify(payload) });
+    const result = id
+      ? await adminRequest(`/admin/categories/${id}`, { method: "PATCH", body: JSON.stringify(payload) })
+      : await adminRequest("/admin/categories", { method: "POST", body: JSON.stringify(payload) });
+    const saved = mapAdminCategory(result.data);
+    setCategories((current) => id
+      ? current.map((category) => category.id === id ? saved : category)
+      : [...current, saved]);
     await loadCategories();
   }
 
