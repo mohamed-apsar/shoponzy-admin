@@ -580,8 +580,10 @@ export default function ProductsPage({ query = "", categories = [] }) {
                           onChange={(images) => updateField("colors", form.colors.map((c, i) => i === index ? { ...c, images } : c))}
                         />
                       </div>
-                      <div className="product-color-showcase">
-                        <p className="product-color-showcase-title">{color.name || `Colour ${index + 1}`} — banner and three-image row <small>(shown on the product page when this colour is selected; optional)</small></p>
+                      {/* The first colour is the main product (colour, featured image, gallery). Each added
+                          variant also gets its own banner + three-image row, shown when it is selected. */}
+                      {index > 0 && <div className="product-color-showcase">
+                        <p className="product-color-showcase-title">Variant {index}{color.name ? ` (${color.name})` : ""} — banner and three-image row <small>(shown on the product page when this variant is selected; optional)</small></p>
                         <ImageUpload
                           kind="productVariant"
                           title={`${color.name || `Colour ${index + 1}`} banner`}
@@ -605,7 +607,7 @@ export default function ProductsPage({ query = "", categories = [] }) {
                             />
                           ))}
                         </div>
-                      </div>
+                      </div>}
                       <div className="products-variant-fields product-color-inventory-fields">
                         <label>Current amount *
                           <input type="number" min="0" step="0.01" value={color.price ?? ""} placeholder={form.price || "Enter current amount"} onChange={(e) => updateField("colors", form.colors.map((c, i) => i === index ? { ...c, price: e.target.value } : c))} aria-label={`Current amount for colour ${index + 1}`} />
