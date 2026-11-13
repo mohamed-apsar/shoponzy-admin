@@ -180,7 +180,7 @@ export default function App() {
   }
 
   if (authStatus === "loading") {
-    return <div className="auth-screen"><p role="status">Connecting to the admin API…</p></div>;
+    return <div className="auth-screen"><p role="status">Loading…</p></div>;
   }
 
   if (authStatus === "error") {
