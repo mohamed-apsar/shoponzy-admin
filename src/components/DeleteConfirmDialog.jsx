@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 
 /* Consistent, accessible confirmation for destructive actions across the admin panel. */
 /* eslint-disable react/prop-types */
-export default function DeleteConfirmDialog({ title = "Delete item?", message = "This item will be permanently deleted.", confirmLabel = "Yes, Delete", busyLabel = "Deleting…", errorFallback = "The item could not be deleted.", onCancel, onConfirm }) {
+export default function DeleteConfirmDialog({ title = "Delete item?", message = "This item will be permanently deleted.", warning = "", confirmDisabled = false, confirmLabel = "Yes, Delete", busyLabel = "Deleting…", errorFallback = "The item could not be deleted.", onCancel, onConfirm }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const cancelRef = useRef(null);
@@ -24,10 +24,11 @@ export default function DeleteConfirmDialog({ title = "Delete item?", message = 
       <div className="delete-confirm-icon" aria-hidden="true">!</div>
       <h2 id="delete-confirm-title">{title}</h2>
       <p id="delete-confirm-message">{message}</p>
+      {warning && <p className="delete-confirm-error" role="alert">{warning}</p>}
       {error && <p className="delete-confirm-error" role="alert">{error}</p>}
       <div className="delete-confirm-actions">
         <button ref={cancelRef} type="button" className="delete-confirm-cancel" disabled={busy} onClick={onCancel}>Cancel</button>
-        <button type="button" className="delete-confirm-submit" disabled={busy} onClick={confirm}>{busy ? busyLabel : confirmLabel}</button>
+      <button type="button" className="delete-confirm-submit" disabled={busy || confirmDisabled} onClick={confirm}>{busy ? busyLabel : confirmLabel}</button>
       </div>
     </section>
   </div>;

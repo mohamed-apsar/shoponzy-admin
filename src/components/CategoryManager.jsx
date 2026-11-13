@@ -243,18 +243,26 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
     setDeleting(item);
   }
 
-  async function confirmDelete() {
-    const item = deleting;
-    if (!item) return;
+  function deleteBlockReason(item) {
+    if (!item) return "";
     const hasDescendants = categories.some((entry) => {
-      let p = entry.parentId;
-      while (p) {
-        if (p === item.id) return true;
-        p = categories.find((candidate) => candidate.id === p)?.parentId;
+      let parentId = entry.parentId;
+      while (parentId) {
+        if (parentId === item.id) return true;
+        parentId = categories.find((candidate) => candidate.id === parentId)?.parentId;
       }
       return false;
     });
-    if (hasDescendants) throw new Error("Delete this item's child categories first.");
+    if (hasDescendants) return "Delete this category's child categories first.";
+    if (item.productCount > 0) return `${item.productCount} product${item.productCount === 1 ? " is" : "s are"} still in this category. Move or archive them first.`;
+    return "";
+  }
+
+  async function confirmDelete() {
+    const item = deleting;
+    if (!item) return;
+    const blockedReason = deleteBlockReason(item);
+    if (blockedReason) throw new Error(blockedReason);
     await onDelete(item.id);
   }
 
@@ -529,7 +537,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
           </form>
         </section>
       </div>}
-      {deleting && <DeleteConfirmDialog title={`Delete ${config.singular}?`} message={`“${deleting.name}” will be permanently deleted.`} onCancel={() => setDeleting(null)} onConfirm={confirmDelete} />}
+      {deleting && <DeleteConfirmDialog title={`Delete ${config.singular}?`} message={`“${deleting.name}” will be permanently deleted.`} warning={deleteBlockReason(deleting)} confirmDisabled={Boolean(deleteBlockReason(deleting))} onCancel={() => setDeleting(null)} onConfirm={confirmDelete} />}
     </div>
   );
 }

@@ -1930,7 +1930,7 @@ tbody tr:last-child td { border-bottom: 0; }
 .delete-confirm-error { margin-top: 14px !important; color: #c6283b !important; font-size: 13px !important; }
 .delete-confirm-actions { display: flex; justify-content: center; gap: 10px; margin-top: 28px; }
 .delete-confirm-actions button { min-height: 44px; padding: 0 18px; border: 0; border-radius: 4px; color: #fff; font: inherit; font-size: 14px; font-weight: 650; cursor: pointer; }
-.delete-confirm-actions button:disabled { opacity: .65; cursor: wait; }
+.delete-confirm-actions button:disabled { opacity: .65; cursor: not-allowed; }
 .delete-confirm-cancel { background: #69737d; }
 .delete-confirm-submit { background: #d9364b; }
 @keyframes delete-confirm-fade { from { opacity: 0; } to { opacity: 1; } }
