@@ -121,7 +121,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
     ...item,
     status: statusOverrides[item.id] ?? item.status,
     comingSoon: comingSoonOverrides[item.id] ?? item.comingSoon,
-    tableImage: level === 2 || level === 3 ? item.productImage || item.image : item.image,
+    tableImage: level === 2 || level === 3 ? item.image || item.productImage : item.image,
   }));
   const filtered = visible.filter((item) => {
     const parent = categories.find((p) => p.id === item.parentId);
