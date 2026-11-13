@@ -125,6 +125,7 @@ export default function App() {
         exploreImage: category.exploreImage || null,
         bannerImage: category.bannerImage || null,
         status: category.status,
+        comingSoon: Boolean(category.comingSoon),
         productCount: category.productCount || 0,
         brand: category.brand || "",
       })));

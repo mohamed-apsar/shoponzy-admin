@@ -35,6 +35,8 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [statusOverrides, setStatusOverrides] = useState({});
+  const [comingSoonOverrides, setComingSoonOverrides] = useState({});
+  const [pendingComingSoonIds, setPendingComingSoonIds] = useState([]);
   const [pendingStatusIds, setPendingStatusIds] = useState([]);
   const [deleting, setDeleting] = useState(null);
   const [expandedProducts, setExpandedProducts] = useState(null);
@@ -94,6 +96,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
   const visible = categories.filter((item) => item.level === level).map((item) => ({
     ...item,
     status: statusOverrides[item.id] ?? item.status,
+    comingSoon: comingSoonOverrides[item.id] ?? item.comingSoon,
     tableImage: level === 2 || level === 3 ? item.productImage || item.image : item.image,
   }));
   const filtered = visible.filter((item) => {
@@ -239,6 +242,29 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
     }
   }
 
+  async function toggleComingSoon(item, comingSoon) {
+    setComingSoonOverrides((current) => ({ ...current, [item.id]: comingSoon }));
+    setPendingComingSoonIds((current) => [...current, item.id]);
+    setError("");
+    try {
+      await onSave(item.id, { comingSoon });
+      setComingSoonOverrides((current) => {
+        const next = { ...current };
+        delete next[item.id];
+        return next;
+      });
+    } catch (saveError) {
+      setComingSoonOverrides((current) => {
+        const next = { ...current };
+        delete next[item.id];
+        return next;
+      });
+      setError(saveError.message);
+    } finally {
+      setPendingComingSoonIds((current) => current.filter((id) => id !== item.id));
+    }
+  }
+
   function pathFor(item) {
     const names = [];
     let p = item.parentId;
@@ -327,13 +353,14 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
 
         <div className="cm-table-wrap">
           <table className="cm-table">
-            <thead><tr>{level <= 3 && <th>Image</th>}<th>Name</th><th>Slug</th>{level > 1 && <th>Parent path</th>}<th>Products</th><th>Status</th><th>Actions</th></tr></thead>
+            <thead><tr>{level <= 3 && <th>Image</th>}<th>Name</th><th>Slug</th>{level > 1 && <th>Parent path</th>}{level === 1 && <th>Coming soon</th>}<th>Products</th><th>Status</th><th>Actions</th></tr></thead>
             <tbody>
               {shown.map((item) => (
                 <Fragment key={item.id}>
                 <tr>
                   {level <= 3 && <td>{item.tableImage?.url ? <img className="cm-thumb" src={item.tableImage.url} alt={item.name} loading="lazy" /> : <div className="cm-thumb cm-thumb-empty">No image</div>}</td>}
                   <td>{item.name}</td><td>{item.slug}</td>{level > 1 && <td>{pathFor(item) || "—"}</td>}
+                  {level === 1 && <td><label className="cm-coming-soon"><input type="checkbox" checked={Boolean(item.comingSoon)} disabled={loading || pendingComingSoonIds.includes(item.id)} onChange={(event) => toggleComingSoon(item, event.target.checked)} /><span>Coming soon</span></label></td>}
                   <td><button type="button" className="cm-products-toggle" aria-expanded={expandedProducts === item.id} onClick={() => toggleProducts(item)}>
                     {expandedProducts === item.id ? "Hide" : "View"} products ({item.productCount || 0})
                   </button></td>
@@ -355,7 +382,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
                   <td><div className="cm-actions"><button type="button" className="cm-edit-icon-button" aria-label={`Edit ${item.name}`} title={`Edit ${item.name}`} onClick={() => openEdit(item)}><EditIcon /></button><button className="danger" onClick={() => remove(item)}>Delete</button></div></td>
                 </tr>
                 {expandedProducts === item.id && <tr key={`${item.id}-products`} className="cm-products-row">
-                  <td colSpan={(level <= 3 ? 1 : 0) + 2 + (level > 1 ? 1 : 0) + 3}>
+                  <td colSpan={(level <= 3 ? 1 : 0) + 2 + (level > 1 ? 1 : 0) + (level === 1 ? 1 : 0) + 3}>
                     {productsByCategory[item.id]?.loading ? <span role="status">Loading products…</span>
                       : productsByCategory[item.id]?.error ? <span className="cm-products-error">{productsByCategory[item.id].error} <button type="button" onClick={() => retryProducts(item)}>Retry</button></span>
                         : productsByCategory[item.id]?.data?.length ? <>
@@ -369,7 +396,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
                 </tr>}
                 </Fragment>
               ))}
-              {!loading && !shown.length && <tr><td colSpan={(level <= 3 ? 1 : 0) + 2 + (level > 1 ? 1 : 0) + 3} className="cm-empty">No {config.title.toLowerCase()} found.</td></tr>}
+              {!loading && !shown.length && <tr><td colSpan={(level <= 3 ? 1 : 0) + 2 + (level > 1 ? 1 : 0) + (level === 1 ? 1 : 0) + 3} className="cm-empty">No {config.title.toLowerCase()} found.</td></tr>}
             </tbody>
           </table>
         </div>
