@@ -94,7 +94,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
     setNewInImageError("");
     try {
       const upload = await uploadImage(file, "category");
-      const image = { url: upload.url, publicId: upload.publicId, alt: "New In" };
+      const image = { url: upload.url, publicId: upload.publicId, alt: "Shop all" };
       const result = await adminRequest("/admin/site-settings/homeCategories", { method: "PATCH", body: JSON.stringify({ newInImage: image }) });
       setNewInImage(result.data.newInImage || image);
     } catch (requestError) {
@@ -235,7 +235,13 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
     }
   }
 
-  async function remove(item) {
+  function remove(item) {
+    setDeleting(item);
+  }
+
+  async function confirmDelete() {
+    const item = deleting;
+    if (!item) return;
     const hasDescendants = categories.some((entry) => {
       let p = entry.parentId;
       while (p) {
@@ -244,8 +250,8 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
       }
       return false;
     });
-    if (hasDescendants) return alert("Delete this item's child categories first.");
-    setDeleting(item);
+    if (hasDescendants) throw new Error("Delete this item's child categories first.");
+    await onDelete(item.id);
   }
 
   async function toggleStatus(item) {
@@ -346,21 +352,21 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
 
       {level === 1 && <section className="cm-panel" style={{ display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap" }}>
         <div style={{ minWidth: 220, flex: 1 }}>
-          <h2 style={{ margin: "0 0 6px" }}>New In circle image</h2>
-          <p style={{ margin: 0, color: "#68738b" }}>Upload the image shown in the New In shortcut on the storefront.</p>
+          <h2 style={{ margin: "0 0 6px" }}>Shop all circle image</h2>
+          <p style={{ margin: 0, color: "#68738b" }}>Upload the image shown in the Shop all shortcut on the storefront.</p>
           {newInImageError && <p className="cm-error" role="alert">{newInImageError}</p>}
         </div>
         <div className="cm-new-in-toggle">
-          <span>Show New In shortcut</span>
+          <span>Show Shop all shortcut</span>
           <StatusToggle
-            label="Show New In shortcut"
+            label="Show Shop all shortcut"
             checked={newInEnabled}
             onChange={toggleNewInShortcut}
             disabled={newInToggleBusy}
             statusText={newInEnabled ? "Enabled" : "Disabled"}
           />
         </div>
-        {newInImage?.url && <img src={newInImage.url} alt="New In shortcut preview" style={{ width: 76, height: 76, borderRadius: "50%", objectFit: "cover", border: "1px solid #e3e7ef" }} />}
+        {newInImage?.url && <img src={newInImage.url} alt="Shop all shortcut preview" style={{ width: 76, height: 76, borderRadius: "50%", objectFit: "cover", border: "1px solid #e3e7ef" }} />}
         <label className="cm-primary-btn" style={{ display: "inline-flex", alignItems: "center", cursor: newInImageBusy ? "wait" : "pointer", opacity: newInImageBusy ? .65 : 1 }}>
           {newInImageBusy ? "Uploading…" : newInImage ? "Replace image" : "Upload image"}
           <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={uploadNewInImage} disabled={newInImageBusy} style={{ display: "none" }} />
@@ -510,7 +516,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
           </form>
         </section>
       </div>}
-      {deleting && <DeleteConfirmDialog title={`Delete ${config.singular}?`} message={`“${deleting.name}” will be permanently deleted.`} onCancel={() => setDeleting(null)} onConfirm={() => onDelete(deleting.id)} />}
+      {deleting && <DeleteConfirmDialog title={`Delete ${config.singular}?`} message={`“${deleting.name}” will be permanently deleted.`} onCancel={() => setDeleting(null)} onConfirm={confirmDelete} />}
     </div>
   );
 }

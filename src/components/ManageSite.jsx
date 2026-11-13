@@ -543,7 +543,7 @@ export default function ManageSite({ activeSection = "General Settings", onSecti
             </div>
           </div>}
           <div className="ms-toggle-list">
-            <Toggle label="Show New in shortcut" checked={values.showNewIn} onChange={(value) => update("showNewIn", value)} />
+            <Toggle label="Show Shop all shortcut" checked={values.showNewIn} onChange={(value) => update("showNewIn", value)} />
           </div>
         </SettingsCard>
       </>}
