@@ -13,7 +13,9 @@ const FLAGS = [
   ["isBestseller", "Bestseller"],
   ["isTrending", "Trending"],
   ["isFeatured", "Featured"],
+  ["isShopByOccasion", "Shop by occasion"],
 ];
+const SHOP_BY_OCCASION = "shop-by-occasion";
 const PAGE_SIZE = 20;
 
 const emptyForm = () => ({
@@ -24,7 +26,7 @@ const emptyForm = () => ({
   colors: [{ name: "", hex: "#111111", featuredImage: null, images: [], price: "", stock: "0", minStock: "0" }], contentBlocks: [], sizesText: "",
   price: "", mrp: "", stock: "0",
   rows: {},
-  isNewArrival: false, isBestseller: false, isTrending: false, isFeatured: false, badge: "",
+  isNewArrival: false, isBestseller: false, isTrending: false, isFeatured: false, isShopByOccasion: false, occasions: [], badge: "",
 });
 
 const comboKey = (color, size) => `${color ?? ""}|${size ?? ""}`;
@@ -255,7 +257,8 @@ export default function ProductsPage({ query = "", categories = [] }) {
       price: single ? String(single.price) : "", mrp: single?.mrp ? String(single.mrp) : "", stock: single ? String(single.stock) : "0",
       rows,
       isNewArrival: Boolean(full.isNewArrival), isBestseller: Boolean(full.isBestseller),
-      isTrending: Boolean(full.isTrending), isFeatured: Boolean(full.isFeatured), badge: full.badge || "",
+      isTrending: Boolean(full.isTrending), isFeatured: Boolean(full.isFeatured),
+      isShopByOccasion: (full.occasions || []).includes(SHOP_BY_OCCASION), occasions: full.occasions || [], badge: full.badge || "",
     });
     setShowForm(true);
   }
@@ -334,6 +337,7 @@ export default function ProductsPage({ query = "", categories = [] }) {
       sizes: parseSizes(form.sizesText),
       variants,
       isNewArrival: form.isNewArrival, isBestseller: form.isBestseller, isTrending: form.isTrending, isFeatured: form.isFeatured,
+      occasions: [...new Set([...(form.occasions || []).filter((occasion) => occasion !== SHOP_BY_OCCASION), ...(form.isShopByOccasion ? [SHOP_BY_OCCASION] : [])])],
       badge: form.badge,
       seo: {
         title: form.seo.title,
