@@ -168,6 +168,15 @@ function SettingsCard({ title, description, children, className = "" }) {
 }
 
 /* Uploads the chosen image to Cloudinary (via the API) and passes back { url, publicId }. */
+const IMAGE_UPLOAD_HINTS = {
+  banner: "Recommended: 1920 x 800 px, wide desktop banner. Maximum 8 MB.",
+  bannerMobile: "Recommended: 750 x 1000 px, portrait mobile banner. Maximum 8 MB.",
+  popup: "Recommended: 800 x 1000 px, portrait image. Maximum 5 MB.",
+  logo: "Recommended: 600 x 200 px, wide transparent PNG. Maximum 2 MB.",
+  favicon: "Recommended: 512 x 512 px, square image. Maximum 1 MB.",
+  maintenance: "Recommended: 1200 x 800 px, landscape image. Maximum 5 MB.",
+};
+
 function ImageUploader({ label, value, onChange, kind, compact = false }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -197,6 +206,7 @@ function ImageUploader({ label, value, onChange, kind, compact = false }) {
         {value?.url ? <img src={value.url} alt={`${label} preview`} /> : <span className="ms-upload-placeholder"><b>＋</b><span>{busy ? "Uploading…" : "Upload image"}</span><small>PNG, JPG or WebP</small></span>}
         <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" disabled={busy} onChange={readImage} aria-label={`Upload ${label}`} />
       </label>
+      <small className="ms-image-hint">{IMAGE_UPLOAD_HINTS[kind] || "Recommended: 800 x 800 px, square image. Maximum 5 MB."}</small>
       {error && <small className="ms-error">{error}</small>}
       {value?.url && <button type="button" className="ms-link-button" onClick={() => onChange(null)}>Remove image</button>}
     </div>

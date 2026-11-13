@@ -42,7 +42,7 @@ function combos(form) {
   return out;
 }
 
-function ImageUpload({ title, images, onChange, required = false, multiple = true, kind = "product", hint = "Images are stored in Cloudinary. 800 × 800 px (square) recommended, max 5 MB." }) {
+function ImageUpload({ title, images, onChange, required = false, multiple = true, kind = "product", hint = "Recommended: 800 x 800 px (square). Maximum 5 MB." }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -582,7 +582,7 @@ export default function ProductsPage({ query = "", categories = [] }) {
                           title={`Banner ${index + 1}`}
                           images={block.image ? [block.image] : []}
                           multiple={false}
-                          hint="Recommended: wide image (for example 1920 × 800). The full image is shown without cropping."
+                          hint="Recommended: 1920 x 800 px (wide). Maximum 5 MB; the full image is shown without cropping."
                           onChange={(images) => updateField("contentBlocks", form.contentBlocks.map((item, blockIndex) => blockIndex === index ? { ...item, image: images[0] || null } : item))}
                         />
                       ) : (
@@ -594,7 +594,7 @@ export default function ProductsPage({ query = "", categories = [] }) {
                               title={`Row ${index + 1} image ${imageIndex + 1}`}
                               images={block.images[imageIndex] ? [block.images[imageIndex]] : []}
                               multiple={false}
-                              hint="Recommended: square or portrait image."
+                              hint="Recommended: 800 x 800 px (square) or 800 x 1200 px (portrait). Maximum 5 MB."
                               onChange={(images) => updateField("contentBlocks", form.contentBlocks.map((item, blockIndex) => blockIndex === index
                                 ? { ...item, images: item.images.map((image, itemIndex) => itemIndex === imageIndex ? images[0] || null : image) }
                                 : item))}

@@ -365,7 +365,7 @@ export default function SeoSettings() {
               <SeoField label="Meta Title"><input maxLength="70" value={settings.title} onChange={(event) => update("title", event.target.value)} /></SeoField>
               <SeoField label="Meta description"><textarea rows="4" maxLength="160" value={settings.description} onChange={(event) => update("description", event.target.value)} /></SeoField>
               <div className="seo-share-image">
-                <SeoField label="Meta image"><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={uploadShareImage} /></SeoField>
+                <SeoField label="Meta image" hint="Recommended: 1200 x 630 px (wide social preview). Maximum 5 MB."><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={uploadShareImage} /></SeoField>
                 {settings.shareImage?.url && <div><img src={settings.shareImage.url} alt="Meta image preview" /><button type="button" onClick={() => update("shareImage", null)}>Remove image</button></div>}
               </div>
             </div>

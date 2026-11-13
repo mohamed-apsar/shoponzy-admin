@@ -353,7 +353,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
       {level === 1 && <section className="cm-panel" style={{ display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap" }}>
         <div style={{ minWidth: 220, flex: 1 }}>
           <h2 style={{ margin: "0 0 6px" }}>Shop all circle image</h2>
-          <p style={{ margin: 0, color: "#68738b" }}>Upload the image shown in the Shop all shortcut on the storefront.</p>
+          <p style={{ margin: 0, color: "#68738b" }}>Upload the image shown in the Shop all shortcut. Recommended: 600 x 600 px (square), maximum 5 MB.</p>
           {newInImageError && <p className="cm-error" role="alert">{newInImageError}</p>}
         </div>
         <div className="cm-new-in-toggle">
@@ -470,7 +470,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
             {level === 1 && <div className="cm-form-group"><label className="cm-coming-soon cm-coming-soon-form"><input type="checkbox" checked={Boolean(form.comingSoon)} onChange={(event) => setForm((previous) => ({ ...previous, comingSoon: event.target.checked }))} /><span>Show a Coming soon page for this category</span></label></div>}
             {level <= 2 && <div className="cm-form-group">
               <label htmlFor="category-strip-image">{level === 1 ? "Category strip image" : `${config.singular} circular image`}</label>
-              <p className="cm-image-help">Shown in the circular {level === 1 ? "category" : "subcategory"} link on the storefront.</p>
+              <p className="cm-image-help">Shown in the circular {level === 1 ? "category" : "subcategory"} link. Recommended: 600 x 600 px (square), maximum 5 MB.</p>
               <input id="category-strip-image" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" onChange={(event) => onImageChange(event, "image")} />
               {(form.imagePreview || form.image?.url) && <div className="cm-category-image-preview">
                 <img className={`cm-image-preview${level > 1 ? " cm-circle-image-preview" : ""}`} src={form.imagePreview || form.image.url} alt={`${form.name || config.singular} circular image preview`} />
@@ -486,7 +486,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
             {level === 1 && <>
               <div className="cm-form-group">
                 <label htmlFor="category-banner-image">Category page banner</label>
-                <p className="cm-image-help">Shown behind the title on this category’s storefront page. Upload a wide image.</p>
+                <p className="cm-image-help">Shown behind the title on this category’s storefront page. Recommended: 1920 x 800 px (wide), maximum 8 MB.</p>
                 <input id="category-banner-image" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" onChange={(event) => onImageChange(event, "bannerImage")} />
                 {(form.bannerImagePreview || form.bannerImage?.url) && <div className="cm-explore-image-preview cm-banner-image-preview">
                   <img src={form.bannerImagePreview || form.bannerImage.url} alt={`${form.name || "Category"} banner preview`} />
@@ -498,7 +498,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
               </div>
               <div className="cm-form-group cm-explore-image-field">
                 <label htmlFor="category-explore-image">Shop all card background image</label>
-                <p className="cm-image-help">Shown behind “Shop all {form.name || "category"}” in the top navigation dropdown. Upload a wide image; the card text stays overlaid.</p>
+                <p className="cm-image-help">Shown behind “Shop all {form.name || "category"}” in the top navigation dropdown. Recommended: 1200 x 800 px (landscape), maximum 5 MB. The card text stays overlaid.</p>
                 <input id="category-explore-image" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" onChange={(event) => onImageChange(event, "exploreImage")} />
                 {(form.exploreImagePreview || form.exploreImage?.url) && <div className="cm-explore-image-preview">
                   <img src={form.exploreImagePreview || form.exploreImage.url} alt={`${form.name || "Category"} Shop all card background preview`} />
