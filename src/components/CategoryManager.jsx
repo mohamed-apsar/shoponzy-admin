@@ -3,6 +3,7 @@ import "./CategoryManager.css";
 import { adminRequest, uploadImage } from "../api/adminApi";
 import EditIcon from "./EditIcon";
 import DeleteConfirmDialog from "./DeleteConfirmDialog";
+import StatusToggle from "./StatusToggle";
 
 /* eslint-disable react/prop-types */
 const LEVELS = [
@@ -42,7 +43,9 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
   const [expandedProducts, setExpandedProducts] = useState(null);
   const [productsByCategory, setProductsByCategory] = useState({});
   const [newInImage, setNewInImage] = useState(null);
+  const [newInEnabled, setNewInEnabled] = useState(true);
   const [newInImageBusy, setNewInImageBusy] = useState(false);
+  const [newInToggleBusy, setNewInToggleBusy] = useState(false);
   const [newInImageError, setNewInImageError] = useState("");
   const [imageChanged, setImageChanged] = useState(false);
   const [exploreImageChanged, setExploreImageChanged] = useState(false);
@@ -53,10 +56,31 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
     if (level !== 1) return undefined;
     let active = true;
     adminRequest("/admin/site-settings")
-      .then((result) => { if (active) setNewInImage(result.data.homeCategories?.newInImage || null); })
+      .then((result) => {
+        if (!active) return;
+        setNewInImage(result.data.homeCategories?.newInImage || null);
+        setNewInEnabled(result.data.homeCategories?.showNewIn ?? true);
+      })
       .catch((requestError) => { if (active) setNewInImageError(requestError.message); });
     return () => { active = false; };
   }, [level]);
+
+  async function toggleNewInShortcut() {
+    const nextValue = !newInEnabled;
+    setNewInToggleBusy(true);
+    setNewInImageError("");
+    try {
+      await adminRequest("/admin/site-settings/homeCategories", {
+        method: "PATCH",
+        body: JSON.stringify({ showNewIn: nextValue }),
+      });
+      setNewInEnabled(nextValue);
+    } catch (requestError) {
+      setNewInImageError(requestError.message);
+    } finally {
+      setNewInToggleBusy(false);
+    }
+  }
 
   async function uploadNewInImage(event) {
     const file = event.target.files?.[0];
@@ -325,6 +349,16 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
           <h2 style={{ margin: "0 0 6px" }}>New In circle image</h2>
           <p style={{ margin: 0, color: "#68738b" }}>Upload the image shown in the New In shortcut on the storefront.</p>
           {newInImageError && <p className="cm-error" role="alert">{newInImageError}</p>}
+        </div>
+        <div className="cm-new-in-toggle">
+          <span>Show New In shortcut</span>
+          <StatusToggle
+            label="Show New In shortcut"
+            checked={newInEnabled}
+            onChange={toggleNewInShortcut}
+            disabled={newInToggleBusy}
+            statusText={newInEnabled ? "Enabled" : "Disabled"}
+          />
         </div>
         {newInImage?.url && <img src={newInImage.url} alt="New In shortcut preview" style={{ width: 76, height: 76, borderRadius: "50%", objectFit: "cover", border: "1px solid #e3e7ef" }} />}
         <label className="cm-primary-btn" style={{ display: "inline-flex", alignItems: "center", cursor: newInImageBusy ? "wait" : "pointer", opacity: newInImageBusy ? .65 : 1 }}>
