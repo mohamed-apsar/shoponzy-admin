@@ -89,7 +89,6 @@ export default function App() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
-  const [openOrders, setOpenOrders] = useState(null);
   const [pendingReturns, setPendingReturns] = useState(null);
   const [newSupport, setNewSupport] = useState(null);
   const [signOutDialogOpen, setSignOutDialogOpen] = useState(false);
@@ -100,16 +99,11 @@ export default function App() {
     el?.scrollIntoView({ block: "nearest" });
   }, [page, opsOpen]);
 
-  const updateOrderCounts = useCallback((counts) => {
-    setOpenOrders(["placed", "confirmed", "packed"].reduce((sum, s) => sum + (counts[s] || 0), 0));
-  }, []);
-
   useEffect(() => {
     if (authStatus !== "authenticated") return;
-    adminRequest("/admin/orders?limit=1").then((result) => updateOrderCounts(result.meta?.statusCounts || {})).catch(() => {});
     adminRequest("/admin/returns/summary").then((result) => setPendingReturns(result.data.pending)).catch(() => {});
     adminRequest("/admin/contact-messages?limit=1&status=new").then((result) => setNewSupport(result.meta?.total || 0)).catch(() => {});
-  }, [authStatus, updateOrderCounts, page]);
+  }, [authStatus, page]);
 
   const loadCategories = useCallback(async () => {
     setCategoriesLoading(true);
@@ -315,7 +309,6 @@ export default function App() {
             >
               <span className="nav-icon">{item.icon}</span>
               <span>{item.name}</span>
-              {item.name === "Manage Orders" && openOrders > 0 && <span className="nav-count">{openOrders}</span>}
             </button>
           ))}
         </nav>
@@ -336,7 +329,7 @@ export default function App() {
         <div className="page-content">
           {page === "Dashboard" && <DashboardHome setPage={navigate} />}
           {page === "Manage Products" && <ProductsPage query={query} categories={categories} />}
-          {page === "Manage Orders" && <OrdersPage query={query} onCountsChange={updateOrderCounts} />}
+          {page === "Manage Orders" && <OrdersPage query={query} />}
           {page === "Master" && <MasterPage />}
           {opsGroupOf(page) === "Inventory Management" && <InventoryPage categories={categories} view={opsGroups["Inventory Management"][page]} onNavigate={navigate} />}
           {page === "Shipping" && <ShippingPage />}

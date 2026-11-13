@@ -254,7 +254,7 @@ function OrderDetail({ id, onClose, onChanged }) {
   );
 }
 
-export default function OrdersPage({ query = "", onCountsChange }) {
+export default function OrdersPage({ query = "" }) {
   const [items, setItems] = useState([]);
   const [meta, setMeta] = useState({});
   const [page, setPage] = useState(1);
@@ -274,13 +274,12 @@ export default function OrdersPage({ query = "", onCountsChange }) {
       const result = await adminRequest(`/admin/orders?${params}`);
       setItems(result.data);
       setMeta(result.meta || {});
-      onCountsChange?.(result.meta?.statusCounts || {});
     } catch (requestError) {
       setError(requestError.message);
     } finally {
       setLoading(false);
     }
-  }, [page, query, status, onCountsChange]);
+  }, [page, query, status]);
 
   useEffect(() => {
     const timer = setTimeout(load, 250);
