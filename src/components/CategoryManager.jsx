@@ -17,8 +17,6 @@ const LEVELS = [
   { title: "Child Third categories", singular: "Third child category" },
 ];
 
-const SUB_IMAGE_SLOTS = ["image1", "image2", "image3"];
-const emptySubImages = () => ({ image1: null, image2: null, image3: null });
 
 const slugify = (value) => value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
@@ -49,7 +47,6 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
   const [imageChanged, setImageChanged] = useState(false);
   const [exploreImageChanged, setExploreImageChanged] = useState(false);
   const [bannerImageChanged, setBannerImageChanged] = useState(false);
-  const [changedSubImages, setChangedSubImages] = useState([]);
   const [uploadsInFlight, setUploadsInFlight] = useState(0);
   const trackUpload = (busy) => setUploadsInFlight((count) => Math.max(0, count + (busy ? 1 : -1)));
   const [form, setForm] = useState({ name: "", slug: "", brand: "", parentIds: ["","","",""], image: null, bannerImage: null, status: "enabled", comingSoon: false });
@@ -156,8 +153,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
     setImageChanged(false);
     setExploreImageChanged(false);
     setBannerImageChanged(false);
-    setChangedSubImages([]);
-    setForm({ name: "", slug: "", brand: "", parentIds: ["","","",""], image: null, bannerImage: null, exploreImage: null, images: emptySubImages(), status: "enabled", comingSoon: false });
+    setForm({ name: "", slug: "", brand: "", parentIds: ["","","",""], image: null, bannerImage: null, exploreImage: null, status: "enabled", comingSoon: false });
     setError("");
     setShowForm(true);
   }
@@ -174,8 +170,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
     setImageChanged(false);
     setExploreImageChanged(false);
     setBannerImageChanged(false);
-    setChangedSubImages([]);
-    setForm({ name: item.name, slug: item.slug, brand: item.brand || "", parentIds, image: item.image || null, bannerImage: item.bannerImage || null, exploreImage: item.exploreImage || null, images: { ...emptySubImages(), ...item.images }, status: item.status, comingSoon: Boolean(item.comingSoon) });
+    setForm({ name: item.name, slug: item.slug, brand: item.brand || "", parentIds, image: item.image || null, bannerImage: item.bannerImage || null, exploreImage: item.exploreImage || null, status: item.status, comingSoon: Boolean(item.comingSoon) });
     setError("");
     setShowForm(true);
   }
@@ -201,10 +196,6 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
       ...(level === 1 || level === 2 || imageChanged ? { image: form.image } : {}),
       ...(level === 1 && exploreImageChanged ? { exploreImage: form.exploreImage || null } : {}),
       ...((level === 1 || level === 2) && bannerImageChanged ? { bannerImage: form.bannerImage || null } : {}),
-      // Only the slots that were touched are sent, so the other images stay exactly as stored.
-      ...(level === 2 && changedSubImages.length
-        ? { images: Object.fromEntries(changedSubImages.map((slot) => [slot, form.images?.[slot] || null])) }
-        : {}),
     };
     if (uploadsInFlight) return setError("Wait for the image upload to finish.");
     setSaving(true);
@@ -496,28 +487,6 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
               />
             </div>}
             {level === 2 && <>
-              <fieldset className="cm-media-section">
-                <legend>Subcategory Images</legend>
-                <p className="cm-image-help">Shown in a row on this subcategory’s storefront page. {cropHint(IMAGE_SIZES.subcategoryImage)}</p>
-                <div className="cm-sub-images">
-                  {SUB_IMAGE_SLOTS.map((slot, index) => (
-                    <CroppedImageField
-                      key={slot}
-                      id={`subcategory-${slot}`}
-                      label={`Subcategory Image ${index + 1}`}
-                      kind={`subcategoryImage${index + 1}`}
-                      output={IMAGE_SIZES.subcategoryImage}
-                      value={form.images?.[slot]}
-                      alt={`${form.name || "Subcategory"} image ${index + 1}`}
-                      onBusyChange={trackUpload}
-                      onChange={(image) => {
-                        setForm((previous) => ({ ...previous, images: { ...emptySubImages(), ...previous.images, [slot]: image } }));
-                        setChangedSubImages((previous) => (previous.includes(slot) ? previous : [...previous, slot]));
-                      }}
-                    />
-                  ))}
-                </div>
-              </fieldset>
               <fieldset className="cm-media-section">
                 <legend>Subcategory Banner</legend>
                 <CroppedImageField

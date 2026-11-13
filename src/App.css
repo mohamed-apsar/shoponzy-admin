@@ -1942,3 +1942,8 @@ tbody tr:last-child td { border-bottom: 0; }
 .product-image-preview.is-wide { width: 240px; }
 .product-image-preview button.product-image-crop { top: auto; bottom: -8px; right: -8px; background: #4f46e5; font-size: 13px; }
 .product-image-preview button.product-image-crop:disabled { opacity: .5; cursor: wait; }
+
+/* Per-colour banner + three-image row in the product form */
+.product-color-showcase { display: grid; gap: 12px; padding: 14px; border: 1px dashed #c7d2fe; border-radius: 10px; background: #f8faff; }
+.product-color-showcase-title { margin: 0; color: #1e293b; font-size: 14px; font-weight: 700; }
+.product-color-showcase-title small { color: #64748b; font-weight: 500; }
