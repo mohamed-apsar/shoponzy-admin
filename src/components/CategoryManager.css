@@ -699,6 +699,7 @@
     width: 100%;
   }
 }
-.cm-coming-soon { display: inline-flex; align-items: center; gap: 9px; color: #59647a; white-space: nowrap; cursor: pointer; }
-.cm-coming-soon input { width: 17px; height: 17px; accent-color: #5146e5; cursor: pointer; }
+.cm-coming-soon { display: inline-flex; align-items: center; justify-content: center; gap: 9px; color: #59647a; white-space: nowrap; cursor: pointer; }
+.cm-coming-soon input { width: 22px; height: 22px; margin: 0; accent-color: #5146e5; cursor: pointer; }
 .cm-coming-soon input:disabled { cursor: wait; }
+.cm-coming-soon-form { justify-content: flex-start; min-height: 24px; font-weight: 600; }

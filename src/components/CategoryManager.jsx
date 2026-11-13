@@ -47,7 +47,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
   const [imageChanged, setImageChanged] = useState(false);
   const [exploreImageChanged, setExploreImageChanged] = useState(false);
   const [bannerImageChanged, setBannerImageChanged] = useState(false);
-  const [form, setForm] = useState({ name: "", slug: "", brand: "", parentIds: ["","","",""], image: null, bannerImage: null, status: "enabled" });
+  const [form, setForm] = useState({ name: "", slug: "", brand: "", parentIds: ["","","",""], image: null, bannerImage: null, status: "enabled", comingSoon: false });
 
   useEffect(() => {
     if (level !== 1) return undefined;
@@ -121,7 +121,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
     setImageChanged(false);
     setExploreImageChanged(false);
     setBannerImageChanged(false);
-    setForm({ name: "", slug: "", brand: "", parentIds: ["","","",""], image: null, bannerImage: null, exploreImage: null, status: "enabled" });
+    setForm({ name: "", slug: "", brand: "", parentIds: ["","","",""], image: null, bannerImage: null, exploreImage: null, status: "enabled", comingSoon: false });
     setError("");
     setShowForm(true);
   }
@@ -138,7 +138,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
     setImageChanged(false);
     setExploreImageChanged(false);
     setBannerImageChanged(false);
-    setForm({ name: item.name, slug: item.slug, brand: item.brand || "", parentIds, image: item.image || null, bannerImage: item.bannerImage || null, exploreImage: item.exploreImage || null, status: item.status });
+    setForm({ name: item.name, slug: item.slug, brand: item.brand || "", parentIds, image: item.image || null, bannerImage: item.bannerImage || null, exploreImage: item.exploreImage || null, status: item.status, comingSoon: Boolean(item.comingSoon) });
     setError("");
     setShowForm(true);
   }
@@ -193,6 +193,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
       slug,
       parent: parentId,
       status: form.status,
+      ...(level === 1 ? { comingSoon: Boolean(form.comingSoon) } : {}),
       ...(level === 2 ? { brand: form.brand.trim() } : {}),
       ...(level === 1 || imageChanged ? { image: form.image } : {}),
       ...(level === 1 && exploreImageChanged ? { exploreImage: form.exploreImage || null } : {}),
@@ -360,7 +361,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
                 <tr>
                   {level <= 3 && <td>{item.tableImage?.url ? <img className="cm-thumb" src={item.tableImage.url} alt={item.name} loading="lazy" /> : <div className="cm-thumb cm-thumb-empty">No image</div>}</td>}
                   <td>{item.name}</td><td>{item.slug}</td>{level > 1 && <td>{pathFor(item) || "—"}</td>}
-                  {level === 1 && <td><label className="cm-coming-soon"><input type="checkbox" checked={Boolean(item.comingSoon)} disabled={loading || pendingComingSoonIds.includes(item.id)} onChange={(event) => toggleComingSoon(item, event.target.checked)} /><span>Coming soon</span></label></td>}
+                  {level === 1 && <td><label className="cm-coming-soon"><input type="checkbox" checked={Boolean(item.comingSoon)} disabled={loading || pendingComingSoonIds.includes(item.id)} aria-label={`Mark ${item.name} as coming soon`} onChange={(event) => toggleComingSoon(item, event.target.checked)} /></label></td>}
                   <td><button type="button" className="cm-products-toggle" aria-expanded={expandedProducts === item.id} onClick={() => toggleProducts(item)}>
                     {expandedProducts === item.id ? "Hide" : "View"} products ({item.productCount || 0})
                   </button></td>
@@ -426,6 +427,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
             }} /></div>
             {level === 2 && <div className="cm-form-group"><label htmlFor="subcategory-brand">Brand for products (optional)</label><input id="subcategory-brand" value={form.brand} maxLength={80} placeholder="Enter brand name" onChange={(e) => setForm((previous) => ({ ...previous, brand: e.target.value }))} /></div>}
             <div className="cm-form-group"><label>Slug *</label><input required value={form.slug} placeholder="Enter Slug" onChange={(e) => setForm((previous) => ({ ...previous, slug: slugify(e.target.value) }))} /></div>
+            {level === 1 && <div className="cm-form-group"><label className="cm-coming-soon cm-coming-soon-form"><input type="checkbox" checked={Boolean(form.comingSoon)} onChange={(event) => setForm((previous) => ({ ...previous, comingSoon: event.target.checked }))} /><span>Show a Coming soon page for this category</span></label></div>}
             {level <= 2 && <div className="cm-form-group">
               <label htmlFor="category-strip-image">{level === 1 ? "Category strip image" : `${config.singular} circular image`}</label>
               <p className="cm-image-help">Shown in the circular {level === 1 ? "category" : "subcategory"} link on the storefront.</p>
