@@ -71,6 +71,11 @@ function mapAdminCategory(category) {
     productImage: category.productImage || null,
     exploreImage: category.exploreImage || null,
     bannerImage: category.bannerImage || null,
+    images: {
+      image1: category.images?.image1 || null,
+      image2: category.images?.image2 || null,
+      image3: category.images?.image3 || null,
+    },
     status: category.status,
     comingSoon: Boolean(category.comingSoon),
     productCount: category.productCount || 0,

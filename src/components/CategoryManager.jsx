@@ -4,6 +4,7 @@ import { adminRequest, uploadImage } from "../api/adminApi";
 import EditIcon from "./EditIcon";
 import DeleteConfirmDialog from "./DeleteConfirmDialog";
 import StatusToggle from "./StatusToggle";
+import CroppedImageField from "./CroppedImageField";
 
 /* eslint-disable react/prop-types */
 const LEVELS = [
@@ -13,6 +14,11 @@ const LEVELS = [
   { title: "Child Second categories", singular: "Second child category" },
   { title: "Child Third categories", singular: "Third child category" },
 ];
+
+const SUB_IMAGE_SLOTS = ["image1", "image2", "image3"];
+const SUB_IMAGE_OUTPUT = { width: 800, height: 1200 };
+const SUB_BANNER_OUTPUT = { width: 1920, height: 600 };
+const emptySubImages = () => ({ image1: null, image2: null, image3: null });
 
 const slugify = (value) => value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
@@ -51,6 +57,9 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
   const [imageChanged, setImageChanged] = useState(false);
   const [exploreImageChanged, setExploreImageChanged] = useState(false);
   const [bannerImageChanged, setBannerImageChanged] = useState(false);
+  const [changedSubImages, setChangedSubImages] = useState([]);
+  const [uploadsInFlight, setUploadsInFlight] = useState(0);
+  const trackUpload = (busy) => setUploadsInFlight((count) => Math.max(0, count + (busy ? 1 : -1)));
   const [form, setForm] = useState({ name: "", slug: "", brand: "", parentIds: ["","","",""], image: null, bannerImage: null, status: "enabled", comingSoon: false });
 
   useEffect(() => {
@@ -149,7 +158,8 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
     setImageChanged(false);
     setExploreImageChanged(false);
     setBannerImageChanged(false);
-    setForm({ name: "", slug: "", brand: "", parentIds: ["","","",""], image: null, bannerImage: null, exploreImage: null, status: "enabled", comingSoon: false });
+    setChangedSubImages([]);
+    setForm({ name: "", slug: "", brand: "", parentIds: ["","","",""], image: null, bannerImage: null, exploreImage: null, images: emptySubImages(), status: "enabled", comingSoon: false });
     setError("");
     setShowForm(true);
   }
@@ -166,7 +176,8 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
     setImageChanged(false);
     setExploreImageChanged(false);
     setBannerImageChanged(false);
-    setForm({ name: item.name, slug: item.slug, brand: item.brand || "", parentIds, image: item.image || null, bannerImage: item.bannerImage || null, exploreImage: item.exploreImage || null, status: item.status, comingSoon: Boolean(item.comingSoon) });
+    setChangedSubImages([]);
+    setForm({ name: item.name, slug: item.slug, brand: item.brand || "", parentIds, image: item.image || null, bannerImage: item.bannerImage || null, exploreImage: item.exploreImage || null, images: { ...emptySubImages(), ...item.images }, status: item.status, comingSoon: Boolean(item.comingSoon) });
     setError("");
     setShowForm(true);
   }
@@ -225,8 +236,13 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
       ...(level === 2 ? { brand: form.brand.trim() } : {}),
       ...(level === 1 || level === 2 || imageChanged ? { image: form.image } : {}),
       ...(level === 1 && exploreImageChanged ? { exploreImage: form.exploreImage || null } : {}),
-      ...(level === 1 && bannerImageChanged ? { bannerImage: form.bannerImage || null } : {}),
+      ...((level === 1 || level === 2) && bannerImageChanged ? { bannerImage: form.bannerImage || null } : {}),
+      // Only the slots that were touched are sent, so the other images stay exactly as stored.
+      ...(level === 2 && changedSubImages.length
+        ? { images: Object.fromEntries(changedSubImages.map((slot) => [slot, form.images?.[slot] || null])) }
+        : {}),
     };
+    if (uploadsInFlight) return setError("Wait for the image upload to finish.");
     setSaving(true);
     setError("");
     try {
@@ -466,7 +482,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
       </section>
 
       {showForm && <div className="cm-modal-overlay" onClick={() => setShowForm(false)}>
-        <section className="cm-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+        <section className={`cm-modal${level === 2 ? " cm-modal-wide" : ""}`} role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
           <div className="cm-modal-header"><h2>{editingId ? "Edit" : "Create"} {config.singular}</h2><button className="cm-close" type="button" onClick={() => setShowForm(false)}>×</button></div>
           <form onSubmit={save}>
             {parentFields.map(({ parentLevel, value, options }) => (
@@ -501,6 +517,48 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
                 }}>Remove image</button>
               </div>}
             </div>}
+            {level === 2 && <>
+              <fieldset className="cm-media-section">
+                <legend>Subcategory Images</legend>
+                <p className="cm-image-help">Shown in a row on this subcategory’s storefront page. Each image is cropped to 800 × 1200 px (2:3). JPG, JPEG, PNG or WebP.</p>
+                <div className="cm-sub-images">
+                  {SUB_IMAGE_SLOTS.map((slot, index) => (
+                    <CroppedImageField
+                      key={slot}
+                      id={`subcategory-${slot}`}
+                      label={`Subcategory Image ${index + 1}`}
+                      kind={`subcategoryImage${index + 1}`}
+                      output={SUB_IMAGE_OUTPUT}
+                      value={form.images?.[slot]}
+                      alt={`${form.name || "Subcategory"} image ${index + 1}`}
+                      onBusyChange={trackUpload}
+                      onChange={(image) => {
+                        setForm((previous) => ({ ...previous, images: { ...emptySubImages(), ...previous.images, [slot]: image } }));
+                        setChangedSubImages((previous) => (previous.includes(slot) ? previous : [...previous, slot]));
+                      }}
+                    />
+                  ))}
+                </div>
+              </fieldset>
+              <fieldset className="cm-media-section">
+                <legend>Subcategory Banner</legend>
+                <CroppedImageField
+                  wide
+                  id="subcategory-banner"
+                  label="Subcategory Banner"
+                  kind="subcategoryBanner"
+                  output={SUB_BANNER_OUTPUT}
+                  value={form.bannerImage}
+                  alt={`${form.name || "Subcategory"} banner`}
+                  help="Shown at the top of this subcategory’s storefront page. Cropped to 1920 × 600 px (16:5). JPG, JPEG, PNG or WebP."
+                  onBusyChange={trackUpload}
+                  onChange={(image) => {
+                    setForm((previous) => ({ ...previous, bannerImage: image }));
+                    setBannerImageChanged(true);
+                  }}
+                />
+              </fieldset>
+            </>}
             {level >= 3 && <p className="cm-image-help" role="note">
               Add actual products in Manage Products, upload each product&apos;s images there, and select this as the deepest category. They will appear under the parent subcategory on the storefront.
             </p>}
@@ -533,7 +591,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
             </>}
             <div className="cm-form-group"><label>Status</label><select value={form.status} onChange={(e) => setForm((previous) => ({ ...previous, status: e.target.value }))}><option value="enabled">Enabled</option><option value="disabled">Disabled</option></select></div>
             {error && <p className="cm-error">{error}</p>}
-            <div className="cm-modal-actions"><button type="button" className="cm-secondary-btn" onClick={() => setShowForm(false)} disabled={saving}>Cancel</button><button type="submit" className="cm-primary-btn" disabled={saving}>{saving ? "Saving…" : "Submit"}</button></div>
+            <div className="cm-modal-actions"><button type="button" className="cm-secondary-btn" onClick={() => setShowForm(false)} disabled={saving}>Cancel</button><button type="submit" className="cm-primary-btn" disabled={saving || uploadsInFlight > 0}>{saving ? "Saving…" : uploadsInFlight ? "Uploading…" : "Submit"}</button></div>
           </form>
         </section>
       </div>}

@@ -708,3 +708,23 @@
 .cm-coming-soon input:disabled { cursor: wait; }
 .cm-coming-soon-form { justify-content: flex-start; min-height: 24px; font-weight: 600; }
 .cm-new-in-toggle { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border: 1px solid #e3e7ef; border-radius: 12px; color: #59647a; font-size: 13px; font-weight: 700; }
+
+/* Subcategory images + banner (cropped uploads) */
+.cm-modal.cm-modal-wide { max-width: 780px; }
+.cm-media-section { display: grid; gap: 10px; margin: 0 0 18px; padding: 14px 16px 16px; border: 1px solid #e0e7ff; border-radius: 12px; background: #f8faff; min-width: 0; }
+.cm-media-section legend { padding: 0 6px; color: #172033; font-size: 15px; font-weight: 700; }
+.cm-sub-images { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.cif { display: grid; align-content: start; gap: 8px; min-width: 0; }
+.cif-label { color: #334155; font-size: 13px; font-weight: 700; }
+.cif-preview { display: grid; place-items: center; width: 100%; overflow: hidden; border: 1px dashed #c7d2fe; border-radius: 10px; background: #fff; }
+.cif-preview img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.cif-empty { color: #94a3b8; font-size: 13px; }
+.cif-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.cif-actions .cif-btn { min-height: 32px; padding: 5px 10px; font-size: 13px; }
+.cif-remove { color: #b91c1c; }
+.cif-error { margin: 0; color: #b91c1c; font-size: 13px; }
+.cif-wide .cif-preview { max-width: 100%; }
+@media (max-width: 640px) {
+  .cm-sub-images { grid-template-columns: 1fr; }
+  .cm-sub-images .cif-preview { max-width: 220px; }
+}
