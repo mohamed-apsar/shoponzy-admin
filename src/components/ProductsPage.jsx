@@ -275,7 +275,7 @@ export default function ProductsPage({ query = "", categories = [] }) {
           ...(bannerImage?.url ? [{ type: "banner", image: imageRefOf(bannerImage) }] : []),
           ...(oldRow.some(Boolean) ? [{ type: "imageRow", images: oldRow }] : []),
         ];
-        const blocks = Array.isArray(showcaseBlocks) ? showcaseBlocks : migratedBlocks.length ? migratedBlocks : emptyVariantShowcaseBlocks();
+        const blocks = showcaseBlocks?.length ? showcaseBlocks : migratedBlocks.length ? migratedBlocks : emptyVariantShowcaseBlocks();
         return {
           name, hex, price: String(inventory?.price ?? ""), stock: String(inventory?.stock ?? 0), minStock: String(inventory?.minStock ?? 0),
           featuredImage: featuredImage ? { url: featuredImage.url, publicId: featuredImage.publicId, alt: featuredImage.alt || "" } : null,
@@ -352,7 +352,7 @@ export default function ProductsPage({ query = "", categories = [] }) {
       if (partialRow) return setError(`Every three-image row for ${color.name} needs all 3 images. Complete the row or remove it.`);
     }
     // Completely empty blocks are skipped; a row needs all three images (the storefront shows them side by side).
-    const contentBlocks = form.contentBlocks.filter((block) => (block.type === "banner" ? block.image : block.images.some(Boolean)));
+    const contentBlocks = form.colors.length ? [] : form.contentBlocks.filter((block) => (block.type === "banner" ? block.image : block.images.some(Boolean)));
     if (contentBlocks.some((block) => block.type === "imageRow" && block.images.some((image) => !image))) {
       return setError("Each three-image row needs all 3 images. Upload the missing ones or remove the row.");
     }
@@ -642,9 +642,9 @@ export default function ProductsPage({ query = "", categories = [] }) {
                   ))}
                   <button type="button" className="table-action" style={{ marginTop: 8, width: "fit-content" }} onClick={() => updateField("colors", [...form.colors, newColor()])}>+ Add colour / variant</button>
                 </div>
-                <div className="products-form-field products-form-full">
+                {!form.colors.length && <div className="products-form-field products-form-full">
                   <span>Product Banner &amp; Three-Image Row</span>
-                  <p className="muted">Product-level blocks are not shown on colour-variant product pages. Use the banner and image rows inside each colour above for variant-specific artwork. Banner: {sizeLabel(IMAGE_SIZES.productBanner)}. Row images: {sizeLabel(IMAGE_SIZES.productRowImage)} each. Leave a block empty to skip it.</p>
+                  <p className="muted">Shown below the product details on the product page, in the order listed. Banner: {sizeLabel(IMAGE_SIZES.productBanner)}. Row images: {sizeLabel(IMAGE_SIZES.productRowImage)} each. Leave a block empty to skip it.</p>
                   {form.contentBlocks.map((block, index) => (
                     <section className="product-content-block" key={index}>
                       <div className="product-content-block-heading">
@@ -695,7 +695,7 @@ export default function ProductsPage({ query = "", categories = [] }) {
                     <button type="button" className="table-action" onClick={() => updateField("contentBlocks", [...form.contentBlocks, { type: "banner", image: null }])}>+ Add wide banner</button>
                     <button type="button" className="table-action" onClick={() => updateField("contentBlocks", [...form.contentBlocks, { type: "imageRow", images: [null, null, null] }])}>+ Add three-image row</button>
                   </div>
-                </div>
+                </div>}
                 <label className="products-form-field products-form-full">Sizes (comma separated, leave empty if none)
                   <input value={form.sizesText} onChange={(e) => updateField("sizesText", e.target.value)} placeholder="e.g. 6, 7, 8, 9 or S, M, L" />
                 </label>
