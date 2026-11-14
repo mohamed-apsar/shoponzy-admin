@@ -1947,3 +1947,4 @@ tbody tr:last-child td { border-bottom: 0; }
 .product-color-showcase { display: grid; gap: 12px; padding: 14px; border: 1px dashed #c7d2fe; border-radius: 10px; background: #f8faff; }
 .product-color-showcase-title { margin: 0; color: #1e293b; font-size: 14px; font-weight: 700; }
 .product-color-showcase-title small { color: #64748b; font-weight: 500; }
+.product-color-showcase-actions { display: flex; flex-wrap: wrap; gap: 8px; }

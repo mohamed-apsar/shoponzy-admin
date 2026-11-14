@@ -22,8 +22,9 @@ const PAGE_SIZE = 20;
 
 const ROW_SLOTS = ["image1", "image2", "image3"];
 const emptyRowImages = () => ({ image1: null, image2: null, image3: null });
-const newColor = () => ({ name: "", hex: "#111111", featuredImage: null, images: [], bannerImage: null, rowImages: emptyRowImages(), price: "", stock: "0", minStock: "0" });
 const imageRefOf = (image) => (image ? { url: image.url, publicId: image.publicId, alt: image.alt || "" } : null);
+const emptyVariantShowcaseBlocks = () => [{ type: "banner", image: null }, { type: "imageRow", images: [null, null, null] }];
+const newColor = () => ({ name: "", hex: "#111111", featuredImage: null, images: [], showcaseBlocks: emptyVariantShowcaseBlocks(), price: "", stock: "0", minStock: "0" });
 
 // One empty banner + one empty three-image row, so both upload slots are visible without clicking "Add".
 const defaultContentBlocks = () => [{ type: "banner", image: null }, { type: "imageRow", images: [null, null, null] }];
@@ -267,14 +268,21 @@ export default function ProductsPage({ query = "", categories = [] }) {
       status: full.status === "archived" ? "disabled" : full.status || "active",
       categoryIds,
       images: (full.images || []).map(({ url, publicId, alt }) => ({ url, publicId, alt: alt || "" })),
-      colors: (full.colors || []).map(({ name, hex, featuredImage, images, bannerImage, rowImages }) => {
+      colors: (full.colors || []).map(({ name, hex, featuredImage, images, bannerImage, rowImages, showcaseBlocks }) => {
         const inventory = (full.variants || []).find((variant) => variant.color === name);
+        const oldRow = ROW_SLOTS.map((slot) => imageRefOf(rowImages?.[slot]));
+        const migratedBlocks = [
+          ...(bannerImage?.url ? [{ type: "banner", image: imageRefOf(bannerImage) }] : []),
+          ...(oldRow.some(Boolean) ? [{ type: "imageRow", images: oldRow }] : []),
+        ];
+        const blocks = Array.isArray(showcaseBlocks) ? showcaseBlocks : migratedBlocks.length ? migratedBlocks : emptyVariantShowcaseBlocks();
         return {
           name, hex, price: String(inventory?.price ?? ""), stock: String(inventory?.stock ?? 0), minStock: String(inventory?.minStock ?? 0),
           featuredImage: featuredImage ? { url: featuredImage.url, publicId: featuredImage.publicId, alt: featuredImage.alt || "" } : null,
           images: (images || []).map(({ url, publicId, alt }) => ({ url, publicId, alt: alt || "" })),
-          bannerImage: imageRefOf(bannerImage),
-          rowImages: Object.fromEntries(ROW_SLOTS.map((slot) => [slot, imageRefOf(rowImages?.[slot])])),
+          showcaseBlocks: blocks.map((block) => block.type === "banner"
+            ? { type: "banner", image: imageRefOf(block.image) }
+            : { type: "imageRow", images: Array.from({ length: 3 }, (_, i) => imageRefOf(block.images?.[i])) }),
         };
       }),
       contentBlocks: !full.contentBlocks?.length ? defaultContentBlocks() : full.contentBlocks.map((block) => block.type === "banner"
@@ -339,6 +347,10 @@ export default function ProductsPage({ query = "", categories = [] }) {
     const colorNames = form.colors.map((c) => c.name.trim());
     if (colorNames.some((n) => !n)) return setError("Every colour needs a name.");
     if (new Set(colorNames).size !== colorNames.length) return setError("Colour names must be unique.");
+    for (const color of form.colors) {
+      const partialRow = (color.showcaseBlocks || []).some((block) => block.type === "imageRow" && block.images.some(Boolean) && block.images.some((image) => !image));
+      if (partialRow) return setError(`Every three-image row for ${color.name} needs all 3 images. Complete the row or remove it.`);
+    }
     // Completely empty blocks are skipped; a row needs all three images (the storefront shows them side by side).
     const contentBlocks = form.contentBlocks.filter((block) => (block.type === "banner" ? block.image : block.images.some(Boolean)));
     if (contentBlocks.some((block) => block.type === "imageRow" && block.images.some((image) => !image))) {
@@ -367,10 +379,11 @@ export default function ProductsPage({ query = "", categories = [] }) {
         name: color.name.trim(), hex: color.hex,
         featuredImage: color.featuredImage || null,
         images: color.images || [],
-        bannerImage: color.bannerImage ? { ...color.bannerImage, alt: color.bannerImage.alt || `${form.name.trim()} ${color.name.trim()} banner` } : null,
-        rowImages: Object.fromEntries(ROW_SLOTS.map((slot, slotIndex) => [slot, color.rowImages?.[slot]
-          ? { ...color.rowImages[slot], alt: color.rowImages[slot].alt || `${form.name.trim()} ${color.name.trim()} image ${slotIndex + 1}` }
-          : null])),
+        bannerImage: null,
+        rowImages: emptyRowImages(),
+        showcaseBlocks: (color.showcaseBlocks || []).filter((block) => block.type === "banner" ? block.image : block.images.some(Boolean)).map((block, blockIndex) => block.type === "banner"
+          ? { type: "banner", image: { ...block.image, alt: block.image.alt || `${form.name.trim()} ${color.name.trim()} banner ${blockIndex + 1}` } }
+          : { type: "imageRow", images: block.images.map((image, imageIndex) => ({ ...image, alt: image.alt || `${form.name.trim()} ${color.name.trim()} image ${blockIndex + 1}-${imageIndex + 1}` })) }),
       })),
       contentBlocks: contentBlocks.map((block, blockIndex) => block.type === "banner"
         ? { type: block.type, image: { ...block.image, alt: block.image.alt || `${form.name.trim()} banner ${blockIndex + 1}` } }
@@ -580,34 +593,37 @@ export default function ProductsPage({ query = "", categories = [] }) {
                           onChange={(images) => updateField("colors", form.colors.map((c, i) => i === index ? { ...c, images } : c))}
                         />
                       </div>
-                      {/* The first colour is the main product (colour, featured image, gallery). Each added
-                          variant also gets its own banner + three-image row, shown when it is selected. */}
-                      {index > 0 && <div className="product-color-showcase">
-                        <p className="product-color-showcase-title">Variant {index}{color.name ? ` (${color.name})` : ""} — banner and three-image row <small>(shown on the product page when this variant is selected; optional)</small></p>
-                        <ImageUpload
-                          kind="productVariant"
-                          title={`${color.name || `Colour ${index + 1}`} banner`}
-                          images={color.bannerImage ? [color.bannerImage] : []}
-                          multiple={false}
-                          size={IMAGE_SIZES.productBanner}
-                          onChange={(images) => updateField("colors", form.colors.map((c, i) => i === index ? { ...c, bannerImage: images[0] || null } : c))}
-                        />
-                        <div className="product-content-image-row">
-                          {ROW_SLOTS.map((slot, slotIndex) => (
-                            <ImageUpload
-                              key={slot}
+                      <div className="product-color-showcase">
+                        <p className="product-color-showcase-title">Variant {index + 1}{color.name ? ` (${color.name})` : ""} banner and image rows <small>(shown only when this variant is selected; optional)</small></p>
+                        {(color.showcaseBlocks || []).map((block, blockIndex) => <section className="product-content-block" key={`${block.type}-${blockIndex}`}>
+                          <div className="product-content-block-heading">
+                            <strong>{block.type === "banner" ? `Variant banner ${blockIndex + 1}` : `Variant three-image row ${blockIndex + 1}`}</strong>
+                            <button type="button" className="table-action danger" onClick={() => updateField("colors", form.colors.map((c, i) => i === index ? { ...c, showcaseBlocks: c.showcaseBlocks.filter((_, j) => j !== blockIndex) } : c))}>Remove</button>
+                          </div>
+                          {block.type === "banner" ? <ImageUpload
+                            kind="productVariant"
+                            title={`${color.name || `Colour ${index + 1}`} banner ${blockIndex + 1}`}
+                            images={block.image ? [block.image] : []}
+                            multiple={false}
+                            size={IMAGE_SIZES.productBanner}
+                            onChange={(images) => updateField("colors", form.colors.map((c, i) => i === index ? { ...c, showcaseBlocks: c.showcaseBlocks.map((entry, j) => j === blockIndex ? { ...entry, image: images[0] || null } : entry) } : c))}
+                          /> : <div className="product-content-image-row">
+                            {Array.from({ length: 3 }, (_, imageIndex) => <ImageUpload
+                              key={imageIndex}
                               kind="productVariant"
-                              title={`${color.name || `Colour ${index + 1}`} image ${slotIndex + 1}`}
-                              images={color.rowImages?.[slot] ? [color.rowImages[slot]] : []}
+                              title={`${color.name || `Colour ${index + 1}`} row ${blockIndex + 1} image ${imageIndex + 1}`}
+                              images={block.images?.[imageIndex] ? [block.images[imageIndex]] : []}
                               multiple={false}
                               size={IMAGE_SIZES.productRowImage}
-                              onChange={(images) => updateField("colors", form.colors.map((c, i) => i === index
-                                ? { ...c, rowImages: { ...emptyRowImages(), ...c.rowImages, [slot]: images[0] || null } }
-                                : c))}
-                            />
-                          ))}
+                              onChange={(images) => updateField("colors", form.colors.map((c, i) => i === index ? { ...c, showcaseBlocks: c.showcaseBlocks.map((entry, j) => j === blockIndex ? { ...entry, images: entry.images.map((image, k) => k === imageIndex ? images[0] || null : image) } : entry) } : c))}
+                            />)}
+                          </div>}
+                        </section>)}
+                        <div className="product-color-showcase-actions">
+                          <button type="button" className="table-action" onClick={() => updateField("colors", form.colors.map((c, i) => i === index ? { ...c, showcaseBlocks: [...c.showcaseBlocks, { type: "banner", image: null }] } : c))}>+ Add banner</button>
+                          <button type="button" className="table-action" onClick={() => updateField("colors", form.colors.map((c, i) => i === index ? { ...c, showcaseBlocks: [...c.showcaseBlocks, { type: "imageRow", images: [null, null, null] }] } : c))}>+ Add three-image row</button>
                         </div>
-                      </div>}
+                      </div>
                       <div className="products-variant-fields product-color-inventory-fields">
                         <label>Current amount *
                           <input type="number" min="0" step="0.01" value={color.price ?? ""} placeholder={form.price || "Enter current amount"} onChange={(e) => updateField("colors", form.colors.map((c, i) => i === index ? { ...c, price: e.target.value } : c))} aria-label={`Current amount for colour ${index + 1}`} />
@@ -628,7 +644,7 @@ export default function ProductsPage({ query = "", categories = [] }) {
                 </div>
                 <div className="products-form-field products-form-full">
                   <span>Product Banner &amp; Three-Image Row</span>
-                  <p className="muted">Shown below the product details on the product page, in the order listed. Banner: {sizeLabel(IMAGE_SIZES.productBanner)}. Row images: {sizeLabel(IMAGE_SIZES.productRowImage)} each. Leave a block empty to skip it.</p>
+                  <p className="muted">Product-level blocks are not shown on colour-variant product pages. Use the banner and image rows inside each colour above for variant-specific artwork. Banner: {sizeLabel(IMAGE_SIZES.productBanner)}. Row images: {sizeLabel(IMAGE_SIZES.productRowImage)} each. Leave a block empty to skip it.</p>
                   {form.contentBlocks.map((block, index) => (
                     <section className="product-content-block" key={index}>
                       <div className="product-content-block-heading">
