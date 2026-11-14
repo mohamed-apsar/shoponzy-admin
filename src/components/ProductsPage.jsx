@@ -570,10 +570,11 @@ export default function ProductsPage({ query = "", categories = [] }) {
                 </label>
 
                 <div className="products-form-field products-form-full">
-                  <span>Colours and images</span>
+                  <span>Main product image and colour variants</span>
                   {form.colors.map((color, index) => (
                     <section className="product-color-variant" key={index}>
                       <div className="product-color-variant-heading">
+                        <span className="product-color-role">{index === 0 ? "Main product image" : `Colour variant ${index}`}</span>
                         <input type="color" value={color.hex} onChange={(e) => updateField("colors", form.colors.map((c, i) => i === index ? { ...c, hex: e.target.value.toUpperCase() } : c))} aria-label={`Colour ${index + 1} swatch`} />
                         <input value={color.name} onChange={(e) => updateField("colors", form.colors.map((c, i) => i === index ? { ...c, name: e.target.value } : c))} placeholder="Colour name, e.g. Black" aria-label={`Colour ${index + 1} name`} />
                         {index > 0 && <button type="button" className="table-action danger" onClick={() => updateField("colors", form.colors.filter((_, i) => i !== index))}>Remove variant</button>}
@@ -594,10 +595,10 @@ export default function ProductsPage({ query = "", categories = [] }) {
                         />
                       </div>
                       <div className="product-color-showcase">
-                        <p className="product-color-showcase-title">Variant {index + 1}{color.name ? ` (${color.name})` : ""} banner and image rows <small>(shown only when this variant is selected; optional)</small></p>
+                        <p className="product-color-showcase-title">{index === 0 ? `Main product${color.name ? ` (${color.name})` : ""}` : `Variant ${index}${color.name ? ` (${color.name})` : ""}`} banner and image rows <small>(shown with this product colour; optional)</small></p>
                         {(color.showcaseBlocks || []).map((block, blockIndex) => <section className="product-content-block" key={`${block.type}-${blockIndex}`}>
                           <div className="product-content-block-heading">
-                            <strong>{block.type === "banner" ? `Variant banner ${blockIndex + 1}` : `Variant three-image row ${blockIndex + 1}`}</strong>
+                            <strong>{index === 0 ? (block.type === "banner" ? `Product banner ${blockIndex + 1}` : `Product three-image row ${blockIndex + 1}`) : (block.type === "banner" ? `Variant banner ${blockIndex + 1}` : `Variant three-image row ${blockIndex + 1}`)}</strong>
                             <button type="button" className="table-action danger" onClick={() => updateField("colors", form.colors.map((c, i) => i === index ? { ...c, showcaseBlocks: c.showcaseBlocks.filter((_, j) => j !== blockIndex) } : c))}>Remove</button>
                           </div>
                           {block.type === "banner" ? <ImageUpload
@@ -620,8 +621,8 @@ export default function ProductsPage({ query = "", categories = [] }) {
                           </div>}
                         </section>)}
                         <div className="product-color-showcase-actions">
-                          <button type="button" className="table-action" onClick={() => updateField("colors", form.colors.map((c, i) => i === index ? { ...c, showcaseBlocks: [...c.showcaseBlocks, { type: "banner", image: null }] } : c))}>+ Add banner</button>
-                          <button type="button" className="table-action" onClick={() => updateField("colors", form.colors.map((c, i) => i === index ? { ...c, showcaseBlocks: [...c.showcaseBlocks, { type: "imageRow", images: [null, null, null] }] } : c))}>+ Add three-image row</button>
+                          <button type="button" className="table-action" onClick={() => updateField("colors", form.colors.map((c, i) => i === index ? { ...c, showcaseBlocks: [...c.showcaseBlocks, { type: "banner", image: null }] } : c))}>+ Add {index === 0 ? "product" : "variant"} banner</button>
+                          <button type="button" className="table-action" onClick={() => updateField("colors", form.colors.map((c, i) => i === index ? { ...c, showcaseBlocks: [...c.showcaseBlocks, { type: "imageRow", images: [null, null, null] }] } : c))}>+ Add {index === 0 ? "product" : "variant"} three-image row</button>
                         </div>
                       </div>
                       <div className="products-variant-fields product-color-inventory-fields">
