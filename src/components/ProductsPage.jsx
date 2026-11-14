@@ -573,11 +573,11 @@ export default function ProductsPage({ query = "", categories = [] }) {
                   <span>Main product image and colour variants</span>
                   {form.colors.map((color, index) => (
                     <section className="product-color-variant" key={index}>
-                      <div className="product-color-variant-heading">
+                      <div className="product-color-controls">
                         <span className="product-color-role">{index === 0 ? "Main product image" : `Colour variant ${index}`}</span>
-                        <input type="color" value={color.hex} onChange={(e) => updateField("colors", form.colors.map((c, i) => i === index ? { ...c, hex: e.target.value.toUpperCase() } : c))} aria-label={`Colour ${index + 1} swatch`} />
-                        <input value={color.name} onChange={(e) => updateField("colors", form.colors.map((c, i) => i === index ? { ...c, name: e.target.value } : c))} placeholder="Colour name, e.g. Black" aria-label={`Colour ${index + 1} name`} />
-                        {index > 0 && <button type="button" className="table-action danger" onClick={() => updateField("colors", form.colors.filter((_, i) => i !== index))}>Remove variant</button>}
+                        <label className="product-color-control product-color-name"><span>Colour name *</span><input value={color.name} onChange={(e) => updateField("colors", form.colors.map((c, i) => i === index ? { ...c, name: e.target.value } : c))} placeholder="e.g. Black" aria-label={`Colour ${index + 1} name`} /></label>
+                        <label className="product-color-control product-color-swatch"><span>Choose colour</span><input type="color" value={color.hex} onChange={(e) => updateField("colors", form.colors.map((c, i) => i === index ? { ...c, hex: e.target.value.toUpperCase() } : c))} aria-label={`Colour ${index + 1} swatch`} /></label>
+                        {index > 0 && <button type="button" className="table-action danger product-color-remove" onClick={() => updateField("colors", form.colors.filter((_, i) => i !== index))}>Remove variant</button>}
                       </div>
                       <div className="product-color-variant-images">
                         <ImageUpload
@@ -641,7 +641,7 @@ export default function ProductsPage({ query = "", categories = [] }) {
                       </div>
                     </section>
                   ))}
-                  <button type="button" className="table-action" style={{ marginTop: 8, width: "fit-content" }} onClick={() => updateField("colors", [...form.colors, newColor()])}>+ Add colour / variant</button>
+                  <button type="button" className="table-action" style={{ marginTop: 8, width: "fit-content" }} onClick={() => updateField("colors", [...form.colors, newColor()])}>+ Add colour variant</button>
                 </div>
                 {!form.colors.length && <div className="products-form-field products-form-full">
                   <span>Product Banner &amp; Three-Image Row</span>
