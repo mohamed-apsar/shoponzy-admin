@@ -20,7 +20,7 @@ const LEVELS = [
 
 const slugify = (value) => value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
-export default function CategoryManager({ categories, mode = 1, loading = false, loadError = "", onSave, onDelete, onToggleStatus }) {
+export default function CategoryManager({ categories, mode = 1, loading = false, loadError = "", onSave, onDelete, onBulkDelete, onToggleStatus }) {
   const level = Number(mode);
   const config = LEVELS[level - 1] || LEVELS[0];
   const [search, setSearch] = useState("");
@@ -36,6 +36,9 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
   const [pendingComingSoonIds, setPendingComingSoonIds] = useState([]);
   const [pendingStatusIds, setPendingStatusIds] = useState([]);
   const [deleting, setDeleting] = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [bulkConfirm, setBulkConfirm] = useState(false);
+  const [bulkResult, setBulkResult] = useState(null); // { deleted, failed: [{ name, error }] }
   const [expandedProducts, setExpandedProducts] = useState(null);
   const [productsByCategory, setProductsByCategory] = useState({});
   const [newInImage, setNewInImage] = useState(null);
@@ -136,6 +139,10 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
   const pageCount = pageSize === "all" ? 1 : Math.max(1, Math.ceil(filtered.length / Number(pageSize)));
   const shown = pageSize === "all" ? filtered : filtered.slice((page - 1) * Number(pageSize), page * Number(pageSize));
   useEffect(() => { setPage(1); }, [search, statusFilter, pageSize, level]);
+  useEffect(() => { setSelectedIds([]); setBulkResult(null); }, [level]);
+  useEffect(() => {
+    setSelectedIds((current) => current.filter((id) => categories.some((item) => item.id === id && item.level === level)));
+  }, [categories, level]);
   useEffect(() => { if (page > pageCount) setPage(pageCount); }, [page, pageCount]);
 
   function parentForLevel(childLevel) {
@@ -227,6 +234,22 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
     if (hasDescendants) return "Delete this category's child categories first.";
     if (item.productCount > 0) return `${item.productCount} product${item.productCount === 1 ? " is" : "s are"} still in this category. Move or archive them first.`;
     return "";
+  }
+
+  const shownIds = shown.map((item) => item.id);
+  const allShownSelected = shownIds.length > 0 && shownIds.every((id) => selectedIds.includes(id));
+  const someShownSelected = shownIds.some((id) => selectedIds.includes(id));
+  const toggleSelected = (id) => setSelectedIds((current) => (current.includes(id) ? current.filter((x) => x !== id) : [...current, id]));
+  const toggleAllShown = () => setSelectedIds((current) => (allShownSelected
+    ? current.filter((id) => !shownIds.includes(id))
+    : [...new Set([...current, ...shownIds])]));
+  const selectedItems = visible.filter((item) => selectedIds.includes(item.id));
+
+  async function confirmBulkDelete() {
+    const results = await onBulkDelete(selectedIds);
+    const failed = results.filter((r) => !r.ok).map((r) => ({ name: r.name || visible.find((item) => item.id === r.id)?.name || r.id, error: r.error }));
+    setBulkResult({ deleted: results.length - failed.length, failed });
+    setSelectedIds(failed.length ? results.filter((r) => !r.ok).map((r) => r.id) : []);
   }
 
   async function confirmDelete() {
@@ -384,13 +407,28 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
           </div>
         </div>
 
+        {selectedIds.length > 0 && <div className="cm-bulk-bar" role="region" aria-label="Bulk actions">
+          <strong>{selectedIds.length} selected</strong>
+          <button type="button" className="cm-bulk-delete" onClick={() => { setBulkResult(null); setBulkConfirm(true); }} disabled={loading}>Delete selected</button>
+          <button type="button" className="cm-bulk-clear" onClick={() => setSelectedIds([])}>Clear selection</button>
+        </div>}
+        {bulkResult && <div className={`cm-bulk-result${bulkResult.failed.length ? " has-failures" : ""}`} role="status">
+          <span>Deleted {bulkResult.deleted} {bulkResult.deleted === 1 ? config.singular.toLowerCase() : config.title.toLowerCase()}.</span>
+          {bulkResult.failed.length > 0 && <>
+            <span> {bulkResult.failed.length} could not be deleted (still selected):</span>
+            <ul>{bulkResult.failed.map((f) => <li key={f.name}><b>{f.name}</b> — {f.error}</li>)}</ul>
+          </>}
+          <button type="button" aria-label="Dismiss" onClick={() => setBulkResult(null)}>×</button>
+        </div>}
+
         <div className="cm-table-wrap">
           <table className="cm-table">
-            <thead><tr>{level <= 3 && <th>Image</th>}<th>Name</th><th>Slug</th>{level > 1 && <th>Parent path</th>}{level === 1 && <th>Coming soon</th>}<th>Products</th><th>Status</th><th>Actions</th></tr></thead>
+            <thead><tr><th className="cm-select-col"><input type="checkbox" aria-label={`Select all ${config.title.toLowerCase()} on this page`} checked={allShownSelected} ref={(el) => { if (el) el.indeterminate = !allShownSelected && someShownSelected; }} onChange={toggleAllShown} disabled={!shownIds.length} /></th>{level <= 3 && <th>Image</th>}<th>Name</th><th>Slug</th>{level > 1 && <th>Parent path</th>}{level === 1 && <th>Coming soon</th>}<th>Products</th><th>Status</th><th>Actions</th></tr></thead>
             <tbody>
               {shown.map((item) => (
                 <Fragment key={item.id}>
-                <tr>
+                <tr className={selectedIds.includes(item.id) ? "cm-row-selected" : undefined}>
+                  <td className="cm-select-col"><input type="checkbox" aria-label={`Select ${item.name}`} checked={selectedIds.includes(item.id)} onChange={() => toggleSelected(item.id)} /></td>
                   {level <= 3 && <td>{item.tableImage?.url ? <img className="cm-thumb" src={item.tableImage.url} alt={item.name} loading="lazy" /> : <div className="cm-thumb cm-thumb-empty">No image</div>}</td>}
                   <td>{item.name}</td><td>{item.slug}</td>{level > 1 && <td>{pathFor(item) || "—"}</td>}
                   {level === 1 && <td><label className="cm-coming-soon"><input type="checkbox" checked={Boolean(item.comingSoon)} disabled={loading || pendingComingSoonIds.includes(item.id)} aria-label={`Mark ${item.name} as coming soon`} onChange={(event) => toggleComingSoon(item, event.target.checked)} /></label></td>}
@@ -415,7 +453,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
                   <td><div className="cm-actions"><button type="button" className="cm-edit-icon-button" aria-label={`Edit ${item.name}`} title={`Edit ${item.name}`} onClick={() => openEdit(item)}><EditIcon /></button><button className="danger" onClick={() => remove(item)}>Delete</button></div></td>
                 </tr>
                 {expandedProducts === item.id && <tr key={`${item.id}-products`} className="cm-products-row">
-                  <td colSpan={(level <= 3 ? 1 : 0) + 2 + (level > 1 ? 1 : 0) + (level === 1 ? 1 : 0) + 3}>
+                  <td colSpan={1 + (level <= 3 ? 1 : 0) + 2 + (level > 1 ? 1 : 0) + (level === 1 ? 1 : 0) + 3}>
                     {productsByCategory[item.id]?.loading ? <span role="status">Loading products…</span>
                       : productsByCategory[item.id]?.error ? <span className="cm-products-error">{productsByCategory[item.id].error} <button type="button" onClick={() => retryProducts(item)}>Retry</button></span>
                         : productsByCategory[item.id]?.data?.length ? <>
@@ -429,7 +467,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
                 </tr>}
                 </Fragment>
               ))}
-              {!loading && !shown.length && <tr><td colSpan={(level <= 3 ? 1 : 0) + 2 + (level > 1 ? 1 : 0) + (level === 1 ? 1 : 0) + 3} className="cm-empty">No {config.title.toLowerCase()} found.</td></tr>}
+              {!loading && !shown.length && <tr><td colSpan={1 + (level <= 3 ? 1 : 0) + 2 + (level > 1 ? 1 : 0) + (level === 1 ? 1 : 0) + 3} className="cm-empty">No {config.title.toLowerCase()} found.</td></tr>}
             </tbody>
           </table>
         </div>
@@ -551,6 +589,13 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
           </form>
         </section>
       </div>}
+      {bulkConfirm && <DeleteConfirmDialog
+        title={`Delete ${selectedIds.length} ${selectedIds.length === 1 ? config.singular.toLowerCase() : config.title.toLowerCase()}?`}
+        message={`${selectedItems.slice(0, 5).map((item) => `“${item.name}”`).join(", ")}${selectedItems.length > 5 ? ` and ${selectedItems.length - 5} more` : ""} will be permanently deleted. Any that still have products or child categories are skipped and listed afterwards.`}
+        confirmLabel={`Yes, delete ${selectedIds.length}`}
+        onCancel={() => setBulkConfirm(false)}
+        onConfirm={confirmBulkDelete}
+      />}
       {deleting && <DeleteConfirmDialog title={`Delete ${config.singular}?`} message={`“${deleting.name}” will be permanently deleted.`} warning={deleteBlockReason(deleting)} confirmDisabled={Boolean(deleteBlockReason(deleting))} onCancel={() => setDeleting(null)} onConfirm={confirmDelete} />}
     </div>
   );

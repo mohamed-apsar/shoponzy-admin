@@ -161,6 +161,15 @@ export default function App() {
     await loadCategories();
   }
 
+  async function bulkDeleteCategories(ids) {
+    try {
+      const result = await adminRequest("/admin/categories/bulk-delete", { method: "POST", body: JSON.stringify({ ids }) });
+      return result.data.results;
+    } finally {
+      await loadCategories();
+    }
+  }
+
   async function toggleCategoryStatus(id, status) {
     await adminRequest(`/admin/categories/${id}`, { method: "PATCH", body: JSON.stringify({ status }) });
     setCategories((current) => current.map((category) => (
@@ -355,8 +364,8 @@ export default function App() {
           {page === "Customer List" && <CustomersPage query={query} />}
           {page === "Coupons" && <CouponsPage query={query} />}
           {page === "SEO Settings" && <SeoSettings />}
-          {page === "Categories" && <CategoryManager categories={categories} mode={1} loading={categoriesLoading} loadError={categoriesError} onSave={saveCategory} onDelete={deleteCategory} onToggleStatus={toggleCategoryStatus} />}
-          {page === "Sub categories" && <CategoryManager categories={categories} mode={2} loading={categoriesLoading} loadError={categoriesError} onSave={saveCategory} onDelete={deleteCategory} onToggleStatus={toggleCategoryStatus} />}
+          {page === "Categories" && <CategoryManager categories={categories} mode={1} loading={categoriesLoading} loadError={categoriesError} onSave={saveCategory} onDelete={deleteCategory} onBulkDelete={bulkDeleteCategories} onToggleStatus={toggleCategoryStatus} />}
+          {page === "Sub categories" && <CategoryManager categories={categories} mode={2} loading={categoriesLoading} loadError={categoriesError} onSave={saveCategory} onDelete={deleteCategory} onBulkDelete={bulkDeleteCategories} onToggleStatus={toggleCategoryStatus} />}
           {manageSitePages.includes(page) && <ManageSite activeSection={page} onSectionChange={navigate} categories={categories} adminUser={user} onAdminUserChange={updateUser} />}
         </div>
         <footer className="footer">© 2026 Shoponzy · Admin dashboard <span>All changes are saved to the database</span></footer>

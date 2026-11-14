@@ -153,6 +153,9 @@ export default function ProductsPage({ query = "", categories = [] }) {
   const [saving, setSaving] = useState(false);
   const [pendingStatusIds, setPendingStatusIds] = useState([]);
   const [deleting, setDeleting] = useState(null);
+  const [selected, setSelected] = useState({}); // id -> name; kept across pages and filters
+  const [bulkConfirm, setBulkConfirm] = useState(false);
+  const [bulkResult, setBulkResult] = useState(null);
   const [badges, setBadges] = useState([]);
   const [badgesError, setBadgesError] = useState("");
   const loadSequence = useRef(0);
@@ -434,6 +437,38 @@ export default function ProductsPage({ query = "", categories = [] }) {
     }
   }
 
+  const selectedIds = Object.keys(selected);
+  const pageIds = items.map((product) => product.id);
+  const allPageSelected = pageIds.length > 0 && pageIds.every((id) => selected[id]);
+  const somePageSelected = pageIds.some((id) => selected[id]);
+  const toggleSelected = (product) => setSelected((current) => {
+    const next = { ...current };
+    if (next[product.id]) delete next[product.id]; else next[product.id] = product.name;
+    return next;
+  });
+  const toggleAllOnPage = () => setSelected((current) => {
+    const next = { ...current };
+    for (const product of items) { if (allPageSelected) delete next[product.id]; else next[product.id] = product.name; }
+    return next;
+  });
+
+  async function confirmBulkDelete() {
+    const ids = selectedIds.slice(0, 200);
+    try {
+      const result = await adminRequest("/admin/products/bulk", { method: "POST", body: JSON.stringify({ ids, action: "delete" }) });
+      const results = result.data.results;
+      const failed = results.filter((r) => !r.ok).map((r) => ({ id: r.id, name: selected[r.id] || r.id, error: r.error }));
+      setBulkResult({
+        deleted: results.filter((r) => r.ok && !r.archived).length,
+        archived: results.filter((r) => r.ok && r.archived).map((r) => selected[r.id] || r.id),
+        failed,
+      });
+      setSelected(Object.fromEntries(failed.map((f) => [f.id, f.name])));
+    } finally {
+      await load();
+    }
+  }
+
   async function toggleStatus(product) {
     const nextStatus = product.status === "active" ? "disabled" : "active";
     setItems((current) => current.map((item) => item.id === product.id ? { ...item, status: nextStatus } : item));
@@ -489,12 +524,25 @@ export default function ProductsPage({ query = "", categories = [] }) {
           </div>
         </div>
         {loadError && <div className="products-form-error" role="alert">{loadError}</div>}
+        {selectedIds.length > 0 && <div className="products-bulk-bar" role="region" aria-label="Bulk actions">
+          <strong>{selectedIds.length} selected</strong>
+          <button type="button" className="products-bulk-delete" onClick={() => { setBulkResult(null); setBulkConfirm(true); }}>Delete selected</button>
+          <button type="button" className="products-bulk-clear" onClick={() => setSelected({})}>Clear selection</button>
+          {selectedIds.length > 200 && <span>Up to 200 are deleted at a time.</span>}
+        </div>}
+        {bulkResult && <div className={`products-bulk-result${bulkResult.failed.length || bulkResult.archived.length ? " has-notes" : ""}`} role="status">
+          <span>Deleted {bulkResult.deleted} product{bulkResult.deleted === 1 ? "" : "s"}.</span>
+          {bulkResult.archived.length > 0 && <span> {bulkResult.archived.length} appear in past orders, so they were archived instead: {bulkResult.archived.join(", ")}.</span>}
+          {bulkResult.failed.length > 0 && <ul>{bulkResult.failed.map((f) => <li key={f.id}><b>{f.name}</b> — {f.error}</li>)}</ul>}
+          <button type="button" aria-label="Dismiss" onClick={() => setBulkResult(null)}>×</button>
+        </div>}
         <div className="table-scroll">
           <table>
-            <thead><tr><th>Product</th><th>SKU</th><th>Category</th><th>Current Price</th><th>Stock</th><th>Status</th><th>Actions</th></tr></thead>
+            <thead><tr><th className="products-select-col"><input type="checkbox" aria-label="Select all products on this page" checked={allPageSelected} ref={(el) => { if (el) el.indeterminate = !allPageSelected && somePageSelected; }} onChange={toggleAllOnPage} disabled={!pageIds.length} /></th><th>Product</th><th>SKU</th><th>Category</th><th>Current Price</th><th>Stock</th><th>Status</th><th>Actions</th></tr></thead>
             <tbody>
               {items.map((product) => (
-                <tr key={product.id}>
+                <tr key={product.id} className={selected[product.id] ? "products-row-selected" : undefined}>
+                  <td className="products-select-col"><input type="checkbox" aria-label={`Select ${product.name}`} checked={Boolean(selected[product.id])} onChange={() => toggleSelected(product)} /></td>
                   <td><div className="products-table-product">{product.images?.[0]?.url || product.colors?.[0]?.featuredImage?.url
                     ? <img src={product.images?.[0]?.url || product.colors[0].featuredImage.url} alt="" />
                     : <span className="products-no-image">□</span>}<span>{product.name}</span></div></td>
@@ -512,7 +560,7 @@ export default function ProductsPage({ query = "", categories = [] }) {
                   </div></td>
                 </tr>
               ))}
-              {!items.length && !loading && <tr><td colSpan={7} className="empty-state">No products found. Click Add Product to create one.</td></tr>}
+              {!items.length && !loading && <tr><td colSpan={8} className="empty-state">No products found. Click Add Product to create one.</td></tr>}
             </tbody>
           </table>
         </div>
@@ -805,6 +853,13 @@ export default function ProductsPage({ query = "", categories = [] }) {
           </section>
         </div>
       )}
+      {bulkConfirm && <DeleteConfirmDialog
+        title={`Delete ${Math.min(selectedIds.length, 200)} product${selectedIds.length === 1 ? "" : "s"}?`}
+        message={`${Object.values(selected).slice(0, 5).map((name) => `“${name}”`).join(", ")}${selectedIds.length > 5 ? ` and ${selectedIds.length - 5} more` : ""} will be deleted. Products that appear in orders are archived instead.`}
+        confirmLabel={`Yes, delete ${Math.min(selectedIds.length, 200)}`}
+        onCancel={() => setBulkConfirm(false)}
+        onConfirm={confirmBulkDelete}
+      />}
       {deleting && <DeleteConfirmDialog title="Delete product?" message={`“${deleting.name}” will be deleted. Products that appear in orders are archived instead.`} onCancel={() => setDeleting(null)} onConfirm={confirmDeleteProduct} />}
     </>
   );
