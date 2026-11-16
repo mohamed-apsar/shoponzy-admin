@@ -2,12 +2,27 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/png" href="/shoponzy-logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + React</title>
+    <meta name="theme-color" content="#f7f8fc" />
+    <title>Shoponzy Admin</title>
+    <style>
+      .startup-fallback { min-height: 100vh; display: grid; place-content: center; justify-items: center; gap: 14px; padding: 24px; color: #29334b; background: #f7f8fc; font: 600 16px/1.5 Inter, system-ui, sans-serif; text-align: center; }
+      .startup-fallback-mark { width: 42px; height: 42px; border: 4px solid #e0e7ff; border-top-color: #4f46e5; border-radius: 50%; animation: startup-spin .8s linear infinite; }
+      @keyframes startup-spin { to { transform: rotate(360deg); } }
+    </style>
+    <script>
+      window.setTimeout(() => {
+        const root = document.getElementById('root');
+        if (root?.querySelector('.startup-fallback')) {
+          root.innerHTML = '<div class="startup-fallback" role="alert"><strong>Shoponzy Admin is taking too long to load.</strong><button type="button" onclick="window.location.reload()" style="padding:10px 18px;border:0;border-radius:8px;color:#fff;background:#4f46e5;font:inherit;font-weight:700;cursor:pointer">Reload admin panel</button></div>';
+        }
+      }, 10000);
+    </script>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root"><div class="startup-fallback" role="status"><span class="startup-fallback-mark" aria-hidden="true"></span><span>Loading Shoponzy Admin…</span></div></div>
+    <noscript><p style="padding:24px;text-align:center">Enable JavaScript to use the Shoponzy Admin panel.</p></noscript>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
