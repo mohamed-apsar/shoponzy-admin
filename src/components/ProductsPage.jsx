@@ -536,7 +536,7 @@ export default function ProductsPage({ query = "", categories = [] }) {
               {sortedCategories.map((item) => <option key={item.id} value={item.id}>{"— ".repeat(item.level - 1)}{item.name}</option>)}
             </select>
             <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} aria-label="Filter status">
-              <option value="">All Statuses</option><option value="active">Enabled</option><option value="disabled">Disabled</option><option value="archived">Archived</option>
+              <option value="">All Statuses</option><option value="active">Enabled</option><option value="disabled">Disabled</option>
             </select>
           </div>
         </div>
