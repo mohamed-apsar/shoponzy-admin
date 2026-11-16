@@ -157,6 +157,23 @@ export default function App() {
     if (authStatus === "authenticated") loadCategories();
   }, [authStatus, loadCategories]);
 
+  const applyPage = useCallback((name) => {
+    setPage(name);
+    setQuery("");
+    setSidebarOpen(false);
+
+    const categoryPages = ["Categories", "Sub categories"];
+    setCategoriesOpen(categoryPages.includes(name));
+    setSiteOpen(manageSitePages.includes(name));
+    setOpsOpen(["Available Stock", "Razorpay Transactions", "Return Requests"].includes(name) ? null : opsGroupOf(name));
+  }, []);
+
+  useEffect(() => {
+    const handlePopState = () => applyPage(pageFromUrl());
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [applyPage]);
+
   async function saveCategory(id, payload) {
     const result = id
       ? await adminRequest(`/admin/categories/${id}`, { method: "PATCH", body: JSON.stringify(payload) })
@@ -228,21 +245,6 @@ export default function App() {
     </div>;
   }
 
-  const applyPage = useCallback((name) => {
-    setPage(name);
-    setQuery("");
-    setSidebarOpen(false);
-
-    const categoryPages = [
-      "Categories",
-      "Sub categories",
-    ];
-
-    setCategoriesOpen(categoryPages.includes(name));
-    setSiteOpen(manageSitePages.includes(name));
-    setOpsOpen(["Available Stock", "Razorpay Transactions", "Return Requests"].includes(name) ? null : opsGroupOf(name));
-  }, []);
-
   function navigate(name) {
     applyPage(name);
     const url = new URL(window.location.href);
@@ -250,12 +252,6 @@ export default function App() {
     else url.searchParams.set("page", name);
     window.history.pushState({ adminPage: name }, "", `${url.pathname}${url.search}${url.hash}`);
   }
-
-  useEffect(() => {
-    const handlePopState = () => applyPage(pageFromUrl());
-    window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
-  }, [applyPage]);
 
   return (
     <ToastProvider>
