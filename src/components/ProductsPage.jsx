@@ -20,6 +20,22 @@ const FLAGS = [
 const SHOP_BY_OCCASION = "shop-by-occasion";
 const PAGE_SIZE = 20;
 
+function categoryDisplayPath(path, categories) {
+  if (!path) return "";
+  const parts = String(path).split("/").filter(Boolean);
+  let parentId = null;
+  return parts.map((part) => {
+    const match = categories.find((category) => category.parentId === parentId
+      && category.slug?.toLowerCase() === part.toLowerCase());
+    if (match) {
+      parentId = match.id;
+      return match.name;
+    }
+    parentId = null;
+    return part;
+  }).join("/");
+}
+
 const ROW_SLOTS = ["image1", "image2", "image3"];
 const emptyRowImages = () => ({ image1: null, image2: null, image3: null });
 const imageRefOf = (image) => (image ? { url: image.url, publicId: image.publicId, alt: image.alt || "" } : null);
@@ -547,7 +563,7 @@ export default function ProductsPage({ query = "", categories = [] }) {
                     ? <img src={product.images?.[0]?.url || product.colors[0].featuredImage.url} alt="" />
                     : <span className="products-no-image">□</span>}<span>{product.name}</span></div></td>
                   <td>{product.sku || product.variants?.[0]?.sku || "—"}</td>
-                  <td>{product.category?.path || product.category?.name || "—"}</td>
+                  <td>{categoryDisplayPath(product.category?.path, categories) || product.category?.name || "—"}</td>
                   <td>{money(product.minPrice)}{product.maxPrice > product.minPrice ? ` – ${money(product.maxPrice)}` : ""}</td>
                   <td>{product.totalStock ?? 0}{product.variants?.length > 1 ? ` (${product.variants.length} variants)` : ""}</td>
                   <td>{product.status === "archived"
