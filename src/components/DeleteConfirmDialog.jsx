@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 /* Consistent, accessible confirmation for destructive actions across the admin panel. */
 /* eslint-disable react/prop-types */
@@ -19,7 +20,7 @@ export default function DeleteConfirmDialog({ title = "Delete item?", message = 
     catch (e) { setError(e.message || errorFallback); setBusy(false); }
   }
 
-  return <div className="delete-confirm-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) onCancel(); }}>
+  return createPortal(<div className="delete-confirm-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) onCancel(); }}>
     <section className="delete-confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="delete-confirm-title" aria-describedby="delete-confirm-message">
       <div className="delete-confirm-icon" aria-hidden="true">!</div>
       <h2 id="delete-confirm-title">{title}</h2>
@@ -31,5 +32,5 @@ export default function DeleteConfirmDialog({ title = "Delete item?", message = 
       <button type="button" className="delete-confirm-submit" disabled={busy || confirmDisabled} onClick={confirm}>{busy ? busyLabel : confirmLabel}</button>
       </div>
     </section>
-  </div>;
+  </div>, document.body);
 }
