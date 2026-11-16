@@ -118,7 +118,6 @@ export default function CouponsPage({ query = "" }) {
     } catch (requestError) {
       setItems((current) => current.map((item) => item.id === c.id ? { ...item, status: c.status } : item));
       setLoadError(requestError.message);
-      throw requestError;
     } finally {
       setPendingStatusIds((current) => current.filter((id) => id !== c.id));
     }

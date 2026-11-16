@@ -158,23 +158,11 @@ function Field({ label, children, hint, className = "" }) {
 }
 
 function Toggle({ label, checked, onChange, description }) {
-  const [confirming, setConfirming] = useState(false);
-  const action = checked ? "Disable" : "Enable";
-  const subject = label.replace(/^(enable|disable)\s+/i, "");
   return (
-    <>
       <div className="ms-toggle-row">
         <div><strong>{label}</strong>{description && <small>{description}</small>}</div>
-        <button type="button" className={`ms-toggle ${checked ? "is-on" : ""}`} role="switch" aria-checked={checked} aria-label={label} onClick={() => setConfirming(true)}><span /></button>
+        <button type="button" className={`ms-toggle ${checked ? "is-on" : ""}`} role="switch" aria-checked={checked} aria-label={label} onClick={() => onChange(!checked)}><span /></button>
       </div>
-      {confirming && <DeleteConfirmDialog
-        title={`${action} ${subject}?`}
-        message={`${subject} will be ${checked ? "disabled" : "enabled"}.`}
-        confirmLabel={`Yes, ${action}`}
-        onCancel={() => setConfirming(false)}
-        onConfirm={async () => { await onChange(!checked); }}
-      />}
-    </>
   );
 }
 

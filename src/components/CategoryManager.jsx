@@ -36,7 +36,6 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
   const [comingSoonOverrides, setComingSoonOverrides] = useState({});
   const [pendingComingSoonIds, setPendingComingSoonIds] = useState([]);
   const [pendingStatusIds, setPendingStatusIds] = useState([]);
-  const [pendingToggleCategory, setPendingToggleCategory] = useState(null);
   const [deleting, setDeleting] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
   const [bulkConfirm, setBulkConfirm] = useState(false);
@@ -445,7 +444,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
                       aria-label={`${item.status === "enabled" ? "Disable" : "Enable"} ${item.name}`}
                       title={`${item.status === "enabled" ? "Disable" : "Enable"} ${item.name}`}
                       className={`cm-status-toggle ${item.status}`}
-                      onClick={() => setPendingToggleCategory(item)}
+                      onClick={() => toggleStatus(item)}
                       disabled={loading || pendingStatusIds.includes(item.id)}
                     >
                       <span className="cm-toggle-track" aria-hidden="true"><span /></span>
@@ -597,13 +596,6 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
         confirmLabel={`Yes, delete ${selectedIds.length}`}
         onCancel={() => setBulkConfirm(false)}
         onConfirm={confirmBulkDelete}
-      />}
-      {pendingToggleCategory && <DeleteConfirmDialog
-        title={`${pendingToggleCategory.status === "enabled" ? "Disable" : "Enable"} ${pendingToggleCategory.name}?`}
-        message={`${pendingToggleCategory.name} will be ${pendingToggleCategory.status === "enabled" ? "disabled" : "enabled"}.`}
-        confirmLabel={pendingToggleCategory.status === "enabled" ? "Yes, Disable" : "Yes, Enable"}
-        onCancel={() => setPendingToggleCategory(null)}
-        onConfirm={async () => { await toggleStatus(pendingToggleCategory); }}
       />}
       {deleting && <DeleteConfirmDialog title={`Delete ${config.singular}?`} message={`“${deleting.name}” will be permanently deleted.`} warning={deleteBlockReason(deleting)} confirmDisabled={Boolean(deleteBlockReason(deleting))} onCancel={() => setDeleting(null)} onConfirm={confirmDelete} />}
     </div>
