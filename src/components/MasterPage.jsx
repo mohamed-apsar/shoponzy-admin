@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { adminRequest } from "../api/adminApi";
 import { PageHeading } from "./ops/OpsKit";
+import DeleteConfirmDialog from "./DeleteConfirmDialog";
 
 export default function MasterPage() {
   const [badges, setBadges] = useState([]);
@@ -9,6 +10,7 @@ export default function MasterPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [badgeToRemove, setBadgeToRemove] = useState(null);
 
   async function load() {
     setLoading(true);
@@ -25,20 +27,20 @@ export default function MasterPage() {
 
   useEffect(() => { load(); }, []);
 
-  async function saveList(next) {
+  async function saveList(next, clearAssigned = false) {
     setSaving(true);
     setError("");
     setSuccess("");
     try {
       const result = await adminRequest("/admin/product-badges", {
         method: "PUT",
-        body: JSON.stringify({ badges: next }),
+        body: JSON.stringify({ badges: next, clearAssigned }),
       });
       setBadges(result.data.badges || []);
-      return true;
+      return { ok: true, clearedProducts: result.data.clearedProducts || 0 };
     } catch (requestError) {
       setError(requestError.message);
-      return false;
+      return { ok: false, clearedProducts: 0 };
     } finally {
       setSaving(false);
     }
@@ -52,14 +54,20 @@ export default function MasterPage() {
     if (!value) return setError("Enter a badge name.");
     if (badges.some((badge) => badge.toLowerCase() === value.toLowerCase())) return setError("That badge already exists.");
     if (badges.length >= 30) return setError("You can create up to 30 badges.");
-    if (await saveList([...badges, value])) {
+    if ((await saveList([...badges, value])).ok) {
       setName("");
       setSuccess(`“${value}” is ready to use on products.`);
     }
   }
 
   async function removeBadge(value) {
-    if (await saveList(badges.filter((badge) => badge !== value))) setSuccess(`“${value}” was removed.`);
+    const result = await saveList(badges.filter((badge) => badge !== value), true);
+    if (result.ok) {
+      setBadgeToRemove(null);
+      setSuccess(`“${value}” was removed${result.clearedProducts ? ` from ${result.clearedProducts} product(s)` : ""}.`);
+    } else {
+      throw new Error("The badge could not be removed. Please try again.");
+    }
   }
 
   return <>
@@ -80,10 +88,18 @@ export default function MasterPage() {
         <div style={{ display: "grid", gap: 10 }}>
           {badges.map((badge) => <div key={badge} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "12px 14px", border: "1px solid var(--shoponzy-border, #e5e7eb)", borderRadius: 10, background: "#fff" }}>
             <span className="ops-badge indigo">{badge}</span>
-            <button type="button" className="table-action danger" onClick={() => removeBadge(badge)} disabled={saving} aria-label={`Remove ${badge} badge`}>Remove</button>
+            <button type="button" className="table-action danger" onClick={() => setBadgeToRemove(badge)} disabled={saving} aria-label={`Remove ${badge} badge`}>Remove</button>
           </div>)}
         </div>
       ) : <div className="ops-empty"><strong>No badges yet</strong><p>Create a badge to add it to products.</p></div>}
     </section>
+    {badgeToRemove && <DeleteConfirmDialog
+      title={`Remove “${badgeToRemove}” badge?`}
+      message="This removes the badge from the list and clears it from any products currently using it."
+      confirmLabel="Yes, Remove Badge"
+      busyLabel="Removing…"
+      onCancel={() => setBadgeToRemove(null)}
+      onConfirm={() => removeBadge(badgeToRemove)}
+    />}
   </>;
 }
