@@ -6,6 +6,7 @@ import { money } from "../utils/format";
 import EditIcon from "./EditIcon";
 import StatusToggle from "./StatusToggle";
 import DeleteConfirmDialog from "./DeleteConfirmDialog";
+import CancelConfirmButton from "./CancelConfirmButton";
 
 /* eslint-disable react/prop-types */
 const LEVEL_LABELS = ["Select Category *", "Select Sub Category"];
@@ -862,7 +863,7 @@ export default function ProductsPage({ query = "", categories = [] }) {
               </div>
               <p className="form-hint">Products are saved to the database and appear on the storefront when enabled.</p>
               <div className="modal-actions">
-                <button type="button" className="secondary-button" onClick={() => setShowForm(false)} disabled={saving}>Cancel</button>
+                <CancelConfirmButton className="secondary-button" onCancel={() => setShowForm(false)} disabled={saving} />
                 <button type="submit" className="primary-button" disabled={saving}>{saving ? "Saving…" : editingId ? "Save Changes" : "Submit"}</button>
               </div>
             </form>

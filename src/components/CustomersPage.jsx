@@ -3,6 +3,7 @@ import { adminRequest } from "../api/adminApi";
 import { money, shortDate } from "../utils/format";
 import { OrdersTable } from "./OrdersPage";
 import { ExportButton } from "./ops/OpsKit";
+import DeleteConfirmDialog from "./DeleteConfirmDialog";
 
 /* eslint-disable react/prop-types */
 const PAGE_SIZE = 20;
@@ -11,13 +12,13 @@ function CustomerDetail({ id, onClose, onChanged }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [confirmingStatus, setConfirmingStatus] = useState(false);
 
   const load = useCallback(() => adminRequest(`/admin/users/${id}`).then((r) => setData(r.data)).catch((e) => setError(e.message)), [id]);
   useEffect(() => { load(); }, [load]);
 
   async function toggle() {
     const next = data.user.status === "active" ? "disabled" : "active";
-    if (next === "disabled" && !window.confirm("Disable this customer? They are signed out everywhere immediately.")) return;
     setBusy(true);
     try {
       await adminRequest(`/admin/users/${id}/status`, { method: "PATCH", body: JSON.stringify({ status: next }) });
@@ -25,6 +26,7 @@ function CustomerDetail({ id, onClose, onChanged }) {
       onChanged();
     } catch (requestError) {
       setError(requestError.message);
+      throw requestError;
     } finally {
       setBusy(false);
     }
@@ -58,11 +60,18 @@ function CustomerDetail({ id, onClose, onChanged }) {
             <OrdersTable items={data.orders} />
             <div className="modal-actions">
               <button type="button" className="secondary-button" onClick={onClose}>Close</button>
-              <button type="button" className="primary-button" disabled={busy} onClick={toggle}>{user.status === "active" ? "Disable customer" : "Enable customer"}</button>
+              <button type="button" className="primary-button" disabled={busy} onClick={() => setConfirmingStatus(true)}>{user.status === "active" ? "Disable customer" : "Enable customer"}</button>
             </div>
           </>
         )}
       </section>
+      {user && confirmingStatus && <DeleteConfirmDialog
+        title={`${user.status === "active" ? "Disable" : "Enable"} customer?`}
+        message={user.status === "active" ? "This customer will be signed out everywhere immediately." : "This customer will be able to sign in again."}
+        confirmLabel={user.status === "active" ? "Yes, Disable" : "Yes, Enable"}
+        onCancel={() => setConfirmingStatus(false)}
+        onConfirm={toggle}
+      />}
     </div>
   );
 }

@@ -5,6 +5,7 @@ import EditIcon from "./EditIcon";
 import StatusToggle from "./StatusToggle";
 import DeleteConfirmDialog from "./DeleteConfirmDialog";
 import { Pagination } from "./ops/OpsKit";
+import CancelConfirmButton from "./CancelConfirmButton";
 
 /* eslint-disable react/prop-types */
 const emptyCoupon = () => ({
@@ -220,7 +221,7 @@ export default function CouponsPage({ query = "" }) {
               </div>
               <p className="form-hint">Per-customer limits are counted by account and by the phone number used at checkout.</p>
               <div className="modal-actions">
-                <button type="button" className="secondary-button" onClick={() => setShowForm(false)} disabled={saving}>Cancel</button>
+                <CancelConfirmButton className="secondary-button" onCancel={() => setShowForm(false)} disabled={saving} />
                 <button type="submit" className="primary-button" disabled={saving}>{saving ? "Saving…" : editingId ? "Save Changes" : "Add Coupon"}</button>
               </div>
             </form>

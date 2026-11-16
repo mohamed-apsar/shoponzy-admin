@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { adminRequest } from "../api/adminApi";
 import { useAdminAuth } from "../context/AdminAuthContext";
 import DeleteConfirmDialog from "./DeleteConfirmDialog";
+import CancelConfirmButton from "./CancelConfirmButton";
 import { dateTime, money, titleCase } from "../utils/format";
 import {
   Badge, ConfirmDialog, ErrorBanner, ExportButton, Field, Modal, MoreMenu, PageHeading, Pagination, StatCards, TableBody, Thumb,
@@ -84,7 +85,7 @@ function CampaignEditor({ type, campaign, onClose, onSaved }) {
 
   return (
     <Modal wide title={campaign ? `Edit: ${campaign.title}` : t.label} eyebrow="NOTIFICATIONS" onClose={onClose} busy={busy} footer={<>
-      <button type="button" className="secondary-button" onClick={onClose} disabled={busy}>Cancel</button>
+      <CancelConfirmButton className="secondary-button" onCancel={onClose} disabled={busy} />
       <button type="button" className="primary-button" disabled={!valid || busy} onClick={save}>{busy ? "Saving…" : "Save draft"}</button>
     </>}>
       <p className="ops-confirm-text">{t.hint} It is emailed to newsletter subscribers only — people who opted in — with an unsubscribe link.</p>

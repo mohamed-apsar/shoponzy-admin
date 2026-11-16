@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { adminDownload, adminRequest } from "../api/adminApi";
 import { dateTime, titleCase } from "../utils/format";
+import CancelConfirmButton from "./CancelConfirmButton";
 import {
   Badge, ConfirmDialog, ErrorBanner, ExportButton, Field, Modal, MoreMenu, PageHeading, Pagination, StatCards, TableBody, Thumb,
   dayEnd, dayStart, qs, useAdminData, useToast,
@@ -62,7 +63,7 @@ function AdjustStockModal({ row, onClose, onSaved }) {
 
   return (
     <Modal title="Update stock" eyebrow="INVENTORY" onClose={onClose} busy={busy} footer={<>
-      <button type="button" className="secondary-button" onClick={onClose} disabled={busy}>Cancel</button>
+      <CancelConfirmButton className="secondary-button" onCancel={onClose} disabled={busy} />
       <button type="button" className="primary-button" disabled={!valid || n === row.stock || busy} onClick={save}>Update stock</button>
     </>}>
       <div className="ops-product" style={{ marginBottom: 14 }}><Thumb src={row.image} /><div><strong>{row.name}</strong><small>{[variantText(row), row.sku].filter(Boolean).join(" · ") || "Single variant"}</small></div></div>

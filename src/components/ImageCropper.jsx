@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import CancelConfirmButton from "./CancelConfirmButton";
 import "./ImageCropper.css";
 
  
@@ -232,7 +233,7 @@ export default function ImageCropper({ source, title, aspect, output, onCancel, 
           </div>
         </div>
         <div className="ic-actions">
-          <button type="button" className="cm-secondary-btn" onClick={onCancel} disabled={busy}>Cancel</button>
+          <CancelConfirmButton className="cm-secondary-btn" onCancel={onCancel} disabled={busy} title="Cancel image edit?" message="Your image adjustments will be discarded." confirmLabel="Yes, Cancel" />
           <button type="button" className="cm-primary-btn" onClick={confirm} disabled={!img || busy}>{busy ? "Uploading…" : "Crop & upload"}</button>
         </div>
       </section>

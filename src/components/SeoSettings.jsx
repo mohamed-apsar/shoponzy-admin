@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { adminRequest, uploadImage } from "../api/adminApi";
 import { API_BASE } from "../api/config";
 import DeleteConfirmDialog from "./DeleteConfirmDialog";
+import CancelConfirmButton from "./CancelConfirmButton";
 import "./SeoSettings.css";
 
 /* eslint-disable react/prop-types */
@@ -407,7 +408,7 @@ export default function SeoSettings() {
             </details>
             <div className="seo-actions">
               <button type="button" className="seo-button secondary" onClick={resetDefaultMetaForm} disabled={saving}>Reset</button>
-              <button type="button" className="seo-button secondary" onClick={() => { resetDefaultMetaForm(); setEditingDefaultMeta(false); }}>Cancel</button>
+              <CancelConfirmButton className="seo-button secondary" onCancel={() => { resetDefaultMetaForm(); setEditingDefaultMeta(false); }} />
               <button type="button" className="seo-button primary" onClick={async () => {
                 const saved = await saveSettings({ title: settings.title, description: settings.description, keywords: settings.keywords, canonical: settings.canonical, ogTitle: settings.ogTitle, ogDescription: settings.ogDescription, shareImage: settings.shareImage, robotsMeta: settings.robotsMeta });
                 if (saved) setEditingDefaultMeta(false);

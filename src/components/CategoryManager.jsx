@@ -7,6 +7,7 @@ import StatusToggle from "./StatusToggle";
 import CroppedImageField from "./CroppedImageField";
 import ImageCropper from "./ImageCropper";
 import { IMAGE_SIZES, cropHint } from "../utils/imageSizes";
+import CancelConfirmButton from "./CancelConfirmButton";
 
 /* eslint-disable react/prop-types */
 const LEVELS = [
@@ -35,6 +36,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
   const [comingSoonOverrides, setComingSoonOverrides] = useState({});
   const [pendingComingSoonIds, setPendingComingSoonIds] = useState([]);
   const [pendingStatusIds, setPendingStatusIds] = useState([]);
+  const [pendingToggleCategory, setPendingToggleCategory] = useState(null);
   const [deleting, setDeleting] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
   const [bulkConfirm, setBulkConfirm] = useState(false);
@@ -443,7 +445,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
                       aria-label={`${item.status === "enabled" ? "Disable" : "Enable"} ${item.name}`}
                       title={`${item.status === "enabled" ? "Disable" : "Enable"} ${item.name}`}
                       className={`cm-status-toggle ${item.status}`}
-                      onClick={() => toggleStatus(item)}
+                      onClick={() => setPendingToggleCategory(item)}
                       disabled={loading || pendingStatusIds.includes(item.id)}
                     >
                       <span className="cm-toggle-track" aria-hidden="true"><span /></span>
@@ -585,7 +587,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
             </>}
             <div className="cm-form-group"><label>Status</label><select value={form.status} onChange={(e) => setForm((previous) => ({ ...previous, status: e.target.value }))}><option value="enabled">Enabled</option><option value="disabled">Disabled</option></select></div>
             {error && <p className="cm-error">{error}</p>}
-            <div className="cm-modal-actions"><button type="button" className="cm-secondary-btn" onClick={() => setShowForm(false)} disabled={saving}>Cancel</button><button type="submit" className="cm-primary-btn" disabled={saving || uploadsInFlight > 0}>{saving ? "Saving…" : uploadsInFlight ? "Uploading…" : "Submit"}</button></div>
+            <div className="cm-modal-actions"><CancelConfirmButton className="cm-secondary-btn" onCancel={() => setShowForm(false)} disabled={saving} /><button type="submit" className="cm-primary-btn" disabled={saving || uploadsInFlight > 0}>{saving ? "Saving…" : uploadsInFlight ? "Uploading…" : "Submit"}</button></div>
           </form>
         </section>
       </div>}
@@ -595,6 +597,13 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
         confirmLabel={`Yes, delete ${selectedIds.length}`}
         onCancel={() => setBulkConfirm(false)}
         onConfirm={confirmBulkDelete}
+      />}
+      {pendingToggleCategory && <DeleteConfirmDialog
+        title={`${pendingToggleCategory.status === "enabled" ? "Disable" : "Enable"} ${pendingToggleCategory.name}?`}
+        message={`${pendingToggleCategory.name} will be ${pendingToggleCategory.status === "enabled" ? "disabled" : "enabled"}.`}
+        confirmLabel={pendingToggleCategory.status === "enabled" ? "Yes, Disable" : "Yes, Enable"}
+        onCancel={() => setPendingToggleCategory(null)}
+        onConfirm={async () => { await toggleStatus(pendingToggleCategory); }}
       />}
       {deleting && <DeleteConfirmDialog title={`Delete ${config.singular}?`} message={`“${deleting.name}” will be permanently deleted.`} warning={deleteBlockReason(deleting)} confirmDisabled={Boolean(deleteBlockReason(deleting))} onCancel={() => setDeleting(null)} onConfirm={confirmDelete} />}
     </div>

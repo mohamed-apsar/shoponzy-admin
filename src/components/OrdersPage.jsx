@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { adminRequest } from "../api/adminApi";
 import { API_BASE } from "../api/config";
 import { dateTime, money, shortDate, titleCase } from "../utils/format";
+import DeleteConfirmDialog from "./DeleteConfirmDialog";
 
 /* eslint-disable react/prop-types */
 const STATUS_CLASS = {
@@ -134,6 +135,7 @@ function OrderDetail({ id, onClose, onChanged }) {
   const [busy, setBusy] = useState(false);
   const [fulfilment, setFulfilment] = useState({ courier: "", trackingNumber: "", trackingUrl: "" });
   const [note, setNote] = useState("");
+  const [confirmingCancel, setConfirmingCancel] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -166,8 +168,8 @@ function OrderDetail({ id, onClose, onChanged }) {
 
   function changeStatus(status) {
     if (status === "cancelled") {
-      if (!window.confirm("Cancel this order? Reserved stock is released.")) return;
-      return run(() => adminRequest(`/admin/orders/${id}/cancel`, { method: "POST", body: JSON.stringify({ reason: note.trim() || undefined }) }));
+      setConfirmingCancel(true);
+      return;
     }
     const body = { status, ...(note.trim() ? { note: note.trim() } : {}) };
     if (status === "shipped") {
@@ -250,6 +252,26 @@ function OrderDetail({ id, onClose, onChanged }) {
           </>
         )}
       </section>
+      {confirmingCancel && <DeleteConfirmDialog
+        title="Cancel this order?"
+        message="The order will be cancelled and its reserved stock released."
+        confirmLabel="Yes, Cancel"
+        errorFallback="The order could not be cancelled."
+        onCancel={() => setConfirmingCancel(false)}
+        onConfirm={async () => {
+          setBusy(true);
+          try {
+            await adminRequest(`/admin/orders/${id}/cancel`, { method: "POST", body: JSON.stringify({ reason: note.trim() || undefined }) });
+            await load();
+            onChanged();
+          } catch (requestError) {
+            setError(requestError.message);
+            throw requestError;
+          } finally {
+            setBusy(false);
+          }
+        }}
+      />}
     </div>
   );
 }
@@ -263,6 +285,7 @@ export default function OrdersPage({ query = "" }) {
   const [error, setError] = useState("");
   const [openId, setOpenId] = useState(null);
   const [busyOrderId, setBusyOrderId] = useState(null);
+  const [pendingCancelOrder, setPendingCancelOrder] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -287,10 +310,10 @@ export default function OrdersPage({ query = "" }) {
   }, [load]);
   useEffect(() => { setPage(1); }, [query, status]);
 
-  async function changeTableStatus(order, nextStatus) {
+  async function changeTableStatus(order, nextStatus, confirmed = false) {
     if (nextStatus === order.status) return;
-    if (nextStatus === "cancelled" && !window.confirm(`Cancel order #${order.orderNumber}?`)) {
-      await load();
+    if (nextStatus === "cancelled" && !confirmed) {
+      setPendingCancelOrder(order);
       return;
     }
     setBusyOrderId(order.id);
@@ -338,6 +361,14 @@ export default function OrdersPage({ query = "" }) {
           </div>
         )}
       </section>
+      {pendingCancelOrder && <DeleteConfirmDialog
+        title={`Cancel order #${pendingCancelOrder.orderNumber}?`}
+        message="This order will be cancelled and its reserved stock released."
+        confirmLabel="Yes, Cancel"
+        errorFallback="The order could not be cancelled."
+        onCancel={() => setPendingCancelOrder(null)}
+        onConfirm={async () => { await changeTableStatus(pendingCancelOrder, "cancelled", true); }}
+      />}
       {openId && <OrderDetail id={openId} onClose={() => setOpenId(null)} onChanged={load} />}
     </>
   );

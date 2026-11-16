@@ -6,6 +6,7 @@ import EditIcon from "./EditIcon";
 import StatusToggle from "./StatusToggle";
 import DeleteConfirmDialog from "./DeleteConfirmDialog";
 import ImageCropper from "./ImageCropper";
+import CancelConfirmButton from "./CancelConfirmButton";
 import { IMAGE_SIZES, cropHint } from "../utils/imageSizes";
 
 /* eslint-disable react/prop-types */
@@ -157,11 +158,23 @@ function Field({ label, children, hint, className = "" }) {
 }
 
 function Toggle({ label, checked, onChange, description }) {
+  const [confirming, setConfirming] = useState(false);
+  const action = checked ? "Disable" : "Enable";
+  const subject = label.replace(/^(enable|disable)\s+/i, "");
   return (
-    <div className="ms-toggle-row">
-      <div><strong>{label}</strong>{description && <small>{description}</small>}</div>
-      <button type="button" className={`ms-toggle ${checked ? "is-on" : ""}`} role="switch" aria-checked={checked} aria-label={label} onClick={() => onChange(!checked)}><span /></button>
-    </div>
+    <>
+      <div className="ms-toggle-row">
+        <div><strong>{label}</strong>{description && <small>{description}</small>}</div>
+        <button type="button" className={`ms-toggle ${checked ? "is-on" : ""}`} role="switch" aria-checked={checked} aria-label={label} onClick={() => setConfirming(true)}><span /></button>
+      </div>
+      {confirming && <DeleteConfirmDialog
+        title={`${action} ${subject}?`}
+        message={`${subject} will be ${checked ? "disabled" : "enabled"}.`}
+        confirmLabel={`Yes, ${action}`}
+        onCancel={() => setConfirming(false)}
+        onConfirm={async () => { await onChange(!checked); }}
+      />}
+    </>
   );
 }
 
@@ -361,7 +374,7 @@ function RecordModal({ kind, record, categories = [], onClose, onSave }) {
               <Toggle label="Section active" checked={values.active} onChange={(value) => update("active", value)} />
             </>}
           </div>
-          <div className="ms-form-actions"><button type="button" className="ms-button ms-button-secondary" onClick={onClose}>Cancel</button><button type="submit" className="ms-button ms-button-primary" disabled={saving}>{saving ? "Saving…" : `Save ${title}`}</button></div>
+        <div className="ms-form-actions"><CancelConfirmButton className="ms-button ms-button-secondary" onCancel={onClose} /><button type="submit" className="ms-button ms-button-primary" disabled={saving}>{saving ? "Saving…" : `Save ${title}`}</button></div>
         </form>
       </section>
     </div>

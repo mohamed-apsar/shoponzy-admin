@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { adminRequest } from "../api/adminApi";
 import DeleteConfirmDialog from "./DeleteConfirmDialog";
+import CancelConfirmButton from "./CancelConfirmButton";
 import { dateTime } from "../utils/format";
 import {
   Badge, ErrorBanner, ExportButton, Field, Modal, MoreMenu, PageHeading, Pagination, StatCards, TableBody,
@@ -32,7 +33,7 @@ function FaqEditor({ faq, categories, onClose, onSaved }) {
   }
   return (
     <Modal title={faq ? "Edit FAQ" : "Add FAQ"} eyebrow="FAQ MANAGEMENT" onClose={onClose} busy={busy} footer={<>
-      <button type="button" className="secondary-button" onClick={onClose} disabled={busy}>Cancel</button>
+      <CancelConfirmButton className="secondary-button" onCancel={onClose} disabled={busy} />
       <button type="button" className="primary-button" disabled={!valid || busy} onClick={save}>{busy ? "Saving…" : faq ? "Save changes" : "Add FAQ"}</button>
     </>}>
       <div className="ops-form">

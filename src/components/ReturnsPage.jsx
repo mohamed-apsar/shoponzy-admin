@@ -213,7 +213,15 @@ function ReturnDetail({ id, onClose, onChanged }) {
       </>}
       {action?.type === "approve" && <ApproveDialog rr={rr} onClose={() => setAction(null)} onDone={done} />}
       {action?.type === "reject" && <RejectDialog rr={rr} onClose={() => setAction(null)} onDone={done} />}
-      {action?.type === "status" && <StatusDialog rr={rr} status={action.status} onClose={() => setAction(null)} onDone={done} />}
+      {action?.type === "status" && action.status === "cancelled" && <DeleteConfirmDialog
+        title={`Cancel return ${rr.returnNumber}?`}
+        message="The return request will be closed without a refund."
+        confirmLabel="Yes, Cancel"
+        errorFallback="The return request could not be cancelled."
+        onCancel={() => setAction(null)}
+        onConfirm={async () => { await adminRequest(`/admin/returns/${rr.id}/status`, { method: "POST", body: JSON.stringify({ status: "cancelled" }) }); toast(`${rr.returnNumber}: Cancelled.`); done(); }}
+      />}
+      {action?.type === "status" && action.status !== "cancelled" && <StatusDialog rr={rr} status={action.status} onClose={() => setAction(null)} onDone={done} />}
       {action?.type === "inspect" && <InspectDialog rr={rr} onClose={() => setAction(null)} onDone={done} />}
       {action?.type === "refund" && <RefundDialog rr={rr} onClose={() => setAction(null)} onDone={done} />}
     </Modal>
