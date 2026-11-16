@@ -97,9 +97,21 @@ const manageSitePages = [
   "Maintenance Mode",
 ];
 
+const navigablePages = new Set([
+  "Dashboard", "Manage Products", "Manage Orders", "Master", "Customer List", "Coupons", "Shipping",
+  "FAQ Management", "SEO Settings", "Categories", "Sub categories",
+  ...manageSitePages,
+  ...Object.values(opsGroups).flatMap((pages) => Object.keys(pages)),
+]);
+
+function pageFromUrl() {
+  const requested = new URLSearchParams(window.location.search).get("page");
+  return navigablePages.has(requested) ? requested : "Dashboard";
+}
+
 export default function App() {
   const { user, status: authStatus, error: authError, setError: setAuthError, signIn, signOut, updateUser } = useAdminAuth();
-  const [page, setPage] = useState("Dashboard");
+  const [page, setPage] = useState(pageFromUrl);
   const [query, setQuery] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [categories, setCategories] = useState([]);
@@ -216,7 +228,7 @@ export default function App() {
     </div>;
   }
 
-  function navigate(name) {
+  const applyPage = useCallback((name) => {
     setPage(name);
     setQuery("");
     setSidebarOpen(false);
@@ -229,7 +241,21 @@ export default function App() {
     setCategoriesOpen(categoryPages.includes(name));
     setSiteOpen(manageSitePages.includes(name));
     setOpsOpen(["Available Stock", "Razorpay Transactions", "Return Requests"].includes(name) ? null : opsGroupOf(name));
+  }, []);
+
+  function navigate(name) {
+    applyPage(name);
+    const url = new URL(window.location.href);
+    if (name === "Dashboard") url.searchParams.delete("page");
+    else url.searchParams.set("page", name);
+    window.history.pushState({ adminPage: name }, "", `${url.pathname}${url.search}${url.hash}`);
   }
+
+  useEffect(() => {
+    const handlePopState = () => applyPage(pageFromUrl());
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [applyPage]);
 
   return (
     <ToastProvider>
