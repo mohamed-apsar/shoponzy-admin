@@ -1,0 +1,20 @@
+.stock-notifications { position: relative; }
+.stock-notifications .stock-notifications-trigger { display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 40px; cursor: pointer; }
+.stock-notifications-count, .stock-notifications-warning { position: absolute; top: -3px; right: -7px; min-width: 19px; height: 19px; padding: 0 4px; box-sizing: border-box; border: 2px solid var(--surface, #fff); border-radius: 12px; background: #c74321; color: #fff; font: 700 10px/15px system-ui; }
+.stock-notifications-warning { left: -5px; right: auto; }
+.stock-notifications-panel { position: absolute; right: 0; top: calc(100% + 14px); z-index: 100; width: min(390px, calc(100vw - 32px)); max-height: calc(100dvh - 110px); overflow-y: auto; background: var(--surface, #fff); color: var(--text, #263451); border: 1px solid var(--border, #e2e7f0); border-radius: 16px; box-shadow: 0 16px 48px #12243c26; }
+.stock-notifications-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 20px; border-bottom: 1px solid var(--border, #e2e7f0); }
+.stock-notifications-heading p { margin: 6px 0 0; font-size: 12px; color: var(--muted, #66748e); }
+.stock-notifications-heading button { background: transparent; color: inherit; border: 0; font-size: 24px; cursor: pointer; }
+.stock-notifications-message { margin: 0; padding: 22px; font-size: 14px; line-height: 1.6; }
+.stock-notifications-summary { margin: 0; padding: 14px 20px; background: #fff7ed; color: #9a3412; font-size: 13px; font-weight: 650; }
+.stock-notifications-panel ul { padding: 0; margin: 0; list-style: none; }
+.stock-notifications-panel li { display: flex; justify-content: space-between; gap: 16px; padding: 16px 20px; border-bottom: 1px solid var(--border, #e2e7f0); }
+.stock-notifications-panel li > div { min-width: 0; }
+.stock-notifications-panel li strong { display: block; font-size: 14px; overflow-wrap: anywhere; }
+.stock-notifications-panel li span { display: block; margin-top: 5px; color: var(--muted, #66748e); font-size: 12px; }
+.stock-notifications-level { flex-shrink: 0; text-align: right; }
+.stock-notifications-level strong { color: #b45309; }
+.stock-notifications-view { width: 100%; padding: 17px; border: 0; background: transparent; color: #5145ec; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.stock-notifications button:focus-visible { outline: 2px solid #5145ec; outline-offset: 2px; }
+@media (max-width: 560px) { .stock-notifications-panel { position: fixed; top: 76px; right: 16px; } }

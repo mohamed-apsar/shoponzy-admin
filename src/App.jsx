@@ -16,6 +16,7 @@ import TransactionsPage from "./components/TransactionsPage";
 import ReturnsPage from "./components/ReturnsPage";
 import FaqPage from "./components/FaqPage";
 import NotificationsPage from "./components/NotificationsPage";
+import StockNotifications from "./components/StockNotifications";
 import SupportPage from "./components/SupportPage";
 import { ToastProvider } from "./components/ops/OpsKit";
 import DeleteConfirmDialog from "./components/DeleteConfirmDialog";
@@ -366,7 +367,7 @@ export default function App() {
           <div className="breadcrumb">Shoponzy <span>/</span> <strong>{page}</strong></div>
           <div className="topbar-actions">
             <label className="search-box"><span>⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search products or orders..." /></label>
-            <button className="icon-button" aria-label="Notifications" onClick={() => alert("No new notifications.")}>♧<i /></button>
+            <StockNotifications page={page} onNavigate={navigate} />
             <div className="top-avatar">SA</div>
           </div>
         </header>

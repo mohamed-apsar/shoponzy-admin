@@ -48,7 +48,11 @@ export async function adminRequest(path, options = {}) {
     await refreshAdminSession();
     response = await send(path, options);
   }
-  return decode(response);
+  const body = await decode(response);
+  if (!["GET", "HEAD", "OPTIONS"].includes((options.method || "GET").toUpperCase()) && !path.includes("/auth/")) {
+    window.dispatchEvent(new Event("admin:data-changed"));
+  }
+  return body;
 }
 
 /* Downloads a file (e.g. a CSV export) with the admin session, refreshing it once if it expired. */
