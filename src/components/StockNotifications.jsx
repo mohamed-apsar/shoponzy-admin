@@ -95,6 +95,7 @@ export default function StockNotifications({ page, onNavigate }) {
         <button type="button" className="stock-notifications-close" aria-label="Close notifications" onClick={() => { setOpen(false); buttonRef.current?.focus(); }}>?</button>
       </div>
       {!loading && <div className="order-action-alerts">
+        <button type="button" className="order-action-reviewed" onClick={() => openAction("Order & Return Alerts")}>View order & return alerts</button>
         {actionError && <p role="alert">{actionError} <button type="button" className="order-action-reviewed" onClick={refresh}>Try again</button></p>}
         <h3>Cancelled orders ({actions.cancelledCount})</h3>
         {!actionError && actions.cancellations.length === 0 && <p>No cancellations awaiting review.</p>}

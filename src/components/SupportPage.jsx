@@ -11,8 +11,8 @@ const PAGE_SIZE = 20;
 // Stored "read" is shown as "Open" (kept for existing data).
 const STATUS = { new: ["New", "requested"], read: ["Open", "pickup_scheduled"], replied: ["Replied", "approved"], closed: ["Closed", "inactive"] };
 const TOPICS = [
-  "Order question", "Return / exchange", "Product question", "Something else",
-  "Website problem", "Order issue", "Payment issue", "Delivery issue", "Other",
+  "Order question", "Return / Refund", "Product question", "Something else",
+  "Order issue", "Payment issue", "Delivery issue", "Other",
 ];
 const StatusBadge = ({ status }) => <Badge value={STATUS[status]?.[1] || "inactive"} label={STATUS[status]?.[0] || status} />;
 const waLink = (phone) => `https://wa.me/91${String(phone).replace(/\D/g, "").slice(-10)}`;

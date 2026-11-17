@@ -17,6 +17,7 @@ import ReturnsPage from "./components/ReturnsPage";
 import FaqPage from "./components/FaqPage";
 import NotificationsPage from "./components/NotificationsPage";
 import StockNotifications from "./components/StockNotifications";
+import OrderActionNotifications from "./components/OrderActionNotifications";
 import SupportPage from "./components/SupportPage";
 import { ToastProvider } from "./components/ops/OpsKit";
 import DeleteConfirmDialog from "./components/DeleteConfirmDialog";
@@ -54,6 +55,7 @@ const opsGroups = {
   },
   "Returns & Refunds": { "Return Requests": "requests" },
   "Notifications": {
+    "Order & Return Alerts": "actions",
     "New Arrivals": "arrivals", "Offers & Discounts": "offers", "Sales & Promotions": "sales",
     "Email Notifications": "email", "Notification History": "history",
   },
@@ -381,7 +383,7 @@ export default function App() {
           {opsGroupOf(page) === "Transactions & Payments" && <TransactionsPage view={opsGroups["Transactions & Payments"][page]} />}
           {opsGroupOf(page) === "Returns & Refunds" && <ReturnsPage view={opsGroups["Returns & Refunds"][page]} />}
           {page === "FAQ Management" && <FaqPage />}
-          {opsGroupOf(page) === "Notifications" && <NotificationsPage view={opsGroups["Notifications"][page]} />}
+          {opsGroupOf(page) === "Notifications" && (opsGroups["Notifications"][page] === "actions" ? <OrderActionNotifications onNavigate={(target, search = "") => { navigate(target); setQuery(search); }} /> : <NotificationsPage view={opsGroups["Notifications"][page]} />)}
           {opsGroupOf(page) === "Help & Support" && <SupportPage view={opsGroups["Help & Support"][page]} />}
           {page === "Customer List" && <CustomersPage query={query} />}
           {page === "Coupons" && <CouponsPage query={query} />}
