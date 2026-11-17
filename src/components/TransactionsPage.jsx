@@ -365,9 +365,7 @@ export default function TransactionsPage({ view = "razorpay" }) {
     { label: "Total transactions", value: s ? s.totalTransactions.toLocaleString("en-IN") : "" },
     { label: "Successful payments", value: s ? s.successful.toLocaleString("en-IN") : "", tone: "green", note: s?.refundedTransactions ? `${s.refundedTransactions} with refunds` : "captured by Razorpay" },
     { label: "Failed payments", value: s ? s.failed.toLocaleString("en-IN") : "", tone: "red" },
-    { label: "Pending payments", value: s ? s.pending.toLocaleString("en-IN") : "", tone: "amber", note: "checkout opened, not paid" },
     { label: "Total payment amount", value: s ? money(s.totalAmount) : "", tone: "green", note: "received (before refunds)" },
-    { label: "Total refunded", value: s ? money(s.totalRefunded) : "", tone: "slate", note: s?.refundsPending?.count ? `${money(s.refundsPending.amount)} pending at Razorpay` : "confirmed by Razorpay" },
   ];
   const common = { onOpen: setOpenId, refreshKey };
   const [title, description] = VIEW_COPY[view] || VIEW_COPY.razorpay;
