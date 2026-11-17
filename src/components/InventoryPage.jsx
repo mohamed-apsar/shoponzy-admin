@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { adminDownload, adminRequest } from "../api/adminApi";
 import { dateTime, titleCase } from "../utils/format";
 import CancelConfirmButton from "./CancelConfirmButton";
@@ -17,23 +17,6 @@ const ALL_REASONS = { ...Object.fromEntries(REASONS), order: "Order placed", ord
 const reasonLabel = (r) => ALL_REASONS[r] || titleCase(r);
 const variantText = (row) => [row.color, row.size].filter(Boolean).join(" / ");
 const fmt = (n) => Number(n || 0).toLocaleString("en-IN");
-
-function CategorySelect({ categories, value, onChange }) {
-  const sorted = useMemo(() => {
-    const byParent = new Map();
-    for (const c of categories) byParent.set(c.parentId || null, [...(byParent.get(c.parentId || null) || []), c]);
-    const out = [];
-    const walk = (parent, depth) => (byParent.get(parent) || []).forEach((c) => { out.push({ ...c, depth }); walk(c.id, depth + 1); });
-    walk(null, 0);
-    return out;
-  }, [categories]);
-  return (
-    <select value={value} onChange={(e) => onChange(e.target.value)} aria-label="Filter by category">
-      <option value="">All categories</option>
-      {sorted.map((c) => <option key={c.id} value={c.id}>{"  ".repeat(c.depth)}{c.name}</option>)}
-    </select>
-  );
-}
 
 /* ---------- Adjust stock: add / remove / set exact, with a reason and a confirmation step ---------- */
 function AdjustStockModal({ row, onClose, onSaved }) {
@@ -108,17 +91,15 @@ function ThresholdModal({ row, storeThreshold, onClose, onSaved }) {
 }
 
 /* ---------- Stock list (all / low / out) ---------- */
-function StockTable({ stockStatus, categories, onAdjusted, onHistory, onNavigate, storeThreshold, title, description, defaultSort = "stock_low" }) {
-  const [q, setQ] = useState("");
-  const [category, setCategory] = useState("");
+function StockTable({ stockStatus, onAdjusted, onHistory, onNavigate, storeThreshold, title, description, defaultSort = "newest" }) {
   const [status, setStatus] = useState("");
   const [sort, setSort] = useState(defaultSort);
   const [page, setPage] = useState(1);
   const [adjusting, setAdjusting] = useState(null);
   const [threshold, setThreshold] = useState(null);
   const effectiveStatus = stockStatus || status;
-  const path = `/admin/inventory?${qs({ page, limit: PAGE_SIZE, q: q.trim(), category, stockStatus: effectiveStatus, sort })}`;
-  const { data, meta, loading, error, reload } = useAdminData(path, { debounce: q ? 300 : 0 });
+  const path = `/admin/inventory?${qs({ page, limit: PAGE_SIZE, stockStatus: effectiveStatus, sort })}`;
+  const { data, meta, loading, error, reload } = useAdminData(path, { debounce: 0 });
   const rows = data || [];
   const reset = (fn) => (v) => { fn(v); setPage(1); };
   const saved = () => { reload(); onAdjusted(); };
@@ -129,8 +110,6 @@ function StockTable({ stockStatus, categories, onAdjusted, onHistory, onNavigate
         <div><h2>{title || (stockStatus === "low" ? "Low-stock variants" : stockStatus === "out" ? "Out-of-stock variants" : "Stock list")}</h2>
           <p className="muted">{description || (stockStatus === "low" ? `Variants at or below their alert level (store default ${storeThreshold ?? "…"}).` : stockStatus === "out" ? "Active variants with no units left to sell." : "Available stock per variant. Units in unshipped orders are shown as reserved.")}</p></div>
         <div className="ops-filters">
-          <input type="search" value={q} onChange={(e) => reset(setQ)(e.target.value)} placeholder="Search product, brand or SKU…" aria-label="Search products" />
-          <CategorySelect categories={categories} value={category} onChange={reset(setCategory)} />
           {!stockStatus && (
             <select value={status} onChange={(e) => {
               const value = e.target.value;
@@ -142,9 +121,9 @@ function StockTable({ stockStatus, categories, onAdjusted, onHistory, onNavigate
             </select>
           )}
           <select value={sort} onChange={(e) => reset(setSort)(e.target.value)} aria-label="Sort">
-            <option value="stock_low">Stock: low to high</option><option value="stock_high">Stock: high to low</option><option value="name">Name A–Z</option><option value="updated">Recently updated</option>
+            <option value="newest">Newest products first</option><option value="stock_low">Stock: low to high</option><option value="stock_high">Stock: high to low</option><option value="name">Name A–Z</option><option value="updated">Recently updated</option>
           </select>
-          <ExportButton path={`/admin/inventory/export.csv?${qs({ q: q.trim(), category, stockStatus: effectiveStatus, sort })}`}
+          <ExportButton path={`/admin/inventory/export.csv?${qs({ stockStatus: effectiveStatus, sort })}`}
             filename={`shoponzy-stock${effectiveStatus ? `-${effectiveStatus}` : ""}`} disabled={!meta?.total} />
         </div>
       </div>
@@ -154,7 +133,7 @@ function StockTable({ stockStatus, categories, onAdjusted, onHistory, onNavigate
           <thead><tr><th>Product</th><th>SKU</th><th>Category</th><th className="num">Available</th><th className="num">Reserved</th><th className="num">Alert at</th><th>Status</th><th>Last updated</th><th>Actions</th></tr></thead>
           <TableBody loading={loading} items={rows} columns={9}
             empty={stockStatus === "out" ? "Nothing is out of stock" : stockStatus === "low" ? "No low-stock items" : "No products match"}
-            emptyHint={q || category || status ? "Try clearing the search or filters." : stockStatus ? "Great — stock levels are healthy." : "Add products under Manage Products."}>
+            emptyHint={status ? "Try changing the stock status filter." : stockStatus ? "Great — stock levels are healthy." : "Add products under Manage Products."}>
             {rows.map((row) => (
               <tr key={row.variantId} className={row.stockStatus === "low" ? "ops-row-low" : row.stockStatus === "out" ? "ops-row-out" : ""}>
                 <td><div className="ops-product"><Thumb src={row.image} alt="" /><div><strong>{row.name}</strong><small>{variantText(row) || "Single variant"}{row.productStatus !== "active" ? ` · ${row.productStatus}` : ""}</small></div></div></td>
@@ -283,24 +262,37 @@ const VIEW_COPY = {
   history: ["Stock Adjustments", "Every stock change — manual adjustments, orders, cancellations and returns — with who made it."],
 };
 
-export default function InventoryPage({ categories = [], view = "stock", onNavigate }) {
+export default function InventoryPage({ view = "stock", onNavigate }) {
   const [historyProduct, setHistoryProduct] = useState(null);
   // The product filter only applies to the visit that set it.
   useEffect(() => { if (view !== "history") setHistoryProduct(null); }, [view]);
   const summary = useAdminData("/admin/inventory/summary", { debounce: 0 });
+  const reloadSummary = summary.reload;
+  useEffect(() => {
+    const refresh = () => reloadSummary();
+    window.addEventListener("admin:data-changed", refresh);
+    window.addEventListener("focus", refresh);
+    const timer = window.setInterval(refresh, 30000);
+    return () => {
+      window.removeEventListener("admin:data-changed", refresh);
+      window.removeEventListener("focus", refresh);
+      window.clearInterval(timer);
+    };
+  }, [reloadSummary]);
   const s = summary.data;
   const threshold = s?.lowStockThreshold;
 
+  const cardValue = (value) => value == null ? "—" : fmt(value);
   const cards = [
-    { label: "Total products", value: fmt(s?.totalProducts), note: `${fmt(s?.totalVariants)} active variants` },
-    { label: "Available stock", value: fmt(s?.totalStock), note: "units ready to sell", tone: "green" },
-    { label: "Reserved", value: fmt(s?.reservedUnits), note: "in unshipped orders", tone: "slate" },
-    { label: "Low-stock products", value: fmt(s?.lowStockProducts), note: `${fmt(s?.lowStockVariants)} variants ≤ alert level`, tone: "amber" },
-    { label: "Out-of-stock products", value: fmt(s?.outOfStockProducts), note: `${fmt(s?.outOfStockVariants)} variants at 0`, tone: "red" },
+    { label: "Total products", value: cardValue(s?.totalProducts), note: `${cardValue(s?.totalVariants)} active variants; excludes archived products` },
+    { label: "Available stock", value: cardValue(s?.totalStock), note: "units across active variants", tone: "green" },
+    { label: "Reserved", value: cardValue(s?.reservedUnits), note: "in unshipped orders", tone: "slate" },
+    { label: "Low-stock products", value: cardValue(s?.lowStockProducts), note: `${cardValue(s?.lowStockVariants)} variants with 1+ units at or below alert level`, tone: "amber" },
+    { label: "Out-of-stock products", value: cardValue(s?.outOfStockProducts), note: `${cardValue(s?.outOfStockVariants)} zero-stock variants; products with no sellable units`, tone: "red" },
   ];
   // "History" on a row opens Stock Adjustments filtered to that product.
   const openHistory = (row) => { setHistoryProduct({ productId: row.productId, name: row.name }); onNavigate?.("Stock Adjustments"); };
-  const props = { categories, onAdjusted: summary.reload, onHistory: openHistory, onNavigate, storeThreshold: threshold };
+  const props = { onAdjusted: summary.reload, onHistory: openHistory, onNavigate, storeThreshold: threshold };
   const [title, description] = VIEW_COPY[view] || VIEW_COPY.stock;
 
   return (
@@ -309,8 +301,8 @@ export default function InventoryPage({ categories = [], view = "stock", onNavig
       <ErrorBanner error={summary.error} onRetry={summary.reload} />
       <StatCards items={cards} loading={!s && summary.loading} />
       {view === "stock" && <StockTable key="stock" {...props} />}
-      {view === "update" && <StockTable key="update" {...props} defaultSort="name" title="Find a product to update"
-        description="Search by name, brand or SKU, then choose Update stock on the variant." />}
+      {view === "update" && <StockTable key="update" {...props} defaultSort="newest" title="Find a product to update"
+        description="Choose Update stock on a variant. Newly added products appear first." />}
       {view === "alerts" && (
         <div className="ops-stack">
           <ThresholdSettings current={threshold} onSaved={summary.reload} />
