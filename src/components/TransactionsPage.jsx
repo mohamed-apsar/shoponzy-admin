@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { adminDownload, adminRequest } from "../api/adminApi";
 import { dateTime, money, titleCase } from "../utils/format";
 import "./TransactionsPage.css";
@@ -121,7 +121,7 @@ function TransactionDetail({ id, onClose, onChanged }) {
   );
 }
 
-function TransactionsTable({ status: fixedStatus, provider, method: fixedMethod, title, description, refreshKey, onOpen, compact = false }) {
+function TransactionsTable({ status: fixedStatus, provider = "razorpay", method: fixedMethod, title, description, refreshKey, onOpen, onSummary, compact = false }) {
   const toast = useToast();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("");
@@ -133,6 +133,20 @@ function TransactionsTable({ status: fixedStatus, provider, method: fixedMethod,
   const filters = { q: q.trim(), status: fixedStatus || status, provider, method: fixedMethod, from: dayStart(from), to: dayEnd(to), sort };
   const { data, meta, loading, error, reload } = useAdminData(`/admin/transactions?${qs({ ...filters, page, limit: compact ? 8 : PAGE_SIZE, r: refreshKey })}`, { debounce: q ? 300 : 0 });
   const rows = data || [];
+  useEffect(() => {
+    if (onSummary) onSummary({ data: loading || error ? null : meta?.summary || null, loading, error });
+  }, [meta, loading, error, onSummary]);
+  useEffect(() => {
+    const refresh = () => reload();
+    const timer = window.setInterval(refresh, 30000);
+    window.addEventListener("focus", refresh);
+    window.addEventListener("admin:data-changed", refresh);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", refresh);
+      window.removeEventListener("admin:data-changed", refresh);
+    };
+  }, [reload]);
   const reset = (fn) => (v) => { fn(v); setPage(1); };
 
   async function exportCsv() {
@@ -368,13 +382,28 @@ export default function TransactionsPage({ view = "razorpay" }) {
   const [openId, setOpenId] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [status, setStatus] = useState("success");
-  const summary = useAdminData(`/admin/transactions/summary?r=${refreshKey}`, { debounce: 0 });
-  const s = summary.data;
+  const summary = useAdminData(`/admin/transactions/summary?provider=razorpay&r=${refreshKey}`, { debounce: 0 });
+  const [tableSummary, setTableSummary] = useState(null);
+  const receiveSummary = useCallback((result) => setTableSummary({ view, ...result }), [view]);
+  const usesTableSummary = view === "razorpay" || view === "status";
+  const s = usesTableSummary ? (tableSummary?.view === view ? tableSummary.data : null) : summary.data;
+  const reloadSummary = summary.reload;
+  useEffect(() => {
+    const refresh = () => reloadSummary();
+    const timer = window.setInterval(refresh, 30000);
+    window.addEventListener("focus", refresh);
+    window.addEventListener("admin:data-changed", refresh);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", refresh);
+      window.removeEventListener("admin:data-changed", refresh);
+    };
+  }, [reloadSummary]);
   const cards = [
-    { label: "Total transactions", value: s ? s.totalTransactions.toLocaleString("en-IN") : "" },
-    { label: "Successful payments", value: s ? s.successful.toLocaleString("en-IN") : "", tone: "green", note: s?.refundedTransactions ? `${s.refundedTransactions} with refunds` : "captured by Razorpay" },
-    { label: "Failed payments", value: s ? s.failed.toLocaleString("en-IN") : "", tone: "red" },
-    { label: "Total payment amount", value: s ? money(s.totalAmount) : "", tone: "green", note: "received (before refunds)" },
+    { label: "Total transactions", value: s ? s.totalTransactions.toLocaleString("en-IN") : "—", note: "all payment attempts, including pending" },
+    { label: "Successful payments", value: s ? s.successful.toLocaleString("en-IN") : "—", tone: "green", note: "captured payments; excludes refunded payments" },
+    { label: "Failed payments", value: s ? s.failed.toLocaleString("en-IN") : "—", tone: "red" },
+    { label: "Total payment amount", value: s ? money(s.totalAmount) : "—", tone: "green", note: "received (before refunds)" },
   ];
   const common = { onOpen: setOpenId, refreshKey };
   const [title, description] = VIEW_COPY[view] || VIEW_COPY.razorpay;
@@ -384,11 +413,11 @@ export default function TransactionsPage({ view = "razorpay" }) {
     <>
       <PageHeading eyebrow="TRANSACTIONS & PAYMENTS" title={title} description={description} />
       <ErrorBanner error={summary.error} onRetry={summary.reload} />
-      <StatCards items={cards} loading={!s && summary.loading} />
-      {view === "razorpay" && <TransactionsTable key="rzp" provider="razorpay" title="Razorpay transactions" {...common} />}
+      <StatCards items={cards} loading={!s && (usesTableSummary ? tableSummary?.view !== view || tableSummary.loading : summary.loading)} />
+      {view === "razorpay" && <TransactionsTable key="rzp" provider="razorpay" title="Razorpay transactions" onSummary={receiveSummary} {...common} />}
       {view === "status" && <>
         <Tabs label="Payment status" tabs={STATUS_TABS.map((t) => ({ ...t, count: counts[t.id] || null }))} active={status} onChange={setStatus} />
-        <TransactionsTable key={status} status={status} {...common} />
+        <TransactionsTable key={status} status={status} onSummary={receiveSummary} {...common} />
       </>}
       {view === "refunds" && <RefundsTable {...common} />}
       {view === "methods" && <MethodsView summary={s} {...common} />}
