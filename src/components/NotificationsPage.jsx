@@ -268,7 +268,7 @@ function CampaignTable({ type, summary, refresh, onChanged, createKey = 0 }) {
 
 /* ---------- Email Notifications: switches + log ---------- */
 const SWITCHES = [
-  ["orderConfirmation", "Order confirmation", "When an order is placed (COD) or paid online"],
+  ["orderConfirmation", "Order confirmation", "When an order is paid online"],
   ["orderShipped", "Order shipped", "With the courier and tracking link"],
   ["orderDelivered", "Order delivered", "When the order is marked delivered"],
   ["orderCancelled", "Order cancelled", "Including refund information for paid orders"],

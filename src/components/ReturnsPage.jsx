@@ -99,24 +99,19 @@ function RefundDialog({ rr, onClose, onDone }) {
   const toast = useToast();
   const max = rr.refund.maxAmount;
   const [amount, setAmount] = useState(String(max));
-  const [reference, setReference] = useState("");
   const [note, setNote] = useState("");
-  const cod = rr.order?.paymentMethod === "cod";
   const n = Number(amount);
-  const valid = n > 0 && n <= max && (!cod || reference.trim());
+  const valid = Number.isFinite(n) && n > 0 && n <= max && Boolean(rr.refund.originalPaymentId);
   return (
     <ConfirmDialog title={`Refund ${rr.returnNumber}`} tone="danger" confirmLabel={`Refund ${money(valid ? n : 0)}`} disabled={!valid} onClose={onClose}
-      message={cod
-        ? "This order was paid in cash. Pay the customer by bank transfer / UPI, then record the reference here."
-        : <>The refund goes to Razorpay against payment <span className="ops-mono">{rr.refund.originalPaymentId}</span>. It shows as Processing until Razorpay confirms it.</>}
+      message={<>The refund goes to Razorpay against payment <span className="ops-mono">{rr.refund.originalPaymentId}</span>. It shows as Processing until Razorpay confirms it.</>}
       onConfirm={async () => {
-        const updated = (await adminRequest(`/admin/returns/${rr.id}/refund`, { method: "POST", body: JSON.stringify({ amount: n, manualReference: cod ? reference.trim() : undefined, note: note.trim() || undefined }) })).data;
+        const updated = (await adminRequest(`/admin/returns/${rr.id}/refund`, { method: "POST", body: JSON.stringify({ amount: n, note: note.trim() || undefined }) })).data;
         toast(updated.refund.status === "completed" ? `Refund of ${money(n)} completed.` : `Refund of ${money(n)} sent to Razorpay — processing.`);
         onDone();
       }}>
       <div className="ops-form">
         <Field label={`Amount (max ${money(max)})`} hint="What the customer paid for these items, after discounts. Delivery fees aren’t included."><input type="number" min={0.01} max={max} step={0.01} value={amount} onChange={(e) => setAmount(e.target.value)} /></Field>
-        {cod && <Field label="Bank / UPI reference"><input value={reference} maxLength={80} onChange={(e) => setReference(e.target.value)} /></Field>}
         <Field label="Note (optional)" full><input value={note} maxLength={200} onChange={(e) => setNote(e.target.value)} /></Field>
       </div>
     </ConfirmDialog>
@@ -131,7 +126,7 @@ function ReturnDetail({ id, onClose, onChanged }) {
   const [syncing, setSyncing] = useState(false);
   const done = () => { reload(); onChanged(); };
   const r = rr?.refund;
-  const canRefund = rr && ["inspected", "completed"].includes(rr.status) && ["pending", "failed"].includes(r?.status) && r.maxAmount > 0;
+  const canRefund = rr && r?.originalPaymentId && ["inspected", "completed"].includes(rr.status) && ["pending", "failed"].includes(r?.status) && r.maxAmount > 0;
 
   async function sync() {
     setSyncing(true);
@@ -198,7 +193,7 @@ function ReturnDetail({ id, onClose, onChanged }) {
           ["Refund amount", r.amount !== null ? money(r.amount) : "—"],
           ["pending", "failed"].includes(r.status) ? ["Refundable for these items", money(r.maxAmount)] : null,
           ["Refund ID", r.refundId ? <span key="ri" className="ops-mono">{r.refundId}</span> : "—"],
-          ["Original payment ID", r.originalPaymentId ? <span key="op" className="ops-mono">{r.originalPaymentId}</span> : rr.order?.paymentMethod === "cod" ? "Cash on delivery" : "—"],
+          ["Original payment ID", r.originalPaymentId ? <span key="op" className="ops-mono">{r.originalPaymentId}</span> : "—"],
           ["Original transaction ID", r.originalTransactionId ? <span key="ot" className="ops-mono">{r.originalTransactionId}</span> : "—"],
           ["Initiated", dateTime(r.initiatedAt)],
           ["Completed", dateTime(r.completedAt)],

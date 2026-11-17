@@ -8,7 +8,7 @@ import {
 
 /* eslint-disable react/prop-types */
 const PAGE_SIZE = 20;
-const METHODS = [["upi", "UPI"], ["card", "Card"], ["netbanking", "Net banking"], ["wallet", "Wallet"], ["emi", "EMI"], ["paylater", "Pay later"], ["cod", "Cash on delivery"]];
+const METHODS = [["upi", "UPI"], ["card", "Card"], ["netbanking", "Net banking"], ["wallet", "Wallet"], ["emi", "EMI"], ["paylater", "Pay later"]];
 const METHOD_LABEL = Object.fromEntries(METHODS);
 
 function methodLabel(t) {
@@ -28,23 +28,18 @@ function RefundDialog({ tx, onClose, onDone }) {
   const refundable = Math.max(0, Math.round(((tx.order?.total || tx.amount) - tx.refundedAmount) * 100) / 100);
   const [amount, setAmount] = useState(String(refundable));
   const [reason, setReason] = useState("");
-  const [reference, setReference] = useState("");
   const n = Number(amount);
-  const cod = tx.provider === "cod";
-  const valid = n > 0 && n <= refundable && (!cod || reference.trim());
+  const valid = Number.isFinite(n) && n > 0 && n <= refundable && Boolean(tx.razorpayPaymentId);
   return (
     <ConfirmDialog title="Issue refund" confirmLabel={`Refund ${money(valid ? n : 0)}`} tone="danger" disabled={!valid} onClose={onClose}
-      message={cod
-        ? <>Cash on delivery refunds are paid outside the system (bank transfer / UPI). Record the payment reference here.</>
-        : <>The refund is sent to Razorpay for payment <span className="ops-mono">{tx.razorpayPaymentId}</span>. Its status updates when Razorpay confirms it.</>}
+      message={<>The refund is sent to Razorpay for payment <span className="ops-mono">{tx.razorpayPaymentId}</span>. Its status updates when Razorpay confirms it.</>}
       onConfirm={async () => {
-        await adminRequest(`/admin/orders/${tx.order.id}/refund`, { method: "POST", body: JSON.stringify({ amount: n, reason: reason.trim() || undefined, manualReference: cod ? reference.trim() : undefined }) });
-        toast(`Refund of ${money(n)} ${cod ? "recorded" : "sent to Razorpay"}.`);
+        await adminRequest(`/admin/orders/${tx.order.id}/refund`, { method: "POST", body: JSON.stringify({ amount: n, reason: reason.trim() || undefined }) });
+        toast(`Refund of ${money(n)} sent to Razorpay.`);
         onDone();
       }}>
       <div className="ops-form">
         <Field label={`Amount (max ${money(refundable)})`}><input type="number" min={0.01} max={refundable} step={0.01} value={amount} onChange={(e) => setAmount(e.target.value)} /></Field>
-        {cod && <Field label="Bank / UPI reference"><input value={reference} maxLength={80} onChange={(e) => setReference(e.target.value)} /></Field>}
         <Field label="Reason (optional)" full><input value={reason} maxLength={200} onChange={(e) => setReason(e.target.value)} /></Field>
       </div>
     </ConfirmDialog>
@@ -57,7 +52,7 @@ function TransactionDetail({ id, onClose, onChanged }) {
   const [refunding, setRefunding] = useState(false);
   const [syncing, setSyncing] = useState("");
   const refundable = tx ? Math.round(((tx.order?.total || tx.amount) - tx.refundedAmount) * 100) / 100 : 0;
-  const canRefund = tx && tx.order && ["success", "partially_refunded"].includes(tx.status) && refundable > 0 && !tx.refunds.some((r) => r.status === "pending");
+  const canRefund = tx && tx.razorpayPaymentId && tx.order && ["success", "partially_refunded"].includes(tx.status) && refundable > 0 && !tx.refunds.some((r) => r.status === "pending");
 
   async function sync(refundId) {
     setSyncing(refundId);
@@ -233,7 +228,7 @@ function RefundsTable({ onOpen, refreshKey, compact = false }) {
               <tr key={r.refundId}>
                 <td><div className="ops-ids">
                   <span className="ops-mono" title="Refund ID">{r.refundId}</span>
-                  {r.razorpayPaymentId ? <span className="ops-mono muted" title="Razorpay payment ID">{r.razorpayPaymentId}</span> : r.manual && <small>Manual (COD)</small>}
+                  {r.razorpayPaymentId ? <span className="ops-mono muted" title="Razorpay payment ID">{r.razorpayPaymentId}</span> : r.manual && <small>Manual refund</small>}
                 </div></td>
                 <td>{r.order ? `#${r.order.orderNumber}` : "—"}</td>
                 <td>{r.customer?.name || "—"}</td>
@@ -368,7 +363,7 @@ export default function TransactionsPage({ view = "razorpay" }) {
   const s = summary.data;
   const cards = [
     { label: "Total transactions", value: s ? s.totalTransactions.toLocaleString("en-IN") : "" },
-    { label: "Successful payments", value: s ? s.successful.toLocaleString("en-IN") : "", tone: "green", note: s?.refundedTransactions ? `${s.refundedTransactions} with refunds` : "captured by Razorpay / COD collected" },
+    { label: "Successful payments", value: s ? s.successful.toLocaleString("en-IN") : "", tone: "green", note: s?.refundedTransactions ? `${s.refundedTransactions} with refunds` : "captured by Razorpay" },
     { label: "Failed payments", value: s ? s.failed.toLocaleString("en-IN") : "", tone: "red" },
     { label: "Pending payments", value: s ? s.pending.toLocaleString("en-IN") : "", tone: "amber", note: "checkout opened, not paid" },
     { label: "Total payment amount", value: s ? money(s.totalAmount) : "", tone: "green", note: "received (before refunds)" },

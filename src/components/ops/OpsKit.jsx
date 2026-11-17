@@ -177,7 +177,7 @@ const TONES = {
   low: "amber", pending: "amber", processing: "amber", requested: "amber", pickup_scheduled: "blue", in_transit: "blue", partially_refunded: "blue", refunded: "slate",
   out: "red", failed: "red", rejected: "red", cancelled: "slate", inactive: "slate", not_applicable: "slate",
 };
-const LABELS = { in: "In stock", low: "Low stock", out: "Out of stock", success: "Success", not_applicable: "Not applicable", processed: "Completed", cod: "COD" };
+const LABELS = { in: "In stock", low: "Low stock", out: "Out of stock", success: "Success", not_applicable: "Not applicable", processed: "Completed" };
 export function Badge({ value, label }) {
   if (!value) return <span className="muted">—</span>;
   return <span className={`ops-badge ${TONES[value] || "slate"}`}>{label || LABELS[value] || titleCase(value)}</span>;
