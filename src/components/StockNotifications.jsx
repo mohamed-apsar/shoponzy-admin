@@ -8,8 +8,10 @@ export default function StockNotifications({ page, onNavigate }) {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState([]);
   const [total, setTotal] = useState(0);
+  const [actions, setActions] = useState({ cancellations: [], returns: [], total: 0, cancelledCount: 0, returnCount: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [actionError, setActionError] = useState("");
   const rootRef = useRef(null);
   const buttonRef = useRef(null);
   const requestRef = useRef(0);
@@ -17,11 +19,20 @@ export default function StockNotifications({ page, onNavigate }) {
   const refresh = useCallback(async () => {
     const request = ++requestRef.current;
     try {
-      const result = await adminRequest("/admin/inventory?stockStatus=low&sort=stock_low&page=1&limit=5", { cache: "no-store" });
+      const [stockResult, orderResult] = await Promise.allSettled([
+        adminRequest("/admin/inventory?stockStatus=low&sort=stock_low&page=1&limit=5", { cache: "no-store" }),
+        adminRequest("/admin/order-alerts", { cache: "no-store" }),
+      ]);
       if (request !== requestRef.current) return;
-      setItems(result.data);
-      setTotal(result.meta.total);
-      setError("");
+      if (stockResult.status === "fulfilled") {
+        setItems(stockResult.value.data);
+        setTotal(stockResult.value.meta.total);
+        setError("");
+      } else setError(stockResult.reason.message || "Unable to load stock alerts.");
+      if (orderResult.status === "fulfilled") {
+        setActions(orderResult.value.data);
+        setActionError("");
+      } else setActionError(orderResult.reason.message || "Unable to load order and return alerts.");
     } catch (failure) {
       if (request === requestRef.current) setError(failure.message || "Unable to load stock alerts.");
     } finally {
@@ -62,19 +73,41 @@ export default function StockNotifications({ page, onNavigate }) {
   }, [open, refresh]);
 
   const viewAlerts = () => { setOpen(false); onNavigate("Low-Stock Alerts"); };
+  const openAction = (target, search) => { setOpen(false); onNavigate(target, search); };
+  async function reviewCancellation(id) {
+    try {
+      await adminRequest(`/admin/orders/${id}/review-cancellation`, { method: "PATCH" });
+      await refresh();
+    } catch (failure) { setActionError(failure.message || "Could not mark cancellation reviewed."); }
+  }
+  const notificationCount = total + actions.total;
   const bell = <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></svg>;
   return <div className="stock-notifications" ref={rootRef}>
-    <button ref={buttonRef} type="button" className={"icon-button stock-notifications-trigger" + (open ? " is-open" : "")} aria-label={"Notifications" + (total ? ": " + total + " low-stock variants" : "")} aria-expanded={open} aria-controls={open ? "stock-notifications-panel" : undefined} onClick={() => setOpen((value) => !value)}>
+    <button ref={buttonRef} type="button" className={"icon-button stock-notifications-trigger" + (open ? " is-open" : "")} aria-label={`Notifications: ${notificationCount} alerts, including ${actions.cancelledCount} cancellations and ${actions.returnCount} return requests`} aria-expanded={open} aria-controls={open ? "stock-notifications-panel" : undefined} onClick={() => setOpen((value) => !value)}>
       {bell}
-      {total > 0 && <span className="stock-notifications-count">{total > 99 ? "99+" : total}</span>}
-      {error && <span className="stock-notifications-warning" aria-label="Alerts unavailable">!</span>}
+      {notificationCount > 0 && <span className="stock-notifications-count">{notificationCount > 99 ? "99+" : notificationCount}</span>}
+      {(error || actionError) && <span className="stock-notifications-warning" aria-label="Some alerts unavailable">!</span>}
     </button>
-    {open && <section id="stock-notifications-panel" className="stock-notifications-panel" aria-label="Stock notifications">
+    {open && <section id="stock-notifications-panel" className="stock-notifications-panel" aria-label="Order, return and stock notifications">
       <div className="stock-notifications-heading">
         <span className="stock-notifications-heading-icon">{bell}</span>
-        <div><h2>Notifications</h2><p>Keep an eye on your inventory</p></div>
+        <div><h2>Notifications</h2><p>Orders, returns and inventory needing attention</p></div>
         <button type="button" className="stock-notifications-close" aria-label="Close notifications" onClick={() => { setOpen(false); buttonRef.current?.focus(); }}>?</button>
       </div>
+      {!loading && <div className="order-action-alerts">
+        {actionError && <p role="alert">{actionError} <button type="button" className="order-action-reviewed" onClick={refresh}>Try again</button></p>}
+        <h3>Cancelled orders ({actions.cancelledCount})</h3>
+        {!actionError && actions.cancellations.length === 0 && <p>No cancellations awaiting review.</p>}
+        {actions.cancellations.map((item) => <div className="order-action-alert" key={item.id}>
+          <button type="button" className="stock-notifications-item" onClick={() => openAction("Manage Orders", item.orderNumber)}><span className="stock-notifications-product"><strong>{item.orderNumber} · {item.customer}</strong><span>{item.message}</span></span></button>
+          <button type="button" className="order-action-reviewed" onClick={() => reviewCancellation(item.id)}>Mark reviewed</button>
+        </div>)}
+        {actions.cancelledCount > actions.cancellations.length && <p>Showing the latest {actions.cancellations.length}; more appear after review.</p>}
+        <h3>Return requests ({actions.returnCount})</h3>
+        {!actionError && actions.returns.length === 0 && <p>No return requests awaiting review.</p>}
+        {actions.returns.map((item) => <button type="button" className="stock-notifications-item" key={item.id} onClick={() => openAction("Return Requests")}><span className="stock-notifications-product"><strong>{item.returnNumber} · {item.orderNumber}</strong><span>{item.customer} · {item.message}</span><span>Review return request</span></span></button>)}
+        {actions.returnCount > actions.returns.length && <button type="button" className="order-action-reviewed" onClick={() => openAction("Return Requests")}>View all return requests</button>}
+      </div>}
       <div className="stock-notifications-toolbar"><span>Inventory alerts <b>{error || loading ? "?" : total}</b></span><span className="stock-notifications-live"><span />Auto-updating</span></div>
       {error ? <div className="stock-notifications-message" role="alert"><span className="stock-notifications-state-icon is-error" aria-hidden="true">!</span><h3>Could not load notifications</h3><p>{error}</p><button type="button" onClick={refresh}>Try again</button></div>
         : loading ? <div className="stock-notifications-loading" role="status"><span className="stock-notifications-sr">Loading stock alerts?</span>{[1, 2, 3].map((key) => <div className="stock-notifications-skeleton" key={key} aria-hidden="true"><span /><div><i /><i /></div></div>)}</div>
