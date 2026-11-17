@@ -284,11 +284,9 @@ export default function InventoryPage({ view = "stock", onNavigate }) {
 
   const cardValue = (value) => value == null ? "—" : fmt(value);
   const cards = [
-    { label: "Total products", value: cardValue(s?.totalProducts), note: `${cardValue(s?.totalVariants)} active variants; excludes archived products` },
-    { label: "Available stock", value: cardValue(s?.totalStock), note: "units across active variants", tone: "green" },
-    { label: "Reserved", value: cardValue(s?.reservedUnits), note: "in unshipped orders", tone: "slate" },
-    { label: "Low-stock products", value: cardValue(s?.lowStockProducts), note: `${cardValue(s?.lowStockVariants)} variants with 1+ units at or below alert level`, tone: "amber" },
-    { label: "Out-of-stock products", value: cardValue(s?.outOfStockProducts), note: `${cardValue(s?.outOfStockVariants)} zero-stock variants; products with no sellable units`, tone: "red" },
+    { label: "Total products", value: cardValue(s?.totalProducts) },
+    { label: "Low-stock products", value: cardValue(s?.lowStockProducts), tone: "amber" },
+    { label: "Out-of-stock products", value: cardValue(s?.outOfStockProducts), tone: "red" },
   ];
   // "History" on a row opens Stock Adjustments filtered to that product.
   const openHistory = (row) => { setHistoryProduct({ productId: row.productId, name: row.name }); onNavigate?.("Stock Adjustments"); };
