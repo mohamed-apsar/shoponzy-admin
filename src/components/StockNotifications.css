@@ -1,20 +1,58 @@
-.stock-notifications { position: relative; }
-.stock-notifications .stock-notifications-trigger { display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 40px; cursor: pointer; }
-.stock-notifications-count, .stock-notifications-warning { position: absolute; top: -3px; right: -7px; min-width: 19px; height: 19px; padding: 0 4px; box-sizing: border-box; border: 2px solid var(--surface, #fff); border-radius: 12px; background: #c74321; color: #fff; font: 700 10px/15px system-ui; }
-.stock-notifications-warning { left: -5px; right: auto; }
-.stock-notifications-panel { position: absolute; right: 0; top: calc(100% + 14px); z-index: 100; width: min(390px, calc(100vw - 32px)); max-height: calc(100dvh - 110px); overflow-y: auto; background: var(--surface, #fff); color: var(--text, #263451); border: 1px solid var(--border, #e2e7f0); border-radius: 16px; box-shadow: 0 16px 48px #12243c26; }
-.stock-notifications-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 20px; border-bottom: 1px solid var(--border, #e2e7f0); }
-.stock-notifications-heading p { margin: 6px 0 0; font-size: 12px; color: var(--muted, #66748e); }
-.stock-notifications-heading button { background: transparent; color: inherit; border: 0; font-size: 24px; cursor: pointer; }
-.stock-notifications-message { margin: 0; padding: 22px; font-size: 14px; line-height: 1.6; }
-.stock-notifications-summary { margin: 0; padding: 14px 20px; background: #fff7ed; color: #9a3412; font-size: 13px; font-weight: 650; }
-.stock-notifications-panel ul { padding: 0; margin: 0; list-style: none; }
-.stock-notifications-panel li { display: flex; justify-content: space-between; gap: 16px; padding: 16px 20px; border-bottom: 1px solid var(--border, #e2e7f0); }
-.stock-notifications-panel li > div { min-width: 0; }
-.stock-notifications-panel li strong { display: block; font-size: 14px; overflow-wrap: anywhere; }
-.stock-notifications-panel li span { display: block; margin-top: 5px; color: var(--muted, #66748e); font-size: 12px; }
+﻿.stock-notifications { position: relative; }
+.stock-notifications .stock-notifications-trigger { display: inline-flex; align-items: center; justify-content: center; width: 42px; height: 42px; border: 1px solid #e6e9f2; border-radius: 12px; background: #fff; color: #657089; cursor: pointer; }
+.stock-notifications-trigger:hover, .stock-notifications-trigger.is-open { background: #eef2ff; border-color: #c7d2fe; color: #4f46e5; }
+.stock-notifications-count, .stock-notifications-warning { position: absolute; top: -6px; right: -6px; min-width: 21px; height: 21px; padding: 0 4px; box-sizing: border-box; border: 2px solid #fff; border-radius: 12px; background: #e05237; color: #fff; font: 700 10px/17px system-ui; text-align: center; }
+.stock-notifications-warning { left: -6px; right: auto; }
+.stock-notifications-panel { position: absolute; right: -4px; top: calc(100% + 16px); z-index: 100; display: flex; flex-direction: column; width: min(420px, calc(100vw - 32px)); max-height: calc(100dvh - 110px); overflow-y: auto; background: #fff; color: #172033; border: 1px solid #e6e9f2; border-radius: 20px; box-shadow: 0 20px 65px #24325826, 0 4px 12px #2432580a; }
+.stock-notifications-heading { display: flex; align-items: center; gap: 12px; padding: 22px 22px 20px; }
+.stock-notifications-heading-icon { display: grid; place-items: center; flex-shrink: 0; width: 44px; height: 44px; border-radius: 14px; background: #eef2ff; color: #4f46e5; }
+.stock-notifications-heading > div { flex: 1; }
+.stock-notifications-heading h2 { margin: 0; font-size: 18px; font-weight: 750; letter-spacing: -.03em; }
+.stock-notifications-heading p { margin: 5px 0 0; font-size: 12px; line-height: 1.5; color: #7b849a; }
+.stock-notifications-close { display: grid; place-items: center; width: 32px; height: 32px; flex-shrink: 0; border-radius: 9px; background: #f7f8fc; color: #657089; border: 0; font-size: 22px; cursor: pointer; }
+.stock-notifications-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 13px 22px; border-block: 1px solid #eef0f6; font-size: 12px; font-weight: 650; }
+.stock-notifications-toolbar b { display: inline-block; min-width: 23px; margin-left: 5px; padding: 3px 6px; border-radius: 6px; background: #eef2ff; color: #4f46e5; text-align: center; font-size: 11px; }
+.stock-notifications-live { display: inline-flex; align-items: center; gap: 5px; font-size: 10px; color: #7b849a; font-weight: 500; }
+.stock-notifications-live > span { width: 5px; height: 5px; border-radius: 50%; background: #159670; }
+.stock-notifications-summary { display: flex; align-items: center; gap: 11px; margin: 16px 18px 6px; padding: 13px; border: 1px solid #fde6c3; border-radius: 12px; background: #fffbf3; color: #995a13; }
+.stock-notifications-summary-icon { display: grid; place-items: center; width: 24px; height: 24px; flex-shrink: 0; border-radius: 8px; background: #fef0cf; font-size: 14px; font-weight: 800; }
+.stock-notifications-summary strong { font-size: 12px; }
+.stock-notifications-summary p { margin: 4px 0 0; font-size: 11px; line-height: 1.5; color: #9a783f; }
+.stock-notifications-panel ul { padding: 0 10px 10px; margin: 0; list-style: none; }
+.stock-notifications-panel li + li { border-top: 1px solid #f0f2f7; }
+.stock-notifications-item { display: flex; align-items: center; gap: 12px; width: 100%; padding: 16px 10px; border: 0; border-radius: 10px; background: transparent; color: inherit; text-align: left; cursor: pointer; }
+.stock-notifications-item:hover { background: #f7f8fc; }
+.stock-notifications-product-icon { display: grid; place-items: center; width: 42px; height: 46px; flex-shrink: 0; border: 1px solid #e8ebf3; border-radius: 11px; background: #f7f8fc; color: #8a93aa; }
+.stock-notifications-product { flex: 1; min-width: 0; }
+.stock-notifications-product strong { display: block; font-size: 13px; line-height: 1.4; overflow-wrap: anywhere; }
+.stock-notifications-product > span { display: block; margin-top: 4px; color: #7b849a; font-size: 11px; overflow-wrap: anywhere; }
+.stock-notifications-product > .stock-notifications-threshold { font-size: 10px; color: #8992a7; }
 .stock-notifications-level { flex-shrink: 0; text-align: right; }
-.stock-notifications-level strong { color: #b45309; }
-.stock-notifications-view { width: 100%; padding: 17px; border: 0; background: transparent; color: #5145ec; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
-.stock-notifications button:focus-visible { outline: 2px solid #5145ec; outline-offset: 2px; }
-@media (max-width: 560px) { .stock-notifications-panel { position: fixed; top: 76px; right: 16px; } }
+.stock-notifications-level b { display: inline-block; padding: 5px 8px; border: 1px solid #ffdfcd; border-radius: 7px; background: #fff4ec; color: #b54c22; font-size: 11px; }
+.stock-notifications-level > span { display: block; margin-top: 6px; color: #8992a7; font-size: 10px; }
+.stock-notifications-footer { margin-top: auto; padding: 16px 20px; border-top: 1px solid #eef0f6; background: #fafbfe; text-align: center; }
+.stock-notifications-footer p { margin: 0 0 10px; color: #7b849a; font-size: 11px; }
+.stock-notifications-view { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 12px 16px; border: 1px solid #4f46e5; border-radius: 10px; background: #4f46e5; color: #fff; font: inherit; font-size: 12px; font-weight: 650; cursor: pointer; box-shadow: 0 3px 6px #4f46e51a; }
+.stock-notifications-view:hover { background: #4338ca; }
+.stock-notifications-footer > span { display: block; margin-top: 10px; color: #8992a7; font-size: 10px; }
+.stock-notifications-message { padding: 34px 28px; text-align: center; }
+.stock-notifications-state-icon { display: grid; place-items: center; width: 56px; height: 56px; margin: 0 auto 16px; border-radius: 18px; background: #eaf8f1; color: #15835c; font-size: 25px; }
+.stock-notifications-state-icon.is-error { color: #b54c22; background: #fff4ec; }
+.stock-notifications-message h3 { margin: 0 0 9px; font-size: 15px; }
+.stock-notifications-message p { margin: 0; color: #7b849a; font-size: 12px; line-height: 1.8; overflow-wrap: anywhere; }
+.stock-notifications-message button { margin-top: 16px; padding: 8px 16px; border: 1px solid #dce1f2; border-radius: 8px; background: #eef2ff; color: #4f46e5; font-size: 12px; cursor: pointer; }
+.stock-notifications-loading { padding: 10px 22px; }
+.stock-notifications-skeleton { display: flex; gap: 12px; align-items: center; padding: 16px 0; }
+.stock-notifications-skeleton > span { width: 42px; height: 46px; border-radius: 11px; background: #f0f2f7; }
+.stock-notifications-skeleton > div { flex: 1; }
+.stock-notifications-skeleton i { display: block; width: 75%; height: 10px; border-radius: 4px; background: #f0f2f7; }
+.stock-notifications-skeleton i + i { width: 50%; margin-top: 10px; }
+.stock-notifications-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.stock-notifications button:focus-visible { outline: 2px solid #4f46e5; outline-offset: -2px; }
+@media (max-width: 560px) {
+  .stock-notifications-panel { position: fixed; top: 76px; right: 16px; border-radius: 16px; }
+  .stock-notifications-heading { padding: 18px 16px; }
+  .stock-notifications-toolbar { padding-inline: 16px; }
+  .stock-notifications-item { gap: 9px; }
+  .stock-notifications-product-icon { width: 34px; height: 40px; }
+}
