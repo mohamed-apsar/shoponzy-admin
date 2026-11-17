@@ -192,7 +192,7 @@ function TransactionsTable({ status: fixedStatus, provider = "razorpay", method:
       <ErrorBanner error={error} onRetry={reload} />
       <div className="table-scroll transactions-scroll" role="region" aria-label="Transactions table" tabIndex={0}>
         <table className="ops-table transactions-table">
-          <colgroup><col style={{ width: "19%" }} /><col style={{ width: "15%" }} /><col style={{ width: "18%" }} /><col style={{ width: "12%" }} /><col style={{ width: "14%" }} /><col style={{ width: "14%" }} /><col style={{ width: "8%" }} /></colgroup>
+          <colgroup><col style={{ width: "18%" }} /><col style={{ width: "15%" }} /><col style={{ width: "17%" }} /><col style={{ width: "12%" }} /><col style={{ width: "14%" }} /><col style={{ width: "15%" }} /><col style={{ width: "9%" }} /></colgroup>
           <thead><tr><th>Transaction</th><th>Order / date</th><th>Customer</th><th className="num">Amount</th><th>Method</th><th>Status</th><th>Actions</th></tr></thead>
           <TableBody loading={loading} items={rows} columns={7} empty="No transactions found" emptyHint={q || status || from || to ? "Try clearing the search or filters." : "Payments appear here as customers check out."}>
             {rows.map((t) => (

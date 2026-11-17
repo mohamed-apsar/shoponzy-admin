@@ -11,18 +11,19 @@
 .transactions-filters input, .transactions-filters select { box-sizing: border-box; width: 100%; min-width: 0; height: 42px; padding: 0 11px; border: 1px solid #dfe3ed; border-radius: 9px; background: #fff; color: #263451; font: inherit; font-size: 13px; font-weight: 400; }
 .transactions-filters input:focus, .transactions-filters select:focus { outline: 2px solid #a5b4fc; outline-offset: 1px; border-color: #818cf8; }
 .transactions-panel .transactions-scroll { width: 100%; overflow-x: auto; border: 1px solid #e9ecf5; border-radius: 12px; scrollbar-width: thin; }
-.transactions-panel .transactions-table { width: 100%; min-width: 900px; table-layout: fixed; border-collapse: collapse; margin: 0; }
+.transactions-panel .transactions-table { width: 100%; min-width: 1040px; table-layout: fixed; border-collapse: collapse; margin: 0; }
 .transactions-panel .transactions-table th { padding: 14px 12px !important; background: #f7f8fc; color: #7b849a; font-size: 10px !important; letter-spacing: .06em; }
 .transactions-panel .transactions-table td { padding: 17px 12px !important; vertical-align: middle; font-size: 13px !important; line-height: 1.5; overflow-wrap: anywhere; white-space: normal; }
-.transactions-panel .transactions-table td small { margin-top: 5px; font-size: 11px; line-height: 1.5; }
+.transactions-panel .transactions-table td small { margin-top: 5px; font-size: 11px !important; line-height: 1.5; }
 .transactions-panel .transactions-table .ops-ids { gap: 5px; }
-.transactions-panel .transactions-table .ops-mono { font-size: 10.5px; word-break: normal; overflow-wrap: anywhere; }
+.transactions-panel .transactions-table .ops-mono { font-size: 11px !important; line-height: 1.6; word-break: normal; overflow-wrap: anywhere; }
 .transactions-panel .transactions-table .num { font-variant-numeric: tabular-nums; }
 .transactions-panel .transactions-table .num > b { white-space: nowrap; font-size: 13px; color: #263451; }
 .transactions-panel .transactions-table .ops-badge { max-width: 100%; white-space: normal; font-size: 11px; line-height: 1.4; }
 .transactions-panel .transactions-table .ops-badge::before { flex-shrink: 0; }
 .transactions-order { color: #4f46e5; font-size: 12px; font-weight: 650; }
-.transactions-panel .transactions-view { display: inline-flex; align-items: center; justify-content: center; min-height: 34px; padding: 7px 10px; border: 1px solid #e0e4ff; border-radius: 8px; background: #eef2ff; color: #4f46e5; font-size: 12px; font-weight: 650; }
+.transactions-panel .transactions-table th:last-child, .transactions-panel .transactions-table td:last-child { text-align: center; padding-inline: 8px !important; }
+.transactions-panel .transactions-view { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; width: 64px; min-width: 64px; height: 34px; min-height: 34px; padding: 0 10px !important; border: 1px solid #e0e4ff; border-radius: 8px; background: #eef2ff; color: #4f46e5; font-size: 12px !important; font-weight: 650; line-height: 1; white-space: nowrap; overflow-wrap: normal; word-break: normal; }
 .transactions-panel .transactions-view:hover { background: #e0e7ff; }
 .transactions-panel button:focus-visible, .transactions-scroll:focus-visible { outline: 2px solid #818cf8; outline-offset: 2px; }
 @media (max-width: 1200px) {
