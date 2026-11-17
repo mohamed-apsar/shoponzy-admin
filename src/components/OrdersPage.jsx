@@ -93,7 +93,7 @@ function OrderStatusDropdown({ order, onChange, busy }) {
   );
 }
 
-const paymentLabel = (order) => `${order.paymentMethod === "cod" ? "COD" : "Prepaid"} · ${titleCase(order.paymentStatus || "pending")}`;
+const paymentLabel = (order) => `${order.paymentMethod === "cod" ? "COD · " : ""}${titleCase(order.paymentStatus || "pending")}`;
 
 export function OrdersTable({ items, onOpen, onStatusChange, busyOrderId }) {
   return (
