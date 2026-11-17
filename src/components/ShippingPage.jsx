@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { adminRequest } from "../api/adminApi";
 import DeleteConfirmDialog from "./DeleteConfirmDialog";
 import StatusToggle from "./StatusToggle";
+import "./ShippingPage.css";
 
 const empty = { states: [], pincodes: [] };
 const cardStyle = { background: "var(--surface, #fff)", border: "1px solid var(--border, #e2e7f0)", borderRadius: 16, padding: 24, minWidth: 0 };
@@ -13,12 +14,16 @@ const norm = (s) => String(s || "").trim().toLocaleLowerCase();
 
 /* eslint-disable react/prop-types */
 export default function ShippingPage() {
+  const editDialogRef = useRef(null);
   const [data, setData] = useState(empty);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [editTarget, setEditTarget] = useState(null);
+  const [editValues, setEditValues] = useState({ name: "", code: "", price: "" });
+  const [editError, setEditError] = useState("");
   const [stateName, setStateName] = useState("");
   const [districtDrafts, setDistrictDrafts] = useState({});
   const [form, setForm] = useState({ state: "", district: "", code: "", price: "" });
@@ -32,6 +37,20 @@ export default function ShippingPage() {
     }).catch((e) => { if (active) setError(e.message); }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, []);
+
+  useEffect(() => {
+    if (!editTarget) return;
+    const dialog = editDialogRef.current;
+    const previousFocus = document.activeElement;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    dialog.showModal();
+    return () => {
+      dialog.close();
+      document.body.style.overflow = previousOverflow;
+      previousFocus?.focus();
+    };
+  }, [editTarget]);
 
   async function save(next, message = "Shipping settings saved.") {
     setSaving(true); setError(""); setNotice("");
@@ -50,12 +69,14 @@ export default function ShippingPage() {
     if (!name || states.some((s) => norm(s.name) === norm(name))) return setError("Enter a unique state name.");
     setStateName(""); save({ ...data, states: [...states, { name: name.toLocaleUpperCase(), enabled: true, districts: [] }] }, "State added.");
   }
+  function openEdit(target) {
+    setEditError("");
+    setError("");
+    setEditValues({ name: target.name || "", code: target.code || "", price: target.price == null ? "" : String(target.price) });
+    setEditTarget(target);
+  }
   function renameState(index) {
-    const current = states[index]; const name = window.prompt("Edit state name", current.name)?.trim();
-    if (!name || name === current.name) return;
-    if (states.some((s, i) => i !== index && norm(s.name) === norm(name))) return setError("That state already exists.");
-    const old = current.name;
-    save({ ...data, states: states.map((s, i) => i === index ? { ...s, name: name.toLocaleUpperCase() } : s), pincodes: data.pincodes.map((p) => p.state === old ? { ...p, state: name.toLocaleUpperCase() } : p) });
+    openEdit({ type: "state", si: index, name: states[index].name });
   }
   function addDistrict(event, index) {
     event.preventDefault(); const name = String(districtDrafts[index] || "").trim(); const current = states[index];
@@ -64,11 +85,7 @@ export default function ShippingPage() {
     save({ ...data, states: states.map((s, i) => i === index ? { ...s, districts: [...s.districts, { name: name.toLocaleUpperCase(), enabled: true }] } : s) }, "District added.");
   }
   function renameDistrict(si, di) {
-    const old = states[si].districts[di]; const name = window.prompt("Edit district name", old.name)?.trim();
-    if (!name || name === old.name) return;
-    if (states[si].districts.some((d, i) => i !== di && norm(d.name) === norm(name))) return setError("That district already exists in this state.");
-    const stateName = states[si].name;
-    save({ ...data, states: states.map((s, i) => i === si ? { ...s, districts: s.districts.map((d, j) => j === di ? { ...d, name: name.toLocaleUpperCase() } : d) } : s), pincodes: data.pincodes.map((p) => p.state === stateName && p.district === old.name ? { ...p, district: name.toLocaleUpperCase() } : p) });
+    openEdit({ type: "district", si, di, name: states[si].districts[di].name });
   }
   function addPin(event) {
     event.preventDefault(); const code = form.code.trim(); const price = Number(form.price);
@@ -80,11 +97,61 @@ export default function ShippingPage() {
   }
   function editRate(index) {
     const old = data.pincodes[index];
-    const code = window.prompt("Edit 6-digit PIN code", old.code)?.trim(); if (code == null) return;
-    const priceText = window.prompt("Edit shipping price (₹)", String(old.price)); if (priceText == null) return;
-    const price = Number(priceText);
-    if (!/^\d{6}$/.test(code) || !Number.isFinite(price) || price < 0 || data.pincodes.some((p, i) => i !== index && p.code === code)) return setError("Enter a unique 6-digit PIN and a valid non-negative price.");
-    updateRate(index, { code, price });
+    openEdit({ type: "pincode", index, code: old.code, price: old.price });
+  }
+  async function saveEdit(event) {
+    event.preventDefault();
+    if (!editTarget || saving) return;
+    setEditError("");
+    let next = data;
+    let message = "Shipping details updated.";
+    if (editTarget.type === "state") {
+      const name = editValues.name.trim();
+      if (!name) return setEditError("Enter a state name.");
+      if (states.some((state, index) => index !== editTarget.si && norm(state.name) === norm(name))) return setEditError("That state already exists.");
+      const current = states[editTarget.si];
+      const normalizedName = name.toLocaleUpperCase();
+      next = {
+        ...data,
+        states: states.map((state, index) => index === editTarget.si ? { ...state, name: normalizedName } : state),
+        pincodes: data.pincodes.map((pin) => pin.state === current.name ? { ...pin, state: normalizedName } : pin),
+      };
+      message = "State updated.";
+    } else if (editTarget.type === "district") {
+      const name = editValues.name.trim();
+      const state = states[editTarget.si];
+      const current = state.districts[editTarget.di];
+      if (!name) return setEditError("Enter a district name.");
+      if (state.districts.some((district, index) => index !== editTarget.di && norm(district.name) === norm(name))) return setEditError("That district already exists in this state.");
+      const normalizedName = name.toLocaleUpperCase();
+      next = {
+        ...data,
+        states: states.map((item, index) => index === editTarget.si ? { ...item, districts: item.districts.map((district, districtIndex) => districtIndex === editTarget.di ? { ...district, name: normalizedName } : district) } : item),
+        pincodes: data.pincodes.map((pin) => pin.state === state.name && pin.district === current.name ? { ...pin, district: normalizedName } : pin),
+      };
+      message = "District updated.";
+    } else {
+      const code = editValues.code.trim();
+      const price = Number(editValues.price);
+      if (!/^\d{6}$/.test(code)) return setEditError("Enter a valid 6-digit PIN code.");
+      if (data.pincodes.some((pin, index) => index !== editTarget.index && pin.code === code)) return setEditError("That PIN code already has a delivery rate.");
+      if (editValues.price === "" || !Number.isFinite(price) || price < 0) return setEditError("Enter a valid non-negative shipping price.");
+      next = { ...data, pincodes: data.pincodes.map((pin, index) => index === editTarget.index ? { ...pin, code, price } : pin) };
+      message = "PIN code delivery rate updated.";
+    }
+
+    setSaving(true);
+    try {
+      const result = await adminRequest("/admin/site-settings/shipping", { method: "PATCH", body: JSON.stringify(next) });
+      setData(result.data);
+      setNotice(message);
+      setEditTarget(null);
+      setError("");
+    } catch (saveError) {
+      setEditError(saveError.message);
+    } finally {
+      setSaving(false);
+    }
   }
   function removeDistrict(si, di) {
     const state = states[si]; const district = state.districts[di];
@@ -141,6 +208,25 @@ export default function ShippingPage() {
       </section>
       {saving && <p role="status" className="muted">Saving changes…</p>}
     </>}
+    {editTarget && <dialog ref={editDialogRef} className="shipping-edit-dialog" aria-labelledby="shipping-edit-title" aria-describedby="shipping-edit-description" onCancel={(event) => { event.preventDefault(); if (!saving) setEditTarget(null); }} onClick={(event) => {
+      const bounds = event.currentTarget.getBoundingClientRect();
+      if (!saving && event.target === event.currentTarget && (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom)) setEditTarget(null);
+    }}>
+        <div className="shipping-edit-heading">
+          <div><p className="shipping-edit-eyebrow">SHIPPING SETTINGS</p><h2 id="shipping-edit-title">Edit {editTarget.type === "pincode" ? "PIN code delivery rate" : editTarget.type}</h2><p id="shipping-edit-description">Update the delivery information saved for your store.</p></div>
+          <button type="button" className="shipping-edit-close" aria-label="Close edit dialog" disabled={saving} onClick={() => setEditTarget(null)}>×</button>
+        </div>
+        <form onSubmit={saveEdit} aria-busy={saving}>
+          <fieldset className="shipping-edit-inputs" disabled={saving}>
+          {editTarget.type !== "pincode" ? <label className="shipping-edit-field">{editTarget.type === "state" ? "State name" : "District name"}<input required aria-describedby={editError ? "shipping-edit-error" : undefined} autoFocus maxLength={80} value={editValues.name} onChange={(event) => setEditValues((values) => ({ ...values, name: event.target.value }))} placeholder={editTarget.type === "state" ? "Enter state name" : "Enter district name"} /></label> : <div className="shipping-edit-fields">
+            <label className="shipping-edit-field">6-digit PIN code<input required aria-describedby={editError ? "shipping-edit-error" : undefined} autoFocus inputMode="numeric" maxLength={6} pattern="[0-9]{6}" value={editValues.code} onChange={(event) => setEditValues((values) => ({ ...values, code: event.target.value.replace(/\D/g, "").slice(0, 6) }))} placeholder="e.g. 625007" /></label>
+            <label className="shipping-edit-field">Shipping price (₹)<input required aria-describedby={editError ? "shipping-edit-error" : undefined} type="number" min="0" step="0.01" value={editValues.price} onChange={(event) => setEditValues((values) => ({ ...values, price: event.target.value }))} placeholder="0.00" /></label>
+          </div>}
+          </fieldset>
+          {editError && <p id="shipping-edit-error" className="shipping-edit-error" role="alert">{editError}</p>}
+          <div className="shipping-edit-actions"><button type="button" className="shipping-edit-cancel" disabled={saving} onClick={() => setEditTarget(null)}>Cancel</button><button type="submit" className="shipping-edit-save" disabled={saving}>{saving ? "Saving…" : "Save changes"}</button></div>
+        </form>
+    </dialog>}
     {deleteTarget && <DeleteConfirmDialog title={deleteTarget.type === "pincode" ? "Delete PIN code rate?" : `Delete ${deleteTarget.type}?`} message={deleteTarget.type === "state" ? `“${deleteTarget.name}” and all its districts and PIN code rates will be deleted.` : deleteTarget.type === "district" ? `“${deleteTarget.name}” and its PIN code rates will be deleted.` : `The delivery rate for PIN code ${deleteTarget.name} will be deleted.`} onCancel={() => setDeleteTarget(null)} onConfirm={confirmDelete} />}
   </section>;
 }
