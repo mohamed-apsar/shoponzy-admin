@@ -43,6 +43,12 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
   const [expandedProducts, setExpandedProducts] = useState(null);
   const [productsByCategory, setProductsByCategory] = useState({});
   const [newInImage, setNewInImage] = useState(null);
+  const [shopAllBanner, setShopAllBanner] = useState(null);
+  const [shopAllBannerLoading, setShopAllBannerLoading] = useState(true);
+  const [shopAllBannerBusy, setShopAllBannerBusy] = useState(false);
+  const [shopAllBannerSaving, setShopAllBannerSaving] = useState(false);
+  const [shopAllBannerMessage, setShopAllBannerMessage] = useState("");
+  const [shopAllBannerError, setShopAllBannerError] = useState("");
   const [newInEnabled, setNewInEnabled] = useState(true);
   const [newInImageBusy, setNewInImageBusy] = useState(false);
   const [newInCropSource, setNewInCropSource] = useState(null);
@@ -62,11 +68,29 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
       .then((result) => {
         if (!active) return;
         setNewInImage(result.data.homeCategories?.newInImage || null);
+        setShopAllBanner(result.data.homeCategories?.shopAllBanner || null);
+        setShopAllBannerLoading(false);
         setNewInEnabled(result.data.homeCategories?.showNewIn ?? true);
       })
       .catch((requestError) => { if (active) setNewInImageError(requestError.message); });
     return () => { active = false; };
   }, [level]);
+
+  async function saveShopAllBanner() {
+    setShopAllBannerSaving(true);
+    setShopAllBannerError("");
+    setShopAllBannerMessage("");
+    try {
+      await adminRequest("/admin/site-settings/homeCategories", {
+        method: "PATCH", body: JSON.stringify({ shopAllBanner }),
+      });
+      setShopAllBannerMessage("Shop all banner saved.");
+    } catch (requestError) {
+      setShopAllBannerError(requestError.message);
+    } finally {
+      setShopAllBannerSaving(false);
+    }
+  }
 
   async function toggleNewInShortcut() {
     const nextValue = !newInEnabled;
@@ -388,6 +412,27 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
           onCancel={() => setNewInCropSource(null)}
           onConfirm={uploadNewInImage}
         />}
+      </section>}
+
+      {level === 1 && !shopAllBannerLoading && <section className="cm-panel">
+        <h2>Shop all banner</h2>
+        <p>Shown at the top of the Shop all products page.</p>
+        <fieldset disabled={shopAllBannerSaving || shopAllBannerBusy} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
+          <CroppedImageField
+            id="shop-all-banner"
+            label="Shop all banner image"
+            kind="categoryBanner"
+            output={IMAGE_SIZES.categoryBanner}
+            value={shopAllBanner}
+            alt="Shop all products"
+            wide
+            onBusyChange={setShopAllBannerBusy}
+            onChange={(image) => { setShopAllBanner(image); setShopAllBannerMessage(""); }}
+          />
+        </fieldset>
+        {shopAllBannerError && <p className="cm-error" role="alert">{shopAllBannerError}</p>}
+        {shopAllBannerMessage && <p role="status">{shopAllBannerMessage}</p>}
+        <button type="button" className="cm-primary-btn" onClick={saveShopAllBanner} disabled={shopAllBannerBusy || shopAllBannerSaving}>{shopAllBannerSaving ? "Saving..." : "Save banner"}</button>
       </section>}
 
       <section className="cm-panel">
