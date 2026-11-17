@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { adminDownload, adminRequest } from "../api/adminApi";
 import { dateTime, money, titleCase } from "../utils/format";
+import "./TransactionsPage.css";
 import {
   Badge, ConfirmDialog, ErrorBanner, ExportButton, Field, KeyValues, Modal, PageHeading, Pagination, StatCards, TableBody, Tabs,
   dayEnd, dayStart, qs, useAdminData, useToast,
@@ -147,29 +148,37 @@ function TransactionsTable({ status: fixedStatus, provider, method: fixedMethod,
   }
 
   return (
-    <section className="panel table-panel">
-      <div className="ops-toolbar">
+    <section className="panel table-panel transactions-panel">
+      <div className="ops-toolbar transactions-toolbar">
+        <div className="transactions-heading">
         <div><h2>{title || (compact ? "Latest transactions" : fixedStatus ? `${titleCase(fixedStatus === "success" ? "successful" : fixedStatus)} payments` : "All transactions")}</h2>
           <p className="muted">{description || (compact ? "Most recent payment attempts." : "Search by transaction ID, Razorpay payment/order ID, order number or customer.")}</p></div>
+          {!compact && <button type="button" className="secondary-button transactions-export" disabled={exporting || !meta?.total} onClick={exportCsv}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5" /></svg>{exporting ? "Exporting…" : "Export CSV"}</button>}
+        </div>
         {!compact && (
-          <div className="ops-filters">
-            <input type="search" value={q} onChange={(e) => reset(setQ)(e.target.value)} placeholder="Search IDs, order or customer…" aria-label="Search transactions" />
+          <div className="transactions-filters">
+            <label className="transactions-search">Search transactions<input type="search" value={q} onChange={(e) => reset(setQ)(e.target.value)} placeholder="ID, order or customer" /></label>
             {!fixedStatus && (
+              <label>Payment status
               <select value={status} onChange={(e) => reset(setStatus)(e.target.value)} aria-label="Filter by status">
                 <option value="">All statuses</option><option value="success">Success</option><option value="failed">Failed</option><option value="pending">Pending</option><option value="refunded">Refunded</option><option value="partially_refunded">Partially refunded</option>
               </select>
+              </label>
             )}
-            <div className="ops-daterange" role="group" aria-label="Date range"><span>From</span><input type="date" aria-label="From date" value={from} max={to || undefined} onChange={(e) => reset(setFrom)(e.target.value)} /><span>To</span><input type="date" aria-label="To date" value={to} min={from || undefined} onChange={(e) => reset(setTo)(e.target.value)} /></div>
+            <label>From date<input type="date" value={from} max={to || undefined} onChange={(e) => reset(setFrom)(e.target.value)} /></label>
+            <label>To date<input type="date" value={to} min={from || undefined} onChange={(e) => reset(setTo)(e.target.value)} /></label>
+            <label>Sort by
             <select value={sort} onChange={(e) => reset(setSort)(e.target.value)} aria-label="Sort">
               <option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="amount_high">Amount: high to low</option><option value="amount_low">Amount: low to high</option>
             </select>
-            <button type="button" className="secondary-button" disabled={exporting} onClick={exportCsv}>{exporting ? "Exporting…" : "⤓ Export CSV"}</button>
+            </label>
           </div>
         )}
       </div>
       <ErrorBanner error={error} onRetry={reload} />
-      <div className="table-scroll">
-        <table className="ops-table">
+      <div className="table-scroll transactions-scroll" role="region" aria-label="Transactions table" tabIndex={0}>
+        <table className="ops-table transactions-table">
+          <colgroup><col style={{ width: "19%" }} /><col style={{ width: "15%" }} /><col style={{ width: "18%" }} /><col style={{ width: "12%" }} /><col style={{ width: "14%" }} /><col style={{ width: "14%" }} /><col style={{ width: "8%" }} /></colgroup>
           <thead><tr><th>Transaction</th><th>Order / date</th><th>Customer</th><th className="num">Amount</th><th>Method</th><th>Status</th><th>Actions</th></tr></thead>
           <TableBody loading={loading} items={rows} columns={7} empty="No transactions found" emptyHint={q || status || from || to ? "Try clearing the search or filters." : "Payments appear here as customers check out."}>
             {rows.map((t) => (
@@ -179,12 +188,12 @@ function TransactionsTable({ status: fixedStatus, provider, method: fixedMethod,
                   {t.razorpayPaymentId && <span className="ops-mono" title="Razorpay payment ID">{t.razorpayPaymentId}</span>}
                   {t.razorpayOrderId && <span className="ops-mono muted" title="Razorpay order ID">{t.razorpayOrderId}</span>}
                 </div></td>
-                <td className="ops-nowrap">{t.order ? `#${t.order.orderNumber}` : "—"}<small>{dateTime(t.createdAt)}</small></td>
+                <td>{t.order ? <strong className="transactions-order">#{t.order.orderNumber}</strong> : "—"}<small>{dateTime(t.createdAt)}</small></td>
                 <td>{t.customer?.name || "—"}{t.customer?.email && <small>{t.customer.email}</small>}</td>
                 <td className="num"><b>{money(t.amount)}</b>{t.refundedAmount > 0 && <small>−{money(t.refundedAmount)} refunded</small>}</td>
                 <td>{methodLabel(t)}</td>
                 <td><Badge value={t.status} />{t.failure?.description && <small title={t.failure.description}>{t.failure.description.slice(0, 40)}{t.failure.description.length > 40 ? "…" : ""}</small>}</td>
-                <td><button type="button" className="table-action" onClick={() => onOpen(t.id)}>View</button></td>
+                <td><button type="button" className="table-action transactions-view" aria-label={`View transaction ${t.id}`} onClick={() => onOpen(t.id)}>View</button></td>
               </tr>
             ))}
           </TableBody>
