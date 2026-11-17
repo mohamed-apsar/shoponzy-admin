@@ -21,7 +21,6 @@ const sections = [
   { title: "Popup Management", icon: "▣" },
   { title: "Pages & Policies", icon: "▥" },
   { title: "Contact & Social Links", icon: "◎" },
-  { title: "Maintenance Mode", icon: "⏻" },
 ];
 
 /* ---------- API ⇄ form mapping ---------- */

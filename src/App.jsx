@@ -95,7 +95,6 @@ const manageSitePages = [
   "Popup Management",
   "Pages & Policies",
   "Contact & Social Links",
-  "Maintenance Mode",
 ];
 
 const navigablePages = new Set([
