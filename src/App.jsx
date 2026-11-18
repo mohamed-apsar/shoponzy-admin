@@ -369,7 +369,6 @@ export default function App() {
           <div className="topbar-actions">
             <label className="search-box"><span>⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search products or orders..." /></label>
             <StockNotifications page={page} onNavigate={(target, search = "") => { navigate(target); setQuery(search); }} />
-            <div className="top-avatar">SA</div>
           </div>
         </header>
 
