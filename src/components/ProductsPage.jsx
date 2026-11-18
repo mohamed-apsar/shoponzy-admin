@@ -7,6 +7,7 @@ import EditIcon from "./EditIcon";
 import StatusToggle from "./StatusToggle";
 import DeleteConfirmDialog from "./DeleteConfirmDialog";
 import CancelConfirmButton from "./CancelConfirmButton";
+import { useToast } from "./ops/OpsKit";
 
 /* eslint-disable react/prop-types */
 const LEVEL_LABELS = ["Select Category *", "Select Sub Category"];
@@ -155,6 +156,7 @@ function ImageUpload({ title, images, onChange, required = false, multiple = tru
 }
 
 export default function ProductsPage({ query = "", categories = [] }) {
+  const toast = useToast();
   const [items, setItems] = useState([]);
   const [meta, setMeta] = useState({ total: 0, pages: 1, summary: {} });
   const [page, setPage] = useState(1);
@@ -446,8 +448,16 @@ export default function ProductsPage({ query = "", categories = [] }) {
   async function confirmDeleteProduct() {
     try {
       const result = await adminRequest(`/admin/products/${deleting.id}`, { method: "DELETE" });
-      if (result.data.archived) window.alert("This product appears in past orders, so it was archived instead of deleted.");
+      setSelected((current) => {
+        const next = { ...current };
+        delete next[deleting.id];
+        return next;
+      });
       await load();
+      window.dispatchEvent(new Event("admin:data-changed"));
+      toast(result.data.archived
+        ? `“${deleting.name}” was archived and removed from the product list. Its past order history is preserved.`
+        : `“${deleting.name}” was deleted.`);
     } catch (requestError) {
       setLoadError(requestError.message);
       throw requestError;
