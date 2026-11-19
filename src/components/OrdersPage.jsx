@@ -103,12 +103,13 @@ export function OrdersTable({ items, onOpen, onStatusChange, busyOrderId }) {
           <tr>
             <th>Order ID</th><th>Customer</th><th>Date</th>
             <th>Total</th><th>Payment</th><th>Status</th>
+            {onOpen && <th scope="col">Actions</th>}
           </tr>
         </thead>
         <tbody>
           {items.map((order) => (
             <tr key={order.id}>
-              <td className="order-id">{onOpen ? <button type="button" className="order-open-button" onClick={() => onOpen(order)}>#{order.orderNumber}</button> : `#${order.orderNumber}`}</td>
+              <td className="order-id">#{order.orderNumber}</td>
               <td>{order.contact?.name || order.customer}</td>
               <td>{shortDate(order.placedAt || order.createdAt)}</td>
               <td>{money(order.total)}</td>
@@ -118,10 +119,11 @@ export function OrdersTable({ items, onOpen, onStatusChange, busyOrderId }) {
                   ? <OrderStatusDropdown order={order} onChange={onStatusChange} busy={busyOrderId === order.id} />
                   : <OrderStatus status={order.status} />}
               </td>
+              {onOpen && <td><button type="button" className="table-action" aria-label={`View order #${order.orderNumber}`} onClick={() => onOpen(order)}>View</button></td>}
             </tr>
           ))}
           {items.length === 0 && (
-            <tr><td colSpan={6} className="empty-state">No matching orders found.</td></tr>
+            <tr><td colSpan={onOpen ? 7 : 6} className="empty-state">No matching orders found.</td></tr>
           )}
         </tbody>
       </table>
@@ -135,6 +137,8 @@ function OrderDetail({ id, onClose, onChanged }) {
   const [busy, setBusy] = useState(false);
   const [fulfilment, setFulfilment] = useState({ courier: "", trackingNumber: "", trackingUrl: "" });
   const [note, setNote] = useState("");
+  const [trackingNotice, setTrackingNotice] = useState("");
+  const [trackingError, setTrackingError] = useState("");
   const [confirmingCancel, setConfirmingCancel] = useState(false);
 
   const load = useCallback(async () => {
@@ -150,7 +154,7 @@ function OrderDetail({ id, onClose, onChanged }) {
 
   useEffect(() => { load(); }, [load]);
 
-  async function run(action) {
+  async function run(action, showError = setError) {
     setBusy(true);
     setError("");
     try {
@@ -158,13 +162,31 @@ function OrderDetail({ id, onClose, onChanged }) {
       await load();
       onChanged();
     } catch (requestError) {
-      setError(requestError.message);
+      showError(requestError.message);
     } finally {
       setBusy(false);
     }
   }
 
   const trackingBody = () => Object.fromEntries(Object.entries(fulfilment).map(([k, v]) => [k, v.trim()]));
+
+  function updateTracking(event) {
+    const { name, value } = event.target;
+    setFulfilment((current) => ({ ...current, [name]: value }));
+    setTrackingNotice("");
+    setTrackingError("");
+  }
+
+  function saveTracking(event) {
+    event.preventDefault();
+    if (busy) return;
+    setTrackingNotice("");
+    setTrackingError("");
+    return run(async () => {
+      await adminRequest(`/admin/orders/${id}/fulfilment`, { method: "PATCH", body: JSON.stringify(trackingBody()) });
+      setTrackingNotice("Tracking saved.");
+    }, setTrackingError);
+  }
 
   function changeStatus(status) {
     if (status === "cancelled") {
@@ -219,16 +241,27 @@ function OrderDetail({ id, onClose, onChanged }) {
               </table>
             </div>
 
-            <div className="products-form-grid" style={{ marginTop: 16 }}>
-              <label className="products-form-field">Courier<input value={fulfilment.courier} onChange={(e) => setFulfilment((f) => ({ ...f, courier: e.target.value }))} placeholder="e.g. Delhivery" /></label>
-              <label className="products-form-field">Tracking number<input value={fulfilment.trackingNumber} onChange={(e) => setFulfilment((f) => ({ ...f, trackingNumber: e.target.value }))} /></label>
-              <label className="products-form-field products-form-full">Tracking URL<input type="url" value={fulfilment.trackingUrl} onChange={(e) => setFulfilment((f) => ({ ...f, trackingUrl: e.target.value }))} placeholder="https://" /></label>
-              <label className="products-form-field products-form-full">Note for the status change (optional)<input value={note} onChange={(e) => setNote(e.target.value)} maxLength={200} /></label>
-            </div>
+            <form className="order-tracking" aria-labelledby="order-tracking-title" onSubmit={saveTracking}>
+              <div>
+                <h3 id="order-tracking-title">Courier and tracking</h3>
+                <p className="muted">Add the courier and tracking details for this shipment.</p>
+              </div>
+              <div className="order-tracking-grid">
+                <label className="products-form-field">Courier<input name="courier" value={fulfilment.courier} onChange={updateTracking} placeholder="e.g. Delhivery" disabled={busy} /></label>
+                <label className="products-form-field">Tracking number<input name="trackingNumber" value={fulfilment.trackingNumber} onChange={updateTracking} placeholder="Enter tracking number" disabled={busy} /></label>
+                <label className="products-form-field products-form-full"><span>Tracking link <small className="muted">(optional)</small></span><input name="trackingUrl" type="url" value={fulfilment.trackingUrl} onChange={updateTracking} placeholder="https://" disabled={busy} /></label>
+              </div>
+              {trackingError && <div className="products-form-error" role="alert">{trackingError}</div>}
+              <div className="order-tracking-actions">
+                <button type="submit" className="primary-button" disabled={busy}>Save tracking</button>
+                {trackingNotice && <span className="muted" role="status">{trackingNotice}</span>}
+              </div>
+            </form>
+
+            <label className="products-form-field order-status-note">Note for the status change (optional)<input value={note} onChange={(e) => setNote(e.target.value)} maxLength={200} /></label>
 
             <div className="modal-actions" style={{ flexWrap: "wrap" }}>
               <a className="secondary-button" href={`${API_BASE}/admin/orders/${order.id}/invoice`} target="_blank" rel="noopener noreferrer">Invoice</a>
-              <button type="button" className="secondary-button" disabled={busy} onClick={() => run(() => adminRequest(`/admin/orders/${id}/fulfilment`, { method: "PATCH", body: JSON.stringify(trackingBody()) }))}>Save tracking</button>
               {(data.allowedTransitions || []).map((status) => (
                 <button key={status} type="button" className={status === "cancelled" ? "secondary-button" : "primary-button"} disabled={busy} onClick={() => changeStatus(status)}>
                   {status === "cancelled" ? "Cancel order" : `Mark ${titleCase(status)}`}
@@ -339,7 +372,7 @@ export default function OrdersPage({ query = "" }) {
   return (
     <>
       <div className="page-heading">
-        <div><p className="eyebrow">SALES</p><h1>Manage Orders</h1><p className="muted">Review customer orders and update their status. Click an order to open it.</p></div>
+        <div><p className="eyebrow">SALES</p><h1>Manage Orders</h1><p className="muted">Review customer orders and update their status.</p></div>
       </div>
       <section className="panel table-panel">
         <div className="product-toolbar">

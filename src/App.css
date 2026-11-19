@@ -162,8 +162,36 @@ th { padding: 13px 14px; background: #f8f9fc; color: #9298a8; font-size: 9px; fo
 td { padding: 15px 14px; border-bottom: 1px solid #f0f1f5; color: #5e6679; font-size: 10px; }
 tbody tr:last-child td { border-bottom: 0; }
 .order-id { color: #e87532; font-weight: 700; }
-.order-open-button { border: 0; padding: 0; background: transparent; color: inherit; font: inherit; font-weight: inherit; cursor: pointer; }
-.order-open-button:hover { text-decoration: underline; }
+.order-tracking {
+  display: grid;
+  gap: 16px;
+  margin-top: 20px;
+  padding: clamp(14px, 3vw, 20px);
+  background: #f8f9ff;
+  border: 1px solid #e4e7ff;
+  border-radius: 12px;
+}
+
+.order-tracking h3 { margin: 0 0 4px; }
+.order-tracking p { margin: 0; }
+.order-tracking-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 16px;
+}
+
+.order-tracking-grid .products-form-field {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.order-tracking-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.order-status-note { margin-top: 16px; }
+
+@media (max-width: 600px) {
+  .order-tracking-grid { grid-template-columns: minmax(0, 1fr); }
+}
 .status { display: inline-flex; align-items: center; border-radius: 20px; padding: 6px 9px; font-size: 9px; font-weight: 600; }
 .status.processing { color: #a86d14; background: #fff4d9; }
 .status.shipped { color: #466fd3; background: #eaf0ff; }
