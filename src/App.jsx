@@ -81,6 +81,7 @@ function mapAdminCategory(category) {
     },
     status: category.status,
     comingSoon: Boolean(category.comingSoon),
+    showOnHomepage: Boolean(category.showOnHomepage),
     productCount: category.productCount || 0,
     brand: category.brand || "",
   };

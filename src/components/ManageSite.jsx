@@ -546,54 +546,13 @@ export default function ManageSite({ activeSection = "General Settings", onSecti
     (statusFilter === "All" || item.status === statusFilter)), [pages, search, statusFilter]);
 
   function renderHomeCategories() {
-    const topCategories = categories.filter((category) => category.level === 1 && category.status === "enabled");
+    const selected = categories.filter((category) => category.level > 1 && category.showOnHomepage);
     return <SettingsForm initial={settings.homeCategories} onSave={(value) => saveSettings("homeCategories", value)} onReset={() => resetSettings("homeCategories")}>
-      {(values, update) => <>
-        <SettingsCard title="Homepage category strip" description="Choose the circular category links shown near the top of the customer storefront. Configure category images under Manage Categories.">
-          <div className="ms-toggle-list">
-            <Toggle label="Show all active top-level categories" checked={values.showAllCategories} onChange={(value) => update("showAllCategories", value)} description="When enabled, categories follow their order in Category Management." />
-          </div>
-          {!values.showAllCategories && <div className="ms-form-grid">
-            <div className="ms-category-picker full">
-              <strong>Select categories</strong>
-              <p>Selected categories appear in the order listed below. Upload or change their circle images under Manage Categories.</p>
-              <div className="ms-category-options">
-                {topCategories.map((category) => <label key={category.id}>
-                  <input type="checkbox" checked={values.categories.includes(category.slug)} onChange={(event) => {
-                    const next = event.target.checked
-                      ? [...values.categories, category.slug]
-                      : values.categories.filter((slug) => slug !== category.slug);
-                    update("categories", next);
-                  }} />
-                  {category.name}
-                </label>)}
-                {!topCategories.length && <small>No top-level categories are available yet. Add them in Category Management first.</small>}
-              </div>
-              {!!values.categories.length && <ol className="ms-category-order">
-                {values.categories.map((slug, index) => {
-                  const category = topCategories.find((item) => item.slug === slug);
-                  if (!category) return null;
-                  return <li key={slug}><span>{category.name}</span><div>
-                    <button type="button" aria-label={`Move ${category.name} up`} disabled={index === 0} onClick={() => {
-                      const next = [...values.categories];
-                      [next[index - 1], next[index]] = [next[index], next[index - 1]];
-                      update("categories", next);
-                    }}>↑</button>
-                    <button type="button" aria-label={`Move ${category.name} down`} disabled={index === values.categories.length - 1} onClick={() => {
-                      const next = [...values.categories];
-                      [next[index + 1], next[index]] = [next[index], next[index + 1]];
-                      update("categories", next);
-                    }}>↓</button>
-                  </div></li>;
-                })}
-              </ol>}
-            </div>
-          </div>}
-          <div className="ms-toggle-list">
-            <Toggle label="Show Shop all shortcut" checked={values.showNewIn} onChange={(value) => update("showNewIn", value)} />
-          </div>
-        </SettingsCard>
-      </>}
+      {(values, update) => <SettingsCard title="Homepage category strip" description="Enable Show on Homepage under Manage Categories > Sub categories. Existing images and names are used automatically. Subcategories and their parent categories must also be enabled to appear on the storefront.">
+        <p>{selected.length} subcategories selected for the homepage.</p>
+        {!!selected.length && <p className="muted">{selected.map((category) => category.name).join(", ")}</p>}
+        <div className="ms-toggle-list"><Toggle label="Show Shop all shortcut" checked={values.showNewIn} onChange={(value) => update("showNewIn", value)} /></div>
+      </SettingsCard>}
     </SettingsForm>;
   }
 

@@ -34,6 +34,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
   const [saving, setSaving] = useState(false);
   const [statusOverrides, setStatusOverrides] = useState({});
   const [pendingStatusIds, setPendingStatusIds] = useState([]);
+  const [pendingHomepageIds, setPendingHomepageIds] = useState([]);
   const [deleting, setDeleting] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
   const [bulkConfirm, setBulkConfirm] = useState(false);
@@ -301,6 +302,15 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
     }
   }
 
+  async function toggleHomepage(item, showOnHomepage) {
+    if (pendingHomepageIds.includes(item.id)) return;
+    setPendingHomepageIds((current) => [...current, item.id]);
+    setError("");
+    try { await onSave(item.id, { showOnHomepage }); }
+    catch (saveError) { setError(saveError.message); }
+    finally { setPendingHomepageIds((current) => current.filter((id) => id !== item.id)); }
+  }
+
   function pathFor(item) {
     const names = [];
     let p = item.parentId;
@@ -443,7 +453,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
 
         <div className="cm-table-wrap">
           <table className="cm-table">
-            <thead><tr><th className="cm-select-col"><input type="checkbox" aria-label={`Select all ${config.title.toLowerCase()} on this page`} checked={allShownSelected} ref={(el) => { if (el) el.indeterminate = !allShownSelected && someShownSelected; }} onChange={toggleAllShown} disabled={!shownIds.length} /></th>{level <= 3 && <th>Image</th>}<th>Name</th><th>Slug</th>{level > 1 && <th>Parent path</th>}<th>Products</th><th>Status</th><th>Actions</th></tr></thead>
+            <thead><tr><th className="cm-select-col"><input type="checkbox" aria-label={`Select all ${config.title.toLowerCase()} on this page`} checked={allShownSelected} ref={(el) => { if (el) el.indeterminate = !allShownSelected && someShownSelected; }} onChange={toggleAllShown} disabled={!shownIds.length} /></th>{level <= 3 && <th>Image</th>}<th>Name</th><th>Slug</th>{level > 1 && <th>Parent path</th>}<th>Products</th>{level > 1 && <th>Show on Homepage</th>}<th>Status</th><th>Actions</th></tr></thead>
             <tbody>
               {shown.map((item) => (
                 <Fragment key={item.id}>
@@ -454,6 +464,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
                   <td><button type="button" className="cm-products-toggle" aria-expanded={expandedProducts === item.id} onClick={() => toggleProducts(item)}>
                     {expandedProducts === item.id ? "Hide" : "View"} products ({item.productCount || 0})
                   </button></td>
+                  {level > 1 && <td><StatusToggle checked={Boolean(item.showOnHomepage)} label={`Show on Homepage: ${item.name}`} statusText={item.showOnHomepage ? "Shown" : "Hidden"} disabled={loading || pendingHomepageIds.includes(item.id)} onChange={() => toggleHomepage(item, !item.showOnHomepage)} /></td>}
                   <td>
                     <button
                       type="button"
@@ -472,7 +483,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
                   <td><div className="cm-actions"><button type="button" className="cm-edit-icon-button" aria-label={`Edit ${item.name}`} title={`Edit ${item.name}`} onClick={() => openEdit(item)}><EditIcon /></button><button className="danger" onClick={() => remove(item)}>Delete</button></div></td>
                 </tr>
                 {expandedProducts === item.id && <tr key={`${item.id}-products`} className="cm-products-row">
-                  <td colSpan={1 + (level <= 3 ? 1 : 0) + 2 + (level > 1 ? 1 : 0) + 3}>
+                  <td colSpan={1 + (level <= 3 ? 1 : 0) + 2 + (level > 1 ? 2 : 0) + 3}>
                     {productsByCategory[item.id]?.loading ? <span role="status">Loading products…</span>
                       : productsByCategory[item.id]?.error ? <span className="cm-products-error">{productsByCategory[item.id].error} <button type="button" onClick={() => retryProducts(item)}>Retry</button></span>
                         : productsByCategory[item.id]?.data?.length ? <>
@@ -486,7 +497,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
                 </tr>}
                 </Fragment>
               ))}
-              {!loading && !shown.length && <tr><td colSpan={1 + (level <= 3 ? 1 : 0) + 2 + (level > 1 ? 1 : 0) + 3} className="cm-empty">No {config.title.toLowerCase()} found.</td></tr>}
+              {!loading && !shown.length && <tr><td colSpan={1 + (level <= 3 ? 1 : 0) + 2 + (level > 1 ? 2 : 0) + 3} className="cm-empty">No {config.title.toLowerCase()} found.</td></tr>}
             </tbody>
           </table>
         </div>
