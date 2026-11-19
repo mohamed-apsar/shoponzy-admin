@@ -25,6 +25,80 @@ function couponState(c) {
   return ["Active", "enabled"];
 }
 
+function AccountDiscountForm() {
+  const [rule, setRule] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    adminRequest("/admin/site-settings").then(({ data }) => {
+      if (active) setRule(data.commerce.accountDiscount ?? { type: "percent", value: 10 });
+    }).catch((requestError) => {
+      if (active) setError(requestError.message);
+    });
+    return () => { active = false; };
+  }, []);
+
+  function update(patch) {
+    setRule((current) => ({ ...current, ...patch }));
+    setNotice("");
+    setError("");
+  }
+
+  async function save(event) {
+    event.preventDefault();
+    setSaving(true);
+    setError("");
+    setNotice("");
+    try {
+      const { data } = await adminRequest("/admin/site-settings/commerce", {
+        method: "PATCH",
+        body: JSON.stringify({ accountDiscount: { ...rule, value: Number(rule.value) } }),
+      });
+      setRule(data.accountDiscount);
+      setNotice("Account discount saved.");
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <section className="panel table-panel" aria-labelledby="account-discount-title">
+      <div className="product-toolbar">
+        <div>
+          <h2 id="account-discount-title">Sign-up and login discount</h2>
+          <p className="muted">Automatically applies to signed-in shoppers after any coupon. Set the value to 0 to turn it off.</p>
+        </div>
+      </div>
+      {error && <div className="products-form-error" role="alert">{error}</div>}
+      {!rule && !error && <p className="muted">Loading account discount…</p>}
+      {rule && (
+        <form onSubmit={save} style={{ padding: "0 20px 20px" }}>
+          <div className="products-form-grid">
+            <label className="products-form-field">Discount type
+              <select value={rule.type} onChange={(event) => update({ type: event.target.value })} disabled={saving}>
+                <option value="percent">Percentage (%)</option>
+                <option value="fixed">Fixed amount (₹)</option>
+              </select>
+            </label>
+            <label className="products-form-field">{rule.type === "percent" ? "Percentage off" : "Amount off (₹)"}
+              <input type="number" required min="0" max={rule.type === "percent" ? 90 : 1000000} step="0.01" value={rule.value} onChange={(event) => update({ value: event.target.value })} disabled={saving} />
+            </label>
+          </div>
+          <div className="action-buttons" style={{ marginTop: 16 }}>
+            <button className="primary-button" disabled={saving}>{saving ? "Saving…" : "Save discount"}</button>
+            {notice && <span role="status">{notice}</span>}
+          </div>
+        </form>
+      )}
+    </section>
+  );
+}
+
 export default function CouponsPage({ query = "" }) {
   const [items, setItems] = useState([]);
   const [meta, setMeta] = useState({ total: 0, pages: 1 });
@@ -138,6 +212,7 @@ export default function CouponsPage({ query = "" }) {
         <div><p className="eyebrow">MARKETING</p><h1>Coupons</h1><p className="muted">Discount codes shoppers can apply in their bag. Totals are re-checked when the order is placed.</p></div>
         <button className="primary-button" onClick={openAdd}>+ Add Coupon</button>
       </div>
+      <AccountDiscountForm />
       <section className="panel table-panel">
         <div className="product-toolbar"><div><h2>All Coupons</h2><p className="muted">{loading ? "Loading…" : `${meta.total ?? items.length} coupons`}</p></div></div>
         {loadError && <div className="products-form-error" role="alert">{loadError}</div>}
