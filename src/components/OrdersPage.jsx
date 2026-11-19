@@ -8,16 +8,16 @@ import DeleteConfirmDialog from "./DeleteConfirmDialog";
 /* eslint-disable react/prop-types */
 const STATUS_CLASS = {
   pending_payment: "pending", placed: "pending", confirmed: "processing", packed: "processing",
-  shipped: "shipped", delivered: "delivered", cancelled: "cancelled", returned: "cancelled",
+  shipped: "shipped", out_for_delivery: "shipped", delivered: "delivered", cancelled: "cancelled", returned: "cancelled",
 };
-const STATUSES = ["placed", "confirmed", "packed", "shipped", "delivered", "cancelled", "returned", "pending_payment"];
+const STATUSES = ["placed", "confirmed", "packed", "shipped", "out_for_delivery", "delivered", "cancelled", "returned", "pending_payment"];
 const STATUS_DROPDOWN_OPTIONS = [
-  ["confirmed", "Confirm"], ["packed", "Packed"], ["shipped", "Shipped"], ["cancelled", "Cancelled"], ["delivered", "Delivered"],
+  ["confirmed", "Confirm"], ["packed", "Processing"], ["shipped", "Shipped"], ["out_for_delivery", "Out for delivery"], ["cancelled", "Cancelled"], ["delivered", "Delivered"],
 ];
 const PAGE_SIZE = 20;
 
 export function OrderStatus({ status }) {
-  return <span className={`status ${STATUS_CLASS[status] || "pending"}`}>{titleCase(status)}</span>;
+  return <span className={`status ${STATUS_CLASS[status] || "pending"}`}>{status === "packed" ? "Processing" : titleCase(status)}</span>;
 }
 
 function OrderStatusDropdown({ order, onChange, busy }) {
@@ -25,7 +25,7 @@ function OrderStatusDropdown({ order, onChange, busy }) {
   const [position, setPosition] = useState(null);
   const buttonRef = useRef(null);
   const menuRef = useRef(null);
-  const options = STATUS_DROPDOWN_OPTIONS;
+  const options = STATUS_DROPDOWN_OPTIONS.filter(([status]) => order.allowedTransitions?.includes(status));
 
   useEffect(() => {
     if (!open) return undefined;
@@ -64,7 +64,7 @@ function OrderStatusDropdown({ order, onChange, busy }) {
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={`Status for order ${order.orderNumber}`}
-        disabled={busy}
+        disabled={busy || !options.length}
         onClick={toggle}
       >
         {selected?.[1] || titleCase(order.status)}
@@ -135,7 +135,8 @@ function OrderDetail({ id, onClose, onChanged }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [fulfilment, setFulfilment] = useState({ courier: "", trackingNumber: "", trackingUrl: "" });
+  const [fulfilment, setFulfilment] = useState({ courier: "", trackingNumber: "", trackingUrl: "", estimatedDeliveryDate: "" });
+  const [nextStatus, setNextStatus] = useState("");
   const [note, setNote] = useState("");
   const [trackingNotice, setTrackingNotice] = useState("");
   const [trackingError, setTrackingError] = useState("");
@@ -146,7 +147,7 @@ function OrderDetail({ id, onClose, onChanged }) {
       const result = await adminRequest(`/admin/orders/${id}`);
       setData(result.data);
       const f = result.data.order.fulfilment || {};
-      setFulfilment({ courier: f.courier || "", trackingNumber: f.trackingNumber || "", trackingUrl: f.trackingUrl || "" });
+      setFulfilment({ courier: f.courier || "", trackingNumber: f.trackingNumber || "", trackingUrl: f.trackingUrl || "", estimatedDeliveryDate: f.estimatedDeliveryDate || "" });
     } catch (requestError) {
       setError(requestError.message);
     }
@@ -183,7 +184,7 @@ function OrderDetail({ id, onClose, onChanged }) {
     setTrackingNotice("");
     setTrackingError("");
     return run(async () => {
-      await adminRequest(`/admin/orders/${id}/fulfilment`, { method: "PATCH", body: JSON.stringify(trackingBody()) });
+      await adminRequest(`/admin/orders/${id}/fulfilment`, { method: "PATCH", body: JSON.stringify({ ...trackingBody(), estimatedDeliveryDate: fulfilment.estimatedDeliveryDate || null }) });
       setTrackingNotice("Tracking saved.");
     }, setTrackingError);
   }
@@ -195,11 +196,11 @@ function OrderDetail({ id, onClose, onChanged }) {
     }
     const body = { status, ...(note.trim() ? { note: note.trim() } : {}) };
     if (status === "shipped") {
-      const f = Object.fromEntries(Object.entries(trackingBody()).filter(([, v]) => v));
+      const f = Object.fromEntries(Object.entries(trackingBody()).filter(([key, value]) => key !== "estimatedDeliveryDate" && value));
       if (Object.keys(f).length) body.fulfilment = f;
     }
     if (status === "returned") body.restock = window.confirm("Put the returned items back into stock?");
-    return run(() => adminRequest(`/admin/orders/${id}/status`, { method: "PATCH", body: JSON.stringify(body) }).then(() => setNote("")));
+    return run(() => adminRequest(`/admin/orders/${id}/status`, { method: "PATCH", body: JSON.stringify(body) }).then(() => { setNote(""); setNextStatus(""); }));
   }
 
   const order = data?.order;
@@ -250,6 +251,7 @@ function OrderDetail({ id, onClose, onChanged }) {
                 <label className="products-form-field">Courier<input name="courier" value={fulfilment.courier} onChange={updateTracking} placeholder="e.g. Delhivery" disabled={busy} /></label>
                 <label className="products-form-field">Tracking number<input name="trackingNumber" value={fulfilment.trackingNumber} onChange={updateTracking} placeholder="Enter tracking number" disabled={busy} /></label>
                 <label className="products-form-field products-form-full"><span>Tracking link <small className="muted">(optional)</small></span><input name="trackingUrl" type="url" value={fulfilment.trackingUrl} onChange={updateTracking} placeholder="https://" disabled={busy} /></label>
+                <label className="products-form-field">Estimated delivery date<input name="estimatedDeliveryDate" type="date" value={fulfilment.estimatedDeliveryDate} onChange={updateTracking} disabled={busy} /></label>
               </div>
               {trackingError && <div className="products-form-error" role="alert">{trackingError}</div>}
               <div className="order-tracking-actions">
@@ -262,11 +264,13 @@ function OrderDetail({ id, onClose, onChanged }) {
 
             <div className="modal-actions" style={{ flexWrap: "wrap" }}>
               <a className="secondary-button" href={`${API_BASE}/admin/orders/${order.id}/invoice`} target="_blank" rel="noopener noreferrer">Invoice</a>
-              {(data.allowedTransitions || []).map((status) => (
-                <button key={status} type="button" className={status === "cancelled" ? "secondary-button" : "primary-button"} disabled={busy} onClick={() => changeStatus(status)}>
-                  {status === "cancelled" ? "Cancel order" : `Mark ${titleCase(status)}`}
-                </button>
-              ))}
+              {!!data.allowedTransitions?.length && <>
+                <select aria-label="Update order status" value={nextStatus} onChange={(event) => setNextStatus(event.target.value)} disabled={busy}>
+                  <option value="">Select next status</option>
+                  {data.allowedTransitions.map((status) => <option key={status} value={status}>{status === "packed" ? "Processing" : titleCase(status)}</option>)}
+                </select>
+                <button type="button" className="primary-button" disabled={busy || !nextStatus} onClick={() => changeStatus(nextStatus)}>Update order status</button>
+              </>}
             </div>
 
             {!!data.returns?.length && (
@@ -354,9 +358,9 @@ export default function OrdersPage({ query = "" }) {
     setItems((current) => current.map((item) => item.id === order.id ? { ...item, status: nextStatus } : item));
     try {
       if (nextStatus === "cancelled") {
-        await adminRequest(`/admin/orders/${order.id}/cancel`, { method: "POST", body: JSON.stringify({ reason: "Cancelled from the order status dropdown", force: true }) });
+        await adminRequest(`/admin/orders/${order.id}/cancel`, { method: "POST", body: JSON.stringify({ reason: "Cancelled from the order status dropdown" }) });
       } else {
-        await adminRequest(`/admin/orders/${order.id}/status`, { method: "PATCH", body: JSON.stringify({ status: nextStatus, note: "Updated from the order status dropdown", force: true }) });
+        await adminRequest(`/admin/orders/${order.id}/status`, { method: "PATCH", body: JSON.stringify({ status: nextStatus, note: "Updated from the order status dropdown" }) });
       }
       await load();
     } catch (requestError) {
