@@ -311,6 +311,18 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
     finally { setPendingHomepageIds((current) => current.filter((id) => id !== item.id)); }
   }
 
+  function homepageWarning(item) {
+    if (!item.showOnHomepage) return "";
+    const seen = new Set();
+    let current = item;
+    while (current && !seen.has(current.id)) {
+      seen.add(current.id);
+      if ((statusOverrides[current.id] ?? current.status) !== "enabled") return `Enable ${current.name} to display this subcategory on the homepage.`;
+      current = categories.find((category) => category.id === current.parentId);
+    }
+    return "";
+  }
+
   function pathFor(item) {
     const names = [];
     let p = item.parentId;
@@ -464,7 +476,7 @@ export default function CategoryManager({ categories, mode = 1, loading = false,
                   <td><button type="button" className="cm-products-toggle" aria-expanded={expandedProducts === item.id} onClick={() => toggleProducts(item)}>
                     {expandedProducts === item.id ? "Hide" : "View"} products ({item.productCount || 0})
                   </button></td>
-                  {level > 1 && <td><StatusToggle checked={Boolean(item.showOnHomepage)} label={`Show on Homepage: ${item.name}`} statusText={item.showOnHomepage ? "Shown" : "Hidden"} disabled={loading || pendingHomepageIds.includes(item.id)} onChange={() => toggleHomepage(item, !item.showOnHomepage)} /></td>}
+                  {level > 1 && <td><StatusToggle checked={Boolean(item.showOnHomepage)} label={`Show on Homepage: ${item.name}`} statusText={item.showOnHomepage ? (homepageWarning(item) ? "Blocked" : "Shown") : "Hidden"} disabled={loading || pendingHomepageIds.includes(item.id)} onChange={() => toggleHomepage(item, !item.showOnHomepage)} />{homepageWarning(item) && <small className="cm-error" role="status" style={{ display: "block", maxWidth: 220, marginTop: 8 }}>{homepageWarning(item)}</small>}</td>}
                   <td>
                     <button
                       type="button"
