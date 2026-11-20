@@ -268,11 +268,13 @@ function CampaignTable({ type, summary, refresh, onChanged, createKey = 0 }) {
 
 /* ---------- Email Notifications: switches + log ---------- */
 const SWITCHES = [
-  ["orderConfirmation", "Order confirmation", "When an order is paid online"],
+  ["orderConfirmation", "Order confirmation", "When checkout completes or an online payment is confirmed"],
+  ["orderProgress", "Order progress", "Confirmed, packed, and out for delivery"],
+  ["orderRefunds", "Order refunds", "When an order refund starts, succeeds, or fails"],
   ["orderShipped", "Order shipped", "With the courier and tracking link"],
   ["orderDelivered", "Order delivered", "When the order is marked delivered"],
   ["orderCancelled", "Order cancelled", "Including refund information for paid orders"],
-  ["returnUpdates", "Return updates", "Return approved, rejected, and refund issued"],
+  ["returnUpdates", "Return updates", "Return requests, pickup, inspection, completion, and return refunds"],
   ["supportAutoReply", "Support auto-reply", "Confirms we received a contact-form message"],
 ];
 const EMAIL_TYPES = { order_confirmation: "Order confirmation", order_status: "Order update", return_update: "Return update", support_reply: "Support reply", support_ack: "Support auto-reply", campaign: "Promotion", test: "Test", password_reset: "Password reset", other: "Other" };
