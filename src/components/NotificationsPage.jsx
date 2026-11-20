@@ -342,7 +342,7 @@ function EmailLog() {
                 <td>{e.to}</td>
                 <td style={{ maxWidth: 360 }}>{e.subject}</td>
                 <td>{EMAIL_TYPES[e.type] || e.type}</td>
-                <td><Badge value={e.status === "sent" ? "completed" : e.status === "failed" ? "failed" : "inactive"} label={e.status === "skipped" ? "Not sent" : titleCase(e.status)} />{e.error && <small>{e.error}</small>}</td>
+                <td><Badge value={e.status === "sent" ? "completed" : e.status === "failed" ? "failed" : "inactive"} label={e.status === "skipped" ? "Not sent" : titleCase(e.status)} />{e.error && <small style={{ display: "block", whiteSpace: "normal", overflowWrap: "anywhere" }}>{/\b525\b/.test(e.error) ? "SMTP 525. Brevo blocked the backend’s outbound IP." : e.error}</small>}</td>
                 <td className="mono">{e.ref || "—"}</td>
               </tr>
             ))}
@@ -362,6 +362,33 @@ const VIEW = {
   email: ["Email Notifications", "Choose which order, return and support emails are sent automatically, and see every email the store sends.", null],
   history: ["Notification History", "All promotional emails — drafts, sent and stopped — with delivery counts.", null],
 };
+
+function EmailConnectionCheck({ from }) {
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+
+  async function test() {
+    setBusy(true);
+    setMessage("");
+    setError("");
+    try {
+      await adminRequest("/admin/notifications/email-connection/test", { method: "POST" });
+      setMessage("SMTP authentication succeeded.");
+    } catch (failure) {
+      setError(failure.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return <div className="ops-callout">
+    <p>Configured sender <b>{from}</b></p>
+    <button type="button" className="secondary-button" onClick={test} disabled={busy}>{busy ? "Checking…" : "Test email connection"}</button>
+    {message && <p role="status">{message}</p>}
+    {error && <p role="alert">{error}</p>}
+  </div>;
+}
 
 function BrevoConnection({ configured, onChanged }) {
   const [open, setOpen] = useState(false);
@@ -431,7 +458,7 @@ export default function NotificationsPage({ view = "arrivals" }) {
       <StatCards items={cards} loading={!s && summary.loading} />
       {type && <CampaignTable key={type} type={type} summary={s} refresh={refresh} onChanged={changed} createKey={createKey} />}
       {view === "email" && <div className="ops-stack">
-        {s?.emailConfigured && <div className="ops-callout" role="status">Email is set up. Emails are sent from <b>{s.mailFrom}</b>.</div>}
+        {s?.emailConfigured && <EmailConnectionCheck from={s.mailFrom} />}
         <EmailSettings onChanged={changed} />
         <EmailLog />
       </div>}
