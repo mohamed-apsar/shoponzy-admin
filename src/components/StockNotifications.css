@@ -54,8 +54,8 @@
 .order-action-alerts > p { color: #7b849a; font-size: 12px; line-height: 1.6; }
 .order-action-alert { padding-bottom: 10px; border-bottom: 1px solid #eef0f6; }
 .order-action-alerts .stock-notifications-item { padding: 12px 0; }
-.order-activity-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 14px; }
-.order-action-alerts .order-activity-heading h3 { margin: 0; }
+.notification-panel-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.notification-panel-actions button:disabled { opacity: .55; cursor: default; }
 .order-activity-list { list-style: none; padding: 0; margin: 0; }
 .order-activity-list li + li { border-top: 1px solid #eef0f6; }
 .order-activity-list time { display: block; margin-top: 4px; color: #667085; font-size: .75rem; }

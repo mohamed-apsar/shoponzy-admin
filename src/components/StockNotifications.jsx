@@ -3,7 +3,24 @@ import { adminRequest } from "../api/adminApi";
 import OrderActivity from "./OrderActivity";
 import "./StockNotifications.css";
 
+const READ_KEY = "shoponzy:admin-notifications-read";
 const ACTIVITY_SEEN_KEY = "shoponzy:admin-order-activity-seen";
+
+function loadReadState() {
+  try {
+    return JSON.parse(sessionStorage.getItem(READ_KEY)) || {
+      seenThrough: Number(sessionStorage.getItem(ACTIVITY_SEEN_KEY)) || 0,
+    };
+  } catch {
+    return { seenThrough: 0 };
+  }
+}
+
+function unreadAlerts(group, previous) {
+  if (!previous) return group.total;
+  const newIds = group.ids.filter((id) => !previous.ids.includes(id)).length;
+  return Math.min(group.total, Math.max(0, group.total - previous.total, newIds));
+}
 
 // Uses the inventory API so product-specific alert levels match the inventory page.
 /* eslint-disable react/prop-types */
@@ -15,7 +32,7 @@ export default function StockNotifications({ page, onNavigate }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [actionError, setActionError] = useState("");
-  const [seenThrough, setSeenThrough] = useState(() => Number(sessionStorage.getItem(ACTIVITY_SEEN_KEY)) || 0);
+  const [read, setRead] = useState(loadReadState);
   const rootRef = useRef(null);
   const buttonRef = useRef(null);
   const requestRef = useRef(0);
@@ -84,17 +101,32 @@ export default function StockNotifications({ page, onNavigate }) {
       await refresh();
     } catch (failure) { setActionError(failure.message || "Could not mark cancellation reviewed."); }
   }
-  const unreadActivity = actions.activity?.filter((event) => Date.parse(event.at) > seenThrough).length || 0;
-  const notificationCount = total + actions.total + unreadActivity;
-  function markActivityRead() {
+  const inventory = { total, ids: items.map((item) => `${item.productId}-${item.variantId}`) };
+  const cancellations = { total: actions.cancelledCount, ids: actions.cancellations.map((item) => item.id) };
+  const returns = { total: actions.returnCount, ids: actions.returns.map((item) => item.id) };
+  const unreadActivity = actions.activity?.filter((event) => Date.parse(event.at) > read.seenThrough).length || 0;
+  const unreadInventory = unreadAlerts(inventory, read.inventory);
+  const unreadReviews = unreadAlerts(cancellations, read.cancellations) + unreadAlerts(returns, read.returns);
+  const notificationCount = unreadInventory + unreadReviews + unreadActivity;
+
+  function markAllRead() {
     const latest = Date.parse(actions.activity?.[0]?.at);
-    if (!Number.isFinite(latest)) return;
-    sessionStorage.setItem(ACTIVITY_SEEN_KEY, String(latest));
-    setSeenThrough(latest);
+    const next = {
+      seenThrough: actionError || !Number.isFinite(latest) ? read.seenThrough : Math.max(read.seenThrough, latest),
+      inventory: error ? read.inventory : inventory,
+      cancellations: actionError ? read.cancellations : cancellations,
+      returns: actionError ? read.returns : returns,
+    };
+    setRead(next);
+    try {
+      sessionStorage.setItem(READ_KEY, JSON.stringify(next));
+    } catch {
+      // Keep the read state in memory when browser storage is unavailable.
+    }
   }
   const bell = <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></svg>;
   return <div className="stock-notifications" ref={rootRef}>
-    <button ref={buttonRef} type="button" className={"icon-button stock-notifications-trigger" + (open ? " is-open" : "")} aria-label={`Notifications: ${unreadActivity} unread order updates, ${actions.total} orders and returns requiring review, ${total} inventory alerts`} aria-expanded={open} aria-controls={open ? "stock-notifications-panel" : undefined} onClick={() => setOpen((value) => !value)}>
+    <button ref={buttonRef} type="button" className={"icon-button stock-notifications-trigger" + (open ? " is-open" : "")} aria-label={`Notifications: ${notificationCount} unread`} aria-expanded={open} aria-controls={open ? "stock-notifications-panel" : undefined} onClick={() => setOpen((value) => !value)}>
       {bell}
       {notificationCount > 0 && <span className="stock-notifications-count">{notificationCount > 99 ? "99+" : notificationCount}</span>}
       {(error || actionError) && <span className="stock-notifications-warning" aria-label="Some alerts unavailable">!</span>}
@@ -106,12 +138,12 @@ export default function StockNotifications({ page, onNavigate }) {
         <button type="button" className="stock-notifications-close" aria-label="Close notifications" onClick={() => { setOpen(false); buttonRef.current?.focus(); }}>?</button>
       </div>
       {!loading && <div className="order-action-alerts">
-        <button type="button" className="order-action-reviewed" onClick={() => openAction("Order & Return Alerts")}>View order & return alerts</button>
-        {actionError && <p role="alert">{actionError} <button type="button" className="order-action-reviewed" onClick={refresh}>Try again</button></p>}
-        <div className="order-activity-heading">
-          <h3>Recent order activity</h3>
-          {!actionError && unreadActivity > 0 && <button type="button" className="order-action-reviewed" onClick={markActivityRead}>Mark activity as read</button>}
+        <div className="notification-panel-actions">
+          <button type="button" className="order-action-reviewed" onClick={() => openAction("Order & Return Alerts")}>View order & return alerts</button>
+          <button type="button" className="order-action-reviewed" disabled={notificationCount === 0} onClick={markAllRead}>Mark all as read</button>
         </div>
+        {actionError && <p role="alert">{actionError} <button type="button" className="order-action-reviewed" onClick={refresh}>Try again</button></p>}
+        <h3>Recent order activity</h3>
         {!actionError && <OrderActivity items={actions.activity?.slice(0, 6)} onOpen={openAction} />}
         <h3>Cancelled orders ({actions.cancelledCount})</h3>
         {!actionError && actions.cancellations.length === 0 && <p>No cancellations awaiting review.</p>}
