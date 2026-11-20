@@ -361,6 +361,50 @@ const VIEW = {
   history: ["Notification History", "All promotional emails — drafts, sent and stopped — with delivery counts.", null],
 };
 
+function BrevoConnection({ configured, onChanged }) {
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
+
+  async function save(event) {
+    event.preventDefault();
+    const fields = new FormData(event.currentTarget);
+    setBusy(true);
+    setError("");
+    try {
+      await adminRequest("/admin/notifications/email-connection", {
+        method: "PUT", body: JSON.stringify(Object.fromEntries(fields)),
+      });
+      setOpen(false);
+      setSuccess(true);
+      onChanged();
+    } catch (failure) {
+      setError(failure.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return <div className={`ops-callout${configured ? "" : " warn"}`}>
+    {success ? <p role="status">Brevo connection verified and saved.</p> : !configured && <p>Email sending isn’t set up yet.</p>}
+    {!open ? <button type="button" className="secondary-button" onClick={() => { setOpen(true); setSuccess(false); }}>{configured ? "Update Brevo connection" : "Set up Brevo email"}</button> : (
+      <form onSubmit={save} className="ops-stack">
+        <div className="products-form-grid">
+          <label className="products-form-field">Brevo SMTP login<input name="user" type="email" required autoComplete="off" /></label>
+          <label className="products-form-field">Brevo SMTP key<input name="password" type="password" required autoComplete="new-password" /></label>
+          <label className="products-form-field">Verified sender email<input name="from" type="email" required autoComplete="off" /></label>
+        </div>
+        {error && <p role="alert">{error}</p>}
+        <div className="action-buttons">
+          <button type="submit" className="primary-button" disabled={busy}>{busy ? "Checking connection…" : "Test and save"}</button>
+          <button type="button" className="secondary-button" disabled={busy} onClick={() => { setOpen(false); setError(""); }}>Cancel</button>
+        </div>
+      </form>
+    )}
+  </div>;
+}
+
 export default function NotificationsPage({ view = "arrivals" }) {
   const [refresh, setRefresh] = useState(0);
   const [createKey, setCreateKey] = useState(0);
@@ -380,9 +424,7 @@ export default function NotificationsPage({ view = "arrivals" }) {
       <PageHeading eyebrow="NOTIFICATIONS" title={title} description={description}
         actions={type && <button type="button" className="primary-button" onClick={() => setCreateKey((k) => k + 1)}>＋ {TYPES[type].create}</button>} />
       <ErrorBanner error={summary.error} onRetry={summary.reload} />
-      {s && !s.emailConfigured && (
-        <div className="ops-callout warn" role="status"><b>Email sending isn’t set up yet.</b> Add your SMTP settings (SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, MAIL_FROM) to the backend’s environment on Vercel. Until then you can prepare drafts, but nothing can be sent and order emails are skipped.</div>
-      )}
+      {s && !s.emailFromEnvironment && (!s.emailConfigured || view === "email") && <BrevoConnection configured={s.emailConfigured} onChanged={changed} />}
       {s && s.emailConfigured && type && !s.subscribers && <div className="ops-callout" role="status">No one has subscribed to the newsletter yet, so there’s nobody to send to. Customers subscribe from the storefront footer.</div>}
       <StatCards items={cards} loading={!s && summary.loading} />
       {type && <CampaignTable key={type} type={type} summary={s} refresh={refresh} onChanged={changed} createKey={createKey} />}
