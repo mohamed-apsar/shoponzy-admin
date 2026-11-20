@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { adminRequest } from "../api/adminApi";
 import { ErrorBanner, PageHeading, StatCards, useAdminData } from "./ops/OpsKit";
 import { dateTime } from "../utils/format";
+import OrderActivity from "./OrderActivity";
 
 /* eslint-disable react/prop-types */
 export default function OrderActionNotifications({ onNavigate }) {
@@ -29,13 +30,17 @@ export default function OrderActionNotifications({ onNavigate }) {
     finally { setBusy(null); }
   }
   return <div className="ops-stack">
-    <PageHeading eyebrow="NOTIFICATIONS" title="Order & Return Alerts" description="Customer cancellations and return requests awaiting action. Refreshes automatically every 30 seconds." actions={<button type="button" className="secondary-button" onClick={reload}>Refresh</button>} />
+    <PageHeading eyebrow="NOTIFICATIONS" title="Order & Return Alerts" description="Recent order, return and refund activity. Refreshes automatically every 30 seconds." actions={<button type="button" className="secondary-button" onClick={reload}>Refresh</button>} />
     <ErrorBanner error={error || failure} onRetry={reload} />
     <StatCards loading={!data && loading} items={[
       { label: "Cancellations awaiting review", value: data?.cancelledCount ?? "", tone: "amber" },
       { label: "Return requests awaiting review", value: data?.returnCount ?? "", tone: "red" },
     ]} />
     {data && <>
+      <section className="panel order-activity-panel">
+        <div className="ops-toolbar"><h2>Recent order activity</h2><span className="muted">Latest 50 updates from the last 30 days</span></div>
+        <OrderActivity items={data.activity} onOpen={onNavigate} />
+      </section>
       <section className="panel"><div className="ops-toolbar"><h2>Cancelled orders</h2></div>
         {!data.cancellations.length && <p className="muted">No cancellations awaiting review.</p>}
         {data.cancellations.map((item) => <div className="ops-toolbar" key={item.id}>
